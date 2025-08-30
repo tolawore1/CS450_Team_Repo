@@ -7,4 +7,5 @@ Make a dummy commit for each member
 - Ali Afrose (Part 4)
 - Ali Afrose (Part 2).
 - Taiwo Olawore (commit test)
+- Taiwo Olawore (merge test)
 - Fahd Laniyan (commit test)
