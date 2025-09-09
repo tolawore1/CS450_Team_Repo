@@ -23,9 +23,8 @@ pip install -e ".[dev]"
 # 3) Enable git hooks
 pre-commit install
 
-# 4) Run the CLI // Note that this is not working as of 9/9/25
-catalog models --owner huggingface --repo transformers
-# Welcome to submit a PR with a fix
+# 4) Run the CLI // Recently fixed, ignore discord comment
+catalog --owner huggingface --repo transformers
 
 # 5) Run checks
 pylint src tests
