@@ -45,3 +45,6 @@ pytest -q
 ├─ README.md                      # install & usage
 ├─ .github/workflows/ci.yml       # CI
 └─ .env.example                   # sample env vars for GitHub API etc.
+
+## Hugging face test command, this returns some data about bert-base-uncased
+python src\ai_model_catalog\cli.py hf-model --model-id bert-base-uncased
