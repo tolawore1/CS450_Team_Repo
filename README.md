@@ -1,6 +1,9 @@
 # CS450_Team_Repo
 Group contains: Ethan, Ali, Fahd, and Taiwo
 
+## Run
+python -m src.ai_model_catalog
+
 ### Quickstart
 
 ```bash

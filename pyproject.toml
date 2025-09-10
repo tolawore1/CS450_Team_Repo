@@ -20,6 +20,7 @@ dev = [
 
 [project.scripts]
 catalog = "ai_model_catalog.cli:app"  # `catalog ...` runs Typer app
+catalog-interactive = "ai_model_catalog:run_interactive"  # `catalog-interactive` runs interactive version
 
 [tool.pytest.ini_options]
 addopts = "-ra -q --strict-markers --disable-warnings"
