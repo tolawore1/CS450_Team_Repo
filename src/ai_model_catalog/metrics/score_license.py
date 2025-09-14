@@ -1,4 +1,4 @@
-from .base import Metric
+from ai_model_catalog.metrics.base import Metric
 
 class LicenseMetric(Metric):
     COMPATIBLE_LICENSES = {

@@ -1,5 +1,12 @@
-def score_ramp_up_time(readme_text: str) -> float:
-    if readme_text and len(readme_text) >= 250:
-        return 1.0
-    else:
-        return 0.0
+from ai_model_catalog.metrics.base import Metric
+
+class RampUpMetric(Metric):
+    def score(self, model_data: dict) -> float:
+        readme = model_data.get("readme", "")
+        if not readme or len(readme) < 250:
+            return 0.0
+        elif len(readme) > 1500:
+            return 1.0
+        else:
+            return 1.0
+        

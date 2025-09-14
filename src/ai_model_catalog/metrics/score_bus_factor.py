@@ -1,4 +1,4 @@
-from .base import Metric
+from ai_model_catalog.metrics.base import Metric
 
 class BusFactorMetric(Metric):
     def score(self, model_data: dict) -> float:
