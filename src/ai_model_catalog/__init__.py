@@ -7,6 +7,7 @@ def main():
     """Main entry point that calls the interactive CLI."""
     interactive_main()
 
+
 # This will run when the module is executed directly
 if __name__ == "__main__":
     main()

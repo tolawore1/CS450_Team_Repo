@@ -6,12 +6,14 @@ import typer
 <<<<<<< HEAD
 from . import fetch_repo as fr
 =======
-from ai_model_catalog.metrics.score_model import netScore
+from ai_model_catalog.score_model import net_score
 >>>>>>> 5f3359fc5a24166aa30c90a29e31e37ce9a809de
+
 
 app = typer.Typer(help="AI/ML model catalog CLI")
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("catalog")
+
 
 # --- GitHub repo command ---
 @app.command()
@@ -26,11 +28,12 @@ def models(owner: str = "huggingface", repo: str = "transformers"):
     data = r.json()
     log.info("Repo: %s ⭐ %s", data["full_name"], data["stargazers_count"])
     typer.echo(data.get("description", ""))
-    scores = netScore(data)
+    scores = net_score(data)
     typer.echo("\nNetScore Breakdown:")
     for k, v in scores.items():
         typer.echo(f"{k}: {v}")
 >>>>>>> 5f3359fc5a24166aa30c90a29e31e37ce9a809de
+
 
 # --- Hugging Face model command ---
 @app.command()
@@ -94,12 +97,13 @@ def interactive_main():
     typer.echo(f"Tags: {', '.join(data.get('tags', []))}")
     if "pipeline_tag" in data:
         typer.echo(f"Task: {data['pipeline_tag']}")
-        
-    scores = netScore(data)
+
+    scores = net_score(data)
     typer.echo("\nNetScore Breakdown:")
     for k, v in scores.items():
         typer.echo(f"{k}: {v}")
 >>>>>>> 5f3359fc5a24166aa30c90a29e31e37ce9a809de
+
 
 if __name__ == "__main__":
     app(prog_name="cli.py")

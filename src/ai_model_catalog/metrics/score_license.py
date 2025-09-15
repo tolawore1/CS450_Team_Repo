@@ -1,5 +1,6 @@
 from ai_model_catalog.metrics.base import Metric
 
+
 class LicenseMetric(Metric):
     COMPATIBLE_LICENSES = {
         "mit",
@@ -14,15 +15,19 @@ class LicenseMetric(Metric):
         "public domain",
         "cc0",
     }
+
     def score(self, model_data: dict) -> float:
         license_field = model_data.get("license", "")
         if isinstance(license_field, dict):
             license_name = license_field.get("spdx_id", "").lower()
         else:
             license_name = str(license_field).lower()
+
         for compatible in self.COMPATIBLE_LICENSES:
             if compatible in license_name:
                 return 1.0
+        return 0.0
 
-        if license_name:
-            return 0.0
+
+def score_license(license_type: str) -> float:
+    return LicenseMetric().score({"license": license_type})

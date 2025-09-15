@@ -1,15 +1,17 @@
+from typing import Dict
 from .metrics.score_size import score_size
 from .metrics.score_license import score_license
 from .metrics.score_ramp_up_time import score_ramp_up_time
 from .metrics.score_bus_factor import score_bus_factor
-from .metrics.score_available_dataset_and_code import score_available_dataset_and_code as score_availability
+from .metrics.score_available_dataset_and_code import (
+    score_available_dataset_and_code as score_availability,
+)
 from .metrics.score_dataset_quality import score_dataset_quality
 from .metrics.score_code_quality import score_code_quality
 from .metrics.score_performance_claims import score_performance_claims
 
-from typing import Dict
 
-def netScore(api_data: Dict) -> Dict[str, float]:
+def net_score(api_data: Dict) -> Dict[str, float]:
     repo_size_bytes = (
         api_data.get("size", 0) * 1024
         if "full_name" in api_data
@@ -20,11 +22,13 @@ def netScore(api_data: Dict) -> Dict[str, float]:
         if isinstance(api_data.get("license"), dict)
         else api_data.get("license")
     )
-    readme = api_data.get("readme", "") or api_data.get("cardData", {}).get("content", "")
+    readme = api_data.get("readme", "") or api_data.get("cardData", {}).get(
+        "content", ""
+    )
     maintainers = (
-        [api_data.get("owner", {}).get("login")] 
+        [api_data.get("owner", {}).get("login")]
         if "owner" in api_data
-        else [api_data.get("author")]            
+        else [api_data.get("author")]
     )
 
     model_data = {
@@ -37,12 +41,14 @@ def netScore(api_data: Dict) -> Dict[str, float]:
     scores = {
         "size": score_size(model_data["repo_size_bytes"]),
         "license": score_license(model_data["license"]),
-        "ramp_up_time": score_ramp_up(model_data["readme"]),
+        "ramp_up_time": score_ramp_up_time(model_data["readme"]),
         "bus_factor": score_bus_factor(model_data["maintainers"]),
-        "availability": score_availability(api_data),
+        "availability": score_availability(
+            model_data.get("has_code", True), model_data.get("has_dataset", True)
+        ),
         "dataset_quality": score_dataset_quality(api_data),
         "code_quality": score_code_quality(api_data),
-        "performance_claims": score_performance(model_data["readme"]),
+        "performance_claims": score_performance_claims(model_data["readme"]),
     }
 
     weights = {
