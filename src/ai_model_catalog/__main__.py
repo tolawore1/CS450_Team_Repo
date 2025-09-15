@@ -1,7 +1,7 @@
 """
-Entry point for running the package as a module: python -m ai_model_catalog
+Entry point for running the package as a module: python -m src.ai_model_catalog
 """
-from . import main
+from .cli import interactive_main
 
 if __name__ == "__main__":
-    main()
+    interactive_main()
