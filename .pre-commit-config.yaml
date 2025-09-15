@@ -1,0 +1,13 @@
+repos:
+- repo: local
+  hooks:
+  - id: pylint
+    name: pylint
+    entry: pylint
+    language: system
+    files: \.py$
+  - id: pytest
+    name: pytest
+    entry: pytest
+    language: system
+    types: [python]

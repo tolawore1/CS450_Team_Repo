@@ -1,14 +1,8 @@
 # CS450_Team_Repo
 Group contains: Ethan, Ali, Fahd, and Taiwo
 
-# Part two according to GitHub doc
-Make a dummy commit for each member
-- Can just edit this text doc and "commit changes"
-- Ali Afrose (Part 4)
-- Ali Afrose (Part 2).
-- Taiwo Olawore (commit test)
-- Taiwo Olawore (merge test)
-- Fahd Laniyan (commit test)
+## Run
+python -m src.ai_model_catalog
 
 ### Quickstart
 
@@ -23,9 +17,8 @@ pip install -e ".[dev]"
 # 3) Enable git hooks
 pre-commit install
 
-# 4) Run the CLI // Note that this is not working as of 9/9/25
-catalog models --owner huggingface --repo transformers
-# Welcome to submit a PR with a fix
+# 4) Run the CLI // Recently fixed, ignore discord comment
+catalog --owner huggingface --repo transformers
 
 # 5) Run checks
 pylint src tests
@@ -46,3 +39,6 @@ pytest -q
 ├─ README.md                      # install & usage
 ├─ .github/workflows/ci.yml       # CI
 └─ .env.example                   # sample env vars for GitHub API etc.
+
+## Hugging face test command, this returns some data about bert-base-uncased
+python src\ai_model_catalog\cli.py hf-model --model-id bert-base-uncased
