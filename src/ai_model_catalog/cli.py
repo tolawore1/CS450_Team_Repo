@@ -3,7 +3,11 @@ AI Model Catalog - CLI for browsing AI/ML models
 """
 import logging
 import typer
+<<<<<<< HEAD
 from . import fetch_repo as fr
+=======
+from ai_model_catalog.metrics.score_model import netScore
+>>>>>>> 5f3359fc5a24166aa30c90a29e31e37ce9a809de
 
 app = typer.Typer(help="AI/ML model catalog CLI")
 logging.basicConfig(level=logging.INFO)
@@ -13,7 +17,20 @@ log = logging.getLogger("catalog")
 @app.command()
 def models(owner: str = "huggingface", repo: str = "transformers"):
     """Fetch metadata from GitHub API for a repo."""
+<<<<<<< HEAD
     fr.models(owner=owner, repo=repo)
+=======
+    url = f"https://api.github.com/repos/{owner}/{repo}"
+    r = requests.get(url, timeout=15)
+    r.raise_for_status()
+    data = r.json()
+    log.info("Repo: %s ⭐ %s", data["full_name"], data["stargazers_count"])
+    typer.echo(data.get("description", ""))
+    scores = netScore(data)
+    typer.echo("\nNetScore Breakdown:")
+    for k, v in scores.items():
+        typer.echo(f"{k}: {v}")
+>>>>>>> 5f3359fc5a24166aa30c90a29e31e37ce9a809de
 
 # --- Hugging Face model command ---
 @app.command()
@@ -21,6 +38,7 @@ def hf_model(model_id: str = "bert-base-uncased"):
     """Fetch metadata from Hugging Face Hub for a given model ID."""
     fr.hf_model(model_id=model_id)
 
+<<<<<<< HEAD
 def interactive_main():
     """Interactive main function that prompts user to select an AI model and runs CLI."""
     print("🤖 Welcome to AI Model Catalog!")
@@ -69,6 +87,19 @@ def interactive_main():
         except (ValueError, ConnectionError, TimeoutError) as e:
             print(f"❌ An error occurred: {e}")
             continue
+=======
+    typer.echo(f"Model: {data['modelId']}")
+    typer.echo(f"Last Modified: {data['lastModified']}")
+    typer.echo(f"Downloads: {data.get('downloads', 'N/A')}")
+    typer.echo(f"Tags: {', '.join(data.get('tags', []))}")
+    if "pipeline_tag" in data:
+        typer.echo(f"Task: {data['pipeline_tag']}")
+        
+    scores = netScore(data)
+    typer.echo("\nNetScore Breakdown:")
+    for k, v in scores.items():
+        typer.echo(f"{k}: {v}")
+>>>>>>> 5f3359fc5a24166aa30c90a29e31e37ce9a809de
 
 if __name__ == "__main__":
     app(prog_name="cli.py")
