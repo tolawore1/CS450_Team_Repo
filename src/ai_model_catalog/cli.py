@@ -17,7 +17,7 @@ log = logging.getLogger("catalog")
 @app.command()
 def models(owner: str = "huggingface", repo: str = "transformers"):
     """Fetch metadata from GitHub API for a repo."""
-    fr.models(owner=owner, repo=repo)
+    fr.fetch_repo_data(owner=owner, repo=repo)
     url = f"https://api.github.com/repos/{owner}/{repo}"
     r = requests.get(url, timeout=15)
     r.raise_for_status()
@@ -40,7 +40,19 @@ def models(owner: str = "huggingface", repo: str = "transformers"):
 @app.command()
 def hf_model(model_id: str = "bert-base-uncased"):
     """Fetch metadata from Hugging Face Hub for a given model ID."""
-    fr.hf_model(model_id=model_id)
+    # fr.hf_model(model_id=model_id)
+    data = fr.fetch_hf_model(model_id=model_id)
+    print("Repository:", data.get("full_name"))
+    print("Description:", data.get("description"))
+    print(
+        "License:",
+        data.get("license", {}).get("spdx_id") if data.get("license") else "None",
+    )
+    print("Size (KB):", data.get("size"))
+    print("Stars:", data.get("stargazers_count"))
+    print("Forks:", data.get("forks_count"))
+    print("Open Issues:", data.get("open_issues_count"))
+    print("Last Updated:", data.get("updated_at"))
 
 
 def interactive_main():
@@ -66,7 +78,7 @@ def interactive_main():
                     or "transformers"
                 )
                 print(f"\nFetching data for {owner}/{repo}...")
-                fr.models(owner=owner, repo=repo)
+                # data = fr.fetch_repo_data(owner=owner, repo=repo)
 
             elif choice == "2":
                 print("\n🤗 Hugging Face Model Search")
@@ -75,7 +87,10 @@ def interactive_main():
                     or "bert-base-uncased"
                 )
                 print(f"\nFetching data for model: {model_id}...")
-                fr.hf_model(model_id=model_id)
+                data = fr.fetch_hf_model(model_id=model_id)
+                print(f"Model: {data.get('author', 'Unknown')}/{model_id}")
+                print(f"Downloads: {data.get('downloads', 0):,}")
+                print(f"Model Size: {data.get('modelSize', 0):,} bytes")
 
             elif choice == "3":
                 print("👋 Goodbye!")
