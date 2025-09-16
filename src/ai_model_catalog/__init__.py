@@ -1,7 +1,9 @@
 """
 AI Model Catalog - Interactive CLI for browsing AI/ML models
 """
+
 from .cli import interactive_main
+
 
 def main():
     """Main entry point that calls the interactive CLI."""
