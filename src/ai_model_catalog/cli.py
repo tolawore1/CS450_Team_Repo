@@ -1,9 +1,6 @@
-"""
-AI Model Catalog - CLI for browsing AI/ML models
-"""
+"""AI Model Catalog - CLI for browsing AI/ML models"""
 
 import logging
-import requests
 import typer
 from ai_model_catalog.score_model import net_score
 from . import fetch_repo as fr
@@ -17,42 +14,60 @@ log = logging.getLogger("catalog")
 @app.command()
 def models(owner: str = "huggingface", repo: str = "transformers"):
     """Fetch metadata from GitHub API for a repo."""
-    fr.fetch_repo_data(owner=owner, repo=repo)
-    url = f"https://api.github.com/repos/{owner}/{repo}"
-    r = requests.get(url, timeout=15)
-    r.raise_for_status()
-    data = r.json()
-    log.info("Repo: %s ⭐ %s", data["full_name"], data["stargazers_count"])
-    typer.echo(data.get("description", ""))
-    typer.echo(f"Model: {data['modelId']}")
-    typer.echo(f"Last Modified: {data['lastModified']}")
-    typer.echo(f"Downloads: {data.get('downloads', 'N/A')}")
-    typer.echo(f"Tags: {', '.join(data.get('tags', []))}")
-    if "pipeline_tag" in data:
-        typer.echo(f"Task: {data['pipeline_tag']}")
+    data = fr.fetch_repo_data(owner=owner, repo=repo)
+
+    full_name = data.get("full_name") or f"{owner}/{repo}"
+    stars = (
+        data.get("stargazers_count") or data.get("stargazers") or data.get("stars") or 0
+    )
+    language = data.get("language") or data.get("primary_language") or "N/A"
+    updated = (
+        data.get("pushed_at")
+        or data.get("updated_at")
+        or data.get("lastModified")
+        or "N/A"
+    )
+    open_issues = data.get("open_issues_count") or data.get("open_issues") or 0
+
+    log.info("Repo: %s ⭐ %s", full_name, stars)
+    typer.echo(data.get("description") or "")
+    typer.echo(f"Default branch: {data.get('default_branch', 'main')}")
+    typer.echo(f"Language: {language}")
+    typer.echo(f"Updated: {updated}")
+    typer.echo(f"Open issues: {open_issues}")
+
     scores = net_score(data)
     typer.echo("\nNetScore Breakdown:")
     for k, v in scores.items():
-        typer.echo(f"{k}: {v}")
+        typer.echo(f"{k}: {v:.3f}")
 
 
 # --- Hugging Face model command ---
 @app.command()
 def hf_model(model_id: str = "bert-base-uncased"):
     """Fetch metadata from Hugging Face Hub for a given model ID."""
-    # fr.hf_model(model_id=model_id)
     data = fr.fetch_hf_model(model_id=model_id)
-    print("Repository:", data.get("full_name"))
-    print("Description:", data.get("description"))
-    print(
-        "License:",
-        data.get("license", {}).get("spdx_id") if data.get("license") else "None",
+
+    print("Model:", data.get("modelId", model_id))
+    print("Author:", data.get("author", "Unknown"))
+    print("Description:", data.get("description", ""))
+
+    lic = data.get("license")
+    lic_str = (
+        (lic.get("spdx_id") or lic.get("id") or lic.get("name"))
+        if isinstance(lic, dict)
+        else (lic or "None")
     )
-    print("Size (KB):", data.get("size"))
-    print("Stars:", data.get("stargazers_count"))
-    print("Forks:", data.get("forks_count"))
-    print("Open Issues:", data.get("open_issues_count"))
-    print("Last Updated:", data.get("updated_at"))
+    print("License:", lic_str)
+
+    print("Downloads:", f"{data.get('downloads', 0):,}")
+    print("Last Modified:", data.get("lastModified"))
+    tags = data.get("tags") or []
+    if isinstance(tags, list) and tags:
+        print("Tags:", ", ".join(tags))
+    task = data.get("pipeline_tag")
+    if task:
+        print("Task:", task)
 
 
 def interactive_main():
