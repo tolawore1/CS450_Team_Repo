@@ -163,6 +163,12 @@ def hf_model(model_id: str = "bert-base-uncased"):
     _handle_model_command(model_id)
 
 
+@app.command()
+def interactive():
+    """Start interactive mode for browsing AI models."""
+    interactive_main()
+
+
 def _get_user_input(prompt: str, default: str = "") -> str:
     """Get user input with optional default value."""
     return input(f"{prompt} (default: {default}): ").strip() or default
@@ -226,7 +232,32 @@ def _display_model_interactive(data: Dict[str, Any], model_id: str) -> None:
 def _handle_github_repository_interactive() -> None:
     """Handle GitHub repository browsing in interactive mode."""
     print("\n📁 GitHub Repository Browser")
-    owner = _get_user_input("Enter repository owner", "huggingface")
+
+    # Display available owners
+    _display_available_owners()
+
+    # Get owner selection as integer
+    while True:
+        try:
+            owner_choice = int(input("Select repository owner (1-5): ").strip())
+            if 1 <= owner_choice <= 5:
+                break
+            print("❌ Please enter a number between 1 and 5.")
+        except ValueError:
+            print("❌ Please enter a valid number.")
+
+    # Map choice to owner name
+    owners = [
+        "huggingface",
+        "openai",
+        "facebookresearch",
+        "google-research",
+        "microsoft",
+    ]
+    owner = owners[owner_choice - 1]
+
+    # Display repositories for the selected owner
+    _display_owner_repositories(owner_choice)
     repo = _get_user_input("Enter repository name", "transformers")
 
     print(f"\nFetching data for {owner}/{repo}...")
@@ -262,7 +293,7 @@ def _display_main_menu() -> None:
     """Display the main menu options."""
     print("🤖 Welcome to AI Model Catalog!")
     print("Choose an option to explore AI models:")
-    print("1. Browse GitHub repositories (e.g., Hugging Face Transformers)")
+    print("1. Browse GitHub repositories")
     print("2. Search Hugging Face models")
     print("3. Exit")
 
@@ -278,6 +309,77 @@ def _should_continue() -> bool:
         input("\nWould you like to explore another model? (y/n): ").strip().lower()
     )
     return continue_choice in ["y", "yes"]
+
+
+def _display_available_owners() -> None:
+    """Display the list of available repository owners."""
+    print("\n📋 Available Repository Owners:")
+    print("1. huggingface")
+    print("2. openai")
+    print("3. facebookresearch (Meta AI)")
+    print("4. google-research")
+    print("5. microsoft")
+    print()
+
+
+def _display_owner_repositories(owner_choice: int) -> None:
+    """Display the repositories available for a given owner choice (1-5)."""
+    owners = [
+        "huggingface",
+        "openai",
+        "facebookresearch",
+        "google-research",
+        "microsoft",
+    ]
+
+    repositories = {
+        "huggingface": [
+            "transformers → NLP, multimodal models",
+            "diffusers → diffusion models (Stable Diffusion)",
+            "accelerate → training large models efficiently",
+            "datasets → dataset loading/sharing",
+            "trl → reinforcement learning with transformers",
+        ],
+        "openai": [
+            "openai-cookbook → practical examples & guides",
+            "whisper → speech-to-text model",
+            "gym → RL environments",
+            "baselines → RL reference implementations",
+            "microscope → visualizing neural networks",
+        ],
+        "facebookresearch": [
+            "fairseq → sequence-to-sequence modeling",
+            "llama → LLaMA language models",
+            "detectron2 → object detection / vision",
+            "pytorch3d → 3D deep learning",
+            "esm → protein language models",
+        ],
+        "google-research": [
+            "bert → original BERT repo",
+            "t5x → T5 training framework",
+            "vision_transformer → ViT models",
+            "biggan → generative adversarial networks",
+            "scenic → computer vision research framework",
+        ],
+        "microsoft": [
+            "DeepSpeed → large-scale model training optimization",
+            "LoRA → low-rank adaptation for large models",
+            "onnxruntime → ONNX inference engine",
+            "lightgbm → gradient boosting framework",
+            "NCCL (in collaboration) → distributed GPU communication",
+        ],
+    }
+
+    if 1 <= owner_choice <= 5:
+        owner = owners[owner_choice - 1]
+        print(f"\n📁 Available repositories for {owner}:")
+        for i, repo in enumerate(repositories[owner], 1):
+            print(f"{i}. {repo}")
+        print()
+    else:
+        print(f"\n❌ Invalid owner choice: {owner_choice}")
+        print("Please select a number between 1 and 5.")
+        print()
 
 
 def interactive_main():
