@@ -1,8 +1,14 @@
-from ai_model_catalog.fetch_repo import fetch_repo_data, fetch_hf_model
+import pytest
+from ai_model_catalog.fetch_repo import fetch_repo_data, fetch_hf_model, GitHubAPIError
 
 
 def test_fetch_repo_data_integration():
-    data = fetch_repo_data("huggingface", "transformers")
+    try:
+        data = fetch_repo_data("huggingface", "transformers")
+    except GitHubAPIError as e:
+        if "rate limit exceeded" in str(e).lower():
+            pytest.skip("GitHub API rate limit exceeded - skipping integration test")
+        raise
 
     # Basic repo metadata
     assert data["full_name"] == "huggingface/transformers"

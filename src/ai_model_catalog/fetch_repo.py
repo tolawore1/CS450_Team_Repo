@@ -2,18 +2,25 @@
 Repository fetching functions for AI Model Catalog
 """
 
-from typing import Dict, Any
+from typing import Dict, Any, Optional, List
+import os
 import logging
 import requests
 
 GITHUB_API = "https://api.github.com"
 HF_API = "https://huggingface.co/api"
-HEADERS = {"Accept": "application/vnd.github+json"}
+GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
+
+HEADERS = {
+    "Accept": "application/vnd.github+json",
+}
+
+if GITHUB_TOKEN:
+    HEADERS["Authorization"] = f"token {GITHUB_TOKEN}"
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("catalog")
 
-# Common test data for fallback
 SAMPLE_ACTION_RUN = {
     "id": 1,
     "name": "CI",
@@ -23,107 +30,209 @@ SAMPLE_ACTION_RUN = {
 }
 
 
-def _get_rate_limit_fallback_data(owner: str, repo: str) -> Dict[str, Any]:
-    """Return fallback data when GitHub API rate limit is exceeded."""
-    return {
-        "full_name": f"{owner}/{repo}",
-        "size": 1000,  # Default size
-        "license": {"spdx_id": "Apache-2.0"},
-        "owner": {"login": owner},
-        "stars": 1000,  # Reasonable default for popular repo
-        "forks": 100,
-        "open_issues": 5,
-        "updated_at": "2025-01-01T00:00:00Z",
-        "readme": (
-            f"# {repo}\n\nThis is a popular repository. Rate limit exceeded. "
-            "Please try again later.\n\nThis repository contains important code and documentation."
-        ),
-        "commits": [{"sha": "abc123", "commit": {"message": "Sample commit"}}],
-        "contributors": [{"login": "contributor1", "contributions": 100}],
-        "issues": [{"number": 1, "title": "Sample issue"}],
-        "pulls": [{"number": 1, "title": "Sample PR"}],
-        "actions": [SAMPLE_ACTION_RUN],
-        "modelSize": 1000,
-        "cardData": {"content": f"# {repo}\n\nRate limit exceeded."},
+class GitHubAPIError(Exception):
+    """Custom exception for GitHub API errors"""
+
+    pass
+
+
+class RepositoryDataError(Exception):
+    """Custom exception for repository data errors"""
+
+    pass
+
+
+def _make_github_request(url: str, params: Optional[Dict] = None) -> requests.Response:
+    """Make a GitHub API request with proper error handling"""
+    try:
+        response = requests.get(url, headers=HEADERS, params=params, timeout=15)
+
+        if response.status_code == 403:
+            raise GitHubAPIError("GitHub API rate limit exceeded")
+
+        response.raise_for_status()
+        return response
+
+    except requests.RequestException as e:
+        raise GitHubAPIError(f"Failed to fetch data from {url}: {str(e)}") from e
+
+
+def _extract_page_count_from_link_header(link_header: str) -> int:
+    """Extract total page count from GitHub Link header"""
+    if 'rel="last"' not in link_header:
+        return 0
+
+    for link in link_header.split(","):
+        if 'rel="last"' in link:
+            last_page_url = link.split(";")[0].strip("<> ")
+            break
+    else:
+        return 0
+
+    if "page=" not in last_page_url:
+        return 0
+
+    page_matches = [
+        part for part in last_page_url.split("&") if part.startswith("page=")
+    ]
+    if not page_matches:
+        return 0
+
+    last_page_param = page_matches[-1]
+    return int(last_page_param.split("=")[1])
+
+
+def _get_total_count_from_link_header(url: str) -> int:
+    """Get total count from GitHub API Link header without fetching all data"""
+    try:
+        response = _make_github_request(url, {"per_page": 1})
+        link_header = response.headers.get("Link", "")
+
+        if link_header:
+            return _extract_page_count_from_link_header(link_header)
+
+        data = response.json()
+        return len(data) if isinstance(data, list) else 0
+
+    except GitHubAPIError:
+        raise
+    except Exception as e:
+        raise RepositoryDataError(f"Failed to get count from {url}: {str(e)}") from e
+
+
+def _fetch_github_endpoint(url: str) -> List[Dict[str, Any]]:
+    """Fetch data from a GitHub API endpoint"""
+    try:
+        response = _make_github_request(url)
+        return response.json()
+    except GitHubAPIError:
+        raise
+    except Exception as e:
+        raise RepositoryDataError(f"Failed to fetch endpoint {url}: {str(e)}") from e
+
+
+def _fetch_readme_content(owner: str, repo: str) -> str:
+    """Fetch README content from GitHub repository"""
+    readme_url = f"{GITHUB_API}/repos/{owner}/{repo}/readme"
+
+    try:
+        response = _make_github_request(readme_url)
+        readme_data = response.json()
+
+        if "download_url" not in readme_data:
+            raise RepositoryDataError("README metadata missing download_url")
+
+        download_response = requests.get(readme_data["download_url"], timeout=15)
+        download_response.raise_for_status()
+        return download_response.text
+
+    except GitHubAPIError:
+        raise
+    except requests.RequestException as e:
+        raise RepositoryDataError(f"Failed to download README content: {str(e)}") from e
+    except Exception as e:
+        raise RepositoryDataError(f"Failed to fetch README: {str(e)}") from e
+
+
+def _fetch_repository_counts(owner: str, repo: str) -> Dict[str, int]:
+    """Fetch all repository counts using Link headers"""
+    base_url = f"{GITHUB_API}/repos/{owner}/{repo}"
+
+    endpoints = {
+        "commits_count": f"{base_url}/commits",
+        "contributors_count": f"{base_url}/contributors",
+        "issues_count": f"{base_url}/issues",
+        "pulls_count": f"{base_url}/pulls",
+        "actions_count": f"{base_url}/actions/runs",
     }
+
+    counts = {}
+    for key, url in endpoints.items():
+        try:
+            counts[key] = _get_total_count_from_link_header(url)
+        except RepositoryDataError as e:
+            log.warning("Failed to get %s: %s", key, e)
+            counts[key] = 0
+
+    return counts
+
+
+def _fetch_repository_samples(owner: str, repo: str) -> Dict[str, List[Dict[str, Any]]]:
+    """Fetch sample data from repository endpoints"""
+    base_url = f"{GITHUB_API}/repos/{owner}/{repo}"
+
+    endpoints = {
+        "commits_data": f"{base_url}/commits?per_page=5",
+        "contributors_data": f"{base_url}/contributors?per_page=5",
+        "issues_data": f"{base_url}/issues?per_page=5",
+        "pulls_data": f"{base_url}/pulls?per_page=5",
+        "actions_data": f"{base_url}/actions/runs?per_page=5",
+    }
+
+    samples = {}
+    for key, url in endpoints.items():
+        try:
+            samples[key] = _fetch_github_endpoint(url)
+        except RepositoryDataError as e:
+            log.warning("Failed to get %s: %s", key, e)
+            samples[key] = []
+
+    return samples
+
+
+def _extract_actions_runs(actions_data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Extract workflow runs from actions data"""
+    if isinstance(actions_data, dict):
+        return actions_data.get("workflow_runs", [])
+    return []
+
+
+def _format_actions_data(actions_runs: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Format actions runs data for output"""
+    return [
+        {
+            "id": run.get("id"),
+            "name": run.get("name"),
+            "status": run.get("status"),
+            "conclusion": run.get("conclusion"),
+            "commit": run.get("head_commit", {}).get("id"),
+        }
+        for run in actions_runs
+    ]
 
 
 def _fetch_github_api_data(owner: str, repo: str) -> Dict[str, Any]:
-    """Fetch all required data from GitHub API endpoints."""
-    # Main repository data
+    """Fetch all required data from GitHub API endpoints"""
     repo_url = f"{GITHUB_API}/repos/{owner}/{repo}"
-    repo_resp = requests.get(repo_url, headers=HEADERS, timeout=15)
-    repo_resp.raise_for_status()
-    repo_data = repo_resp.json()
+    repo_response = _make_github_request(repo_url)
+    repo_data = repo_response.json()
 
-    # README content
     readme_text = _fetch_readme_content(owner, repo)
+    counts = _fetch_repository_counts(owner, repo)
+    samples = _fetch_repository_samples(owner, repo)
 
-    # Additional repository data
-    commits_data = _fetch_github_endpoint(f"{GITHUB_API}/repos/{owner}/{repo}/commits")
-    contributors_data = _fetch_github_endpoint(
-        f"{GITHUB_API}/repos/{owner}/{repo}/contributors"
-    )
-    issues_data = _fetch_github_endpoint(f"{GITHUB_API}/repos/{owner}/{repo}/issues")
-    pulls_data = _fetch_github_endpoint(f"{GITHUB_API}/repos/{owner}/{repo}/pulls")
-    actions_data = _fetch_github_endpoint(
-        f"{GITHUB_API}/repos/{owner}/{repo}/actions/runs"
-    )
-
-    # Extract workflow runs from actions data
-    actions_runs = (
-        actions_data.get("workflow_runs", []) if isinstance(actions_data, dict) else []
-    )
+    actions_runs = _extract_actions_runs(samples["actions_data"])
 
     return {
         "repo_data": repo_data,
         "readme_text": readme_text,
-        "commits_data": commits_data,
-        "contributors_data": contributors_data,
-        "issues_data": issues_data,
-        "pulls_data": pulls_data,
+        "commits_data": samples["commits_data"],
+        "contributors_data": samples["contributors_data"],
+        "issues_data": samples["issues_data"],
+        "pulls_data": samples["pulls_data"],
         "actions_runs": actions_runs,
+        **counts,
     }
 
 
-def _fetch_readme_content(owner: str, repo: str) -> str:
-    """Fetch README content from GitHub repository."""
-    readme_url = f"{GITHUB_API}/repos/{owner}/{repo}/readme"
-    readme_resp = requests.get(readme_url, headers=HEADERS, timeout=15)
-
-    if readme_resp.status_code == 200:
-        try:
-            readme_data = readme_resp.json()
-            if "download_url" in readme_data:
-                readme_text = requests.get(readme_data["download_url"], timeout=15).text
-                return readme_text
-        except (requests.RequestException, ValueError, KeyError):
-            # Handle network errors, JSON parsing errors, or missing keys
-            pass
-
-    return ""
-
-
-def _fetch_github_endpoint(url: str) -> list:
-    """Fetch data from a GitHub API endpoint, returning empty list on failure."""
-    try:
-        resp = requests.get(url, headers=HEADERS, timeout=15)
-        if resp.status_code == 200:
-            return resp.json()
-    except (requests.RequestException, ValueError):
-        # Handle network errors or JSON parsing errors
-        pass
-    return []
-
-
 def _format_repo_api_data(github_data: Dict[str, Any]) -> Dict[str, Any]:
-    """Format the fetched GitHub data into the expected API structure."""
+    """Format the fetched GitHub data into the expected API structure"""
     repo_data = github_data["repo_data"]
     actions_runs = github_data["actions_runs"]
 
     return {
         "full_name": repo_data.get("full_name"),
-        "size": repo_data.get("size"),  # KB
+        "size": repo_data.get("size"),
         "license": repo_data.get("license"),
         "owner": repo_data.get("owner"),
         "stars": repo_data.get("stargazers_count"),
@@ -135,93 +244,100 @@ def _format_repo_api_data(github_data: Dict[str, Any]) -> Dict[str, Any]:
         "contributors": github_data["contributors_data"],
         "issues": github_data["issues_data"],
         "pulls": github_data["pulls_data"],
-        "actions": [
-            {
-                "id": run.get("id"),
-                "name": run.get("name"),
-                "status": run.get("status"),
-                "conclusion": run.get("conclusion"),
-                "commit": run.get("head_commit", {}).get("id"),
-            }
-            for run in actions_runs
-        ],
-        "modelSize": repo_data.get("size"),  # fallback
-        "cardData": {"content": github_data["readme_text"]},  # fallback
+        "actions": _format_actions_data(actions_runs),
+        "modelSize": repo_data.get("size"),
+        "cardData": {"content": github_data["readme_text"]},
+        "commits_count": github_data.get("commits_count", 0),
+        "contributors_count": github_data.get("contributors_count", 0),
+        "issues_count": github_data.get("issues_count", 0),
+        "pulls_count": github_data.get("pulls_count", 0),
+        "actions_count": github_data.get("actions_count", 0),
     }
 
 
 def fetch_repo_data(
     owner: str = "huggingface", repo: str = "transformers"
 ) -> Dict[str, Any]:
-    """Fetch all required GitHub metadata for scoring functions."""
-    repo_url = f"{GITHUB_API}/repos/{owner}/{repo}"
-    repo_resp = requests.get(repo_url, headers=HEADERS, timeout=15)
+    """Fetch all required GitHub metadata for scoring functions"""
+    try:
+        github_data = _fetch_github_api_data(owner, repo)
+        return _format_repo_api_data(github_data)
+    except (GitHubAPIError, RepositoryDataError) as e:
+        log.error("Failed to fetch repository data for %s/%s: %s", owner, repo, e)
+        raise
+    except Exception as e:
+        log.error(
+            "Unexpected error fetching repository data for %s/%s: %s", owner, repo, e
+        )
+        raise RepositoryDataError(f"Unexpected error: {e}") from e
 
-    # Handle rate limiting gracefully
-    if repo_resp.status_code == 403:
-        return _get_rate_limit_fallback_data(owner, repo)
 
-    # Fetch all GitHub data
-    github_data = _fetch_github_api_data(owner, repo)
+def _calculate_model_size(model_data: Dict[str, Any]) -> int:
+    """Calculate model size from available fields"""
+    if "usedStorage" in model_data and model_data["usedStorage"]:
+        return model_data["usedStorage"]
 
-    # Format and return the data
-    return _format_repo_api_data(github_data)
+    if "safetensors" in model_data and model_data["safetensors"]:
+        return sum(
+            file_info.get("size", 0)
+            for file_info in model_data["safetensors"]
+            if isinstance(file_info, dict)
+        )
+
+    if "siblings" in model_data and model_data["siblings"]:
+        return sum(
+            file_info.get("size", 0)
+            for file_info in model_data["siblings"]
+            if isinstance(file_info, dict)
+        )
+
+    return 100 * 1024 * 1024
+
+
+def _fetch_hf_readme(model_id: str) -> str:
+    """Fetch README content from Hugging Face model"""
+    try:
+        readme_url = f"https://huggingface.co/{model_id}/raw/main/README.md"
+        response = requests.get(readme_url, timeout=15)
+        response.raise_for_status()
+        return response.text
+    except requests.RequestException as e:
+        raise RepositoryDataError(
+            f"Failed to fetch README from Hugging Face: {e}"
+        ) from e
 
 
 def fetch_hf_model(model_id: str) -> Dict[str, Any]:
-    """Fetch Hugging Face Hub model metadata and shape it for net_score()."""
+    """Fetch Hugging Face Hub model metadata and shape it for net_score()"""
     model_url = f"{HF_API}/models/{model_id}"
-    resp = requests.get(model_url, timeout=15)
-    resp.raise_for_status()
-    model_data = resp.json()
 
-    # Get license first
+    try:
+        response = requests.get(model_url, timeout=15)
+        response.raise_for_status()
+        model_data = response.json()
+    except requests.RequestException as e:
+        raise RepositoryDataError(
+            f"Failed to fetch model data from Hugging Face: {e}"
+        ) from e
+
     license_type = model_data.get("license", "unknown")
 
-    # Get readme from cardData, with fallback to empty string
     card_data = model_data.get("cardData", {})
     readme_text = card_data.get("content", "") if card_data else ""
 
-    # If no readme content, try to fetch it from the model's README.md file
     if not readme_text:
         try:
-            readme_url = f"https://huggingface.co/{model_id}/raw/main/README.md"
-            readme_resp = requests.get(readme_url, timeout=15)
-            if readme_resp.status_code == 200:
-                readme_text = readme_resp.text
-        except requests.RequestException:
-            # Handle network errors when fetching README
-            pass
+            readme_text = _fetch_hf_readme(model_id)
+        except RepositoryDataError:
+            readme_text = (
+                f"# {model_id}\n\nThis is a Hugging Face model.\n\n"
+                f"For more information, visit: https://huggingface.co/{model_id}"
+            )
 
-    # If still no readme, provide a fallback
-    if not readme_text:
-        readme_text = (
-            f"# {model_id}\n\nThis is a Hugging Face model.\n\n"
-            + f"For more information, visit: https://huggingface.co/{model_id}"
-        )
+    model_size = _calculate_model_size(model_data)
 
-    # Calculate model size from available fields
-    model_size = 0
-
-    # Try usedStorage first (most accurate)
-    if "usedStorage" in model_data and model_data["usedStorage"]:
-        model_size = model_data["usedStorage"]
-    # Try safetensors files
-    elif "safetensors" in model_data and model_data["safetensors"]:
-        for file_info in model_data["safetensors"]:
-            if isinstance(file_info, dict) and "size" in file_info:
-                model_size += file_info["size"]
-    # Try siblings (file list)
-    elif "siblings" in model_data and model_data["siblings"]:
-        for file_info in model_data["siblings"]:
-            if isinstance(file_info, dict) and "size" in file_info:
-                model_size += file_info["size"]
-    else:
-        # Fallback: estimate based on model type or use a reasonable default
-        model_size = 100 * 1024 * 1024  # 100MB default for bert-base-uncased
-
-    api_data = {
-        "modelSize": model_size,  # bytes
+    return {
+        "modelSize": model_size,
         "license": license_type,
         "author": model_data.get("author"),
         "readme": readme_text,
@@ -229,6 +345,3 @@ def fetch_hf_model(model_id: str) -> Dict[str, Any]:
         "downloads": model_data.get("downloads", 0),
         "lastModified": model_data.get("lastModified", ""),
     }
-    # print(api_data)
-
-    return api_data

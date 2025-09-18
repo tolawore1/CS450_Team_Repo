@@ -8,11 +8,12 @@ from ai_model_catalog.fetch_repo import (
 
 
 # --- Helpers to fake requests.get ---
-def fake_response(json_data, status=200, text_data=None):
+def fake_response(json_data, status=200, text_data=None, headers=None):
     mock_resp = MagicMock()
     mock_resp.status_code = status
     mock_resp.json.return_value = json_data
     mock_resp.text = text_data or ""
+    mock_resp.headers = headers or {}
     mock_resp.raise_for_status = MagicMock()
     return mock_resp
 
@@ -54,14 +55,60 @@ def test_fetch_repo_data(mock_get):
     # Configure side effects for sequential calls
     mock_get.side_effect = [
         fake_response(repo_json),  # repo (rate limit check)
-        fake_response(repo_json),  # repo (main data fetch)
-        fake_response(readme_json),  # readme metadata
-        fake_response(text_data=readme_text, json_data={}),  # readme content
-        fake_response(commits_json),  # commits
-        fake_response(contributors_json),  # contributors
-        fake_response(issues_json),  # issues
-        fake_response(pulls_json),  # pulls
-        fake_response(actions_json),  # actions
+        fake_response(readme_json, status=200),  # readme metadata
+        fake_response(text_data=readme_text, json_data={}),  # readme content download
+        # Count fetching calls (per_page=1) with Link headers
+        fake_response(
+            commits_json,
+            headers={
+                "Link": (
+                    "<https://api.github.com/repos/test/commits?per_page=1&page=100>; "
+                    'rel="last"'
+                )
+            },
+        ),  # commits count
+        fake_response(
+            contributors_json,
+            headers={
+                "Link": (
+                    "<https://api.github.com/repos/test/contributors?per_page=1&page=50>; "
+                    'rel="last"'
+                )
+            },
+        ),  # contributors count
+        fake_response(
+            issues_json,
+            headers={
+                "Link": (
+                    "<https://api.github.com/repos/test/issues?per_page=1&page=25>; "
+                    'rel="last"'
+                )
+            },
+        ),  # issues count
+        fake_response(
+            pulls_json,
+            headers={
+                "Link": (
+                    "<https://api.github.com/repos/test/pulls?per_page=1&page=75>; "
+                    'rel="last"'
+                )
+            },
+        ),  # pulls count
+        fake_response(
+            actions_json,
+            headers={
+                "Link": (
+                    "<https://api.github.com/repos/test/actions/runs?per_page=1&page=200>; "
+                    'rel="last"'
+                )
+            },
+        ),  # actions count
+        # Sample data calls (per_page=5)
+        fake_response(commits_json),  # commits sample
+        fake_response(contributors_json),  # contributors sample
+        fake_response(issues_json),  # issues sample
+        fake_response(pulls_json),  # pulls sample
+        fake_response(actions_json),  # actions sample
     ]
 
     data = fetch_repo_data("huggingface", "transformers")
@@ -73,6 +120,12 @@ def test_fetch_repo_data(mock_get):
     assert data["open_issues"] == 7
     assert "Transformers README" in data["readme"]
     assert data["actions"][0]["conclusion"] == "success"
+    # Test count fields
+    assert data["commits_count"] == 100
+    assert data["contributors_count"] == 50
+    assert data["issues_count"] == 25
+    assert data["pulls_count"] == 75
+    assert data["actions_count"] == 200
 
 
 @patch("requests.get")
