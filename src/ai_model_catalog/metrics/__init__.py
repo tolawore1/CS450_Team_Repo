@@ -1,13 +1,12 @@
 from .base import Metric
-from .score_license import LicenseMetric
-from .score_size import SizeMetric
-from .score_ramp_up_time import RampUpMetric
-from .score_bus_factor import BusFactorMetric
 from .score_available_dataset_and_code import AvailableDatasetAndCodeMetric
-from .score_dataset_quality import DatasetQualityMetric
+from .score_bus_factor import BusFactorMetric
 from .score_code_quality import CodeQualityMetric
+from .score_dataset_quality import DatasetQualityMetric
+from .score_license import LicenseMetric
 from .score_performance_claims import PerformanceClaimsMetric
-
+from .score_ramp_up_time import RampUpMetric
+from .score_size import SizeMetric
 
 score_license = LicenseMetric().score
 score_size = SizeMetric().score

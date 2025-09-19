@@ -9,10 +9,10 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 from ai_model_catalog.cli import (  # pylint: disable=wrong-import-position
     _display_available_owners,
     _display_owner_repositories,
-    _format_repository_data,
-    _format_model_data,
     _extract_license_name,
     _format_count_info,
+    _format_model_data,
+    _format_repository_data,
 )
 
 

@@ -3,10 +3,9 @@ import json
 import math
 import time
 
-from ai_model_catalog.metrics.runner import run_metrics, print_ndjson
 from ai_model_catalog.metrics.base import Metric
+from ai_model_catalog.metrics.runner import print_ndjson, run_metrics
 from ai_model_catalog.metrics.types import MetricResult
-
 
 # --- Fake metrics for concurrency/clamping/error tests ------------------------
 

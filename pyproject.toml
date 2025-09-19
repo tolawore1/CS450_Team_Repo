@@ -48,3 +48,17 @@ source = ["src/ai_model_catalog"]
 
 [tool.coverage.report]
 skip_empty = true
+
+[tool.isort]
+profile = "black"
+line_length = 100
+src_paths = ["src", "tests"]
+known_first_party = ["ai_model_catalog"]
+
+[tool.mypy]
+python_version = "3.13"
+mypy_path = ["src"]                # so it finds ai_model_catalog in src/
+ignore_missing_imports = true      # don't fail on 3rd-party packages without stubs
+pretty = true
+warn_unused_ignores = true
+warn_redundant_casts = true

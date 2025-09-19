@@ -1,4 +1,5 @@
 import math
+
 import pytest
 
 from ai_model_catalog.metrics.score_ramp_up_time import (

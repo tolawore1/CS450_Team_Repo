@@ -1,9 +1,12 @@
 """AI Model Catalog - CLI for browsing AI/ML models"""
 
 import logging
-from typing import Dict, Any
+from typing import Any, Dict
+
 import typer
+
 from ai_model_catalog.score_model import net_score
+
 from . import fetch_repo as fr
 from .fetch_repo import GitHubAPIError, RepositoryDataError
 

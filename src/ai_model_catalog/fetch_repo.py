@@ -2,9 +2,10 @@
 Repository fetching functions for AI Model Catalog
 """
 
-from typing import Dict, Any, Optional, List
-import os
 import logging
+import os
+from typing import Any, Dict, List, Optional
+
 import requests
 
 GITHUB_API = "https://api.github.com"

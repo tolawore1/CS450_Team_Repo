@@ -1,14 +1,15 @@
 from typing import Dict
-from .metrics.score_size import score_size
-from .metrics.score_license import score_license
-from .metrics.score_ramp_up_time import score_ramp_up_time
-from .metrics.score_bus_factor import score_bus_factor
+
 from .metrics.score_available_dataset_and_code import (
     score_available_dataset_and_code as score_availability,
 )
-from .metrics.score_dataset_quality import score_dataset_quality
+from .metrics.score_bus_factor import score_bus_factor
 from .metrics.score_code_quality import score_code_quality
+from .metrics.score_dataset_quality import score_dataset_quality
+from .metrics.score_license import score_license
 from .metrics.score_performance_claims import score_performance_claims
+from .metrics.score_ramp_up_time import score_ramp_up_time
+from .metrics.score_size import score_size
 
 
 def net_score(api_data: Dict) -> Dict[str, float]:

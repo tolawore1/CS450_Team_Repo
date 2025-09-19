@@ -1,5 +1,6 @@
 import pytest
-from ai_model_catalog.fetch_repo import fetch_repo_data, fetch_hf_model, GitHubAPIError
+
+from ai_model_catalog.fetch_repo import GitHubAPIError, fetch_hf_model, fetch_repo_data
 
 
 def test_fetch_repo_data_integration():

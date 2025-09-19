@@ -1,9 +1,9 @@
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 from ai_model_catalog.fetch_repo import (
-    fetch_repo_data,
-    fetch_hf_model,
     SAMPLE_ACTION_RUN,
+    fetch_hf_model,
+    fetch_repo_data,
 )
 
 

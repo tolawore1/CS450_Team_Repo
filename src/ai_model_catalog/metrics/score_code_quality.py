@@ -1,5 +1,7 @@
 from __future__ import annotations
+
 from typing import Iterable, Union
+
 from .base import Metric
 
 

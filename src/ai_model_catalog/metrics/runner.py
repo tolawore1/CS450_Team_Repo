@@ -1,8 +1,9 @@
 from __future__ import annotations
+
 import json
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import Iterable, List, TextIO
 from time import perf_counter
+from typing import Iterable, List, TextIO
 
 from .base import Metric
 from .types import MetricResult

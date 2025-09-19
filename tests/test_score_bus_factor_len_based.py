@@ -1,4 +1,5 @@
 import math
+
 import pytest
 
 from ai_model_catalog.metrics.score_bus_factor import (
