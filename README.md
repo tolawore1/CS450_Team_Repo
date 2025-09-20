@@ -248,18 +248,20 @@ $env:LOG_FILE="$PWD\logs\app.log"
 python -m ai_model_catalog.cli models --owner huggingface --repo transformers
 Get-Content .\logs\app.log
 
-```bash
+bash
 export LOG_LEVEL=2               # 0=silent, 1=info, 2=debug
 export LOG_FILE="$PWD/logs/app.log"
 python -m ai_model_catalog.cli models --owner huggingface --repo transformers
 cat ./logs/app.log
 
-```Format
+Format
 YYYY-MM-DD HH:MM:SS LEVEL logger: message
 examples:
 2025-09-19 19:30:18 INFO catalog: models command: owner=huggingface repo=transformers
 2025-09-19 19:30:18 DEBUG ai_model_catalog.fetch_repo: OK https://api.github.com/repos/huggingface/transformers status=200 len=12345
 2025-09-19 19:30:19 INFO ai_model_catalog.score_model: NetScore=0.842
+
+
 
 
 ## Development
