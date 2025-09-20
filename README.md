@@ -231,6 +231,37 @@ weights = {
 }
 ```
 
+## Logging
+
+This app writes logs to a file based on two environment variables:
+
+- `LOG_FILE` — the path to the log file
+- `LOG_LEVEL` — verbosity: `"0"` (silent, default), `"1"` (info), `"2"` (debug)
+
+If `LOG_LEVEL=0` or `LOG_FILE` is unset, no log output is written.
+
+### Quick start (PowerShell/bash)
+
+```powershell
+$env:LOG_LEVEL="2"               # 0=silent, 1=info, 2=debug
+$env:LOG_FILE="$PWD\logs\app.log"
+python -m ai_model_catalog.cli models --owner huggingface --repo transformers
+Get-Content .\logs\app.log
+
+```bash
+export LOG_LEVEL=2               # 0=silent, 1=info, 2=debug
+export LOG_FILE="$PWD/logs/app.log"
+python -m ai_model_catalog.cli models --owner huggingface --repo transformers
+cat ./logs/app.log
+
+```Format
+YYYY-MM-DD HH:MM:SS LEVEL logger: message
+examples:
+2025-09-19 19:30:18 INFO catalog: models command: owner=huggingface repo=transformers
+2025-09-19 19:30:18 DEBUG ai_model_catalog.fetch_repo: OK https://api.github.com/repos/huggingface/transformers status=200 len=12345
+2025-09-19 19:30:19 INFO ai_model_catalog.score_model: NetScore=0.842
+
+
 ## Development
 
 ### Project Structure

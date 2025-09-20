@@ -1,3 +1,4 @@
+import logging
 from typing import Dict
 
 from .metrics.score_available_dataset_and_code import (
@@ -11,8 +12,12 @@ from .metrics.score_performance_claims import score_performance_claims
 from .metrics.score_ramp_up_time import score_ramp_up_time
 from .metrics.score_size import score_size
 
+log = logging.getLogger(__name__)
+
 
 def net_score(api_data: Dict) -> Dict[str, float]:
+    log.debug("net_score: input keys=%s", list(api_data.keys()))
+
     repo_size_bytes = (
         api_data.get("size", 0) * 1024
         if "full_name" in api_data
@@ -37,6 +42,8 @@ def net_score(api_data: Dict) -> Dict[str, float]:
         "license": license_type,
         "readme": readme,
         "maintainers": maintainers,
+        "has_code": api_data.get("has_code", True),
+        "has_dataset": api_data.get("has_dataset", True),
     }
 
     scores = {
@@ -45,7 +52,7 @@ def net_score(api_data: Dict) -> Dict[str, float]:
         "ramp_up_time": score_ramp_up_time(model_data["readme"]),
         "bus_factor": score_bus_factor(model_data["maintainers"]),
         "availability": score_availability(
-            model_data.get("has_code", True), model_data.get("has_dataset", True)
+            model_data["has_code"], model_data["has_dataset"]
         ),
         "dataset_quality": score_dataset_quality(api_data),
         "code_quality": score_code_quality(api_data),
@@ -65,4 +72,6 @@ def net_score(api_data: Dict) -> Dict[str, float]:
 
     netscore = sum(scores[k] * weights[k] for k in scores)
     scores["NetScore"] = round(netscore, 3)
+    log.debug("component scores=%s", scores)
+    log.info("NetScore=%s", scores["NetScore"])
     return scores

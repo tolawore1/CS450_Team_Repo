@@ -5,13 +5,15 @@ from typing import Any, Dict
 
 import typer
 
+from ai_model_catalog.logging_config import configure_logging
 from ai_model_catalog.score_model import net_score
 
 from . import fetch_repo as fr
 from .fetch_repo import GitHubAPIError, RepositoryDataError
 
+configure_logging()
 app = typer.Typer(help="AI/ML model catalog CLI")
-logging.basicConfig(level=logging.INFO)
+log = logging.getLogger(__name__)
 log = logging.getLogger("catalog")
 
 
@@ -137,21 +139,26 @@ def _get_repository_counts_info(data: Dict[str, Any]) -> Dict[str, str]:
 
 def _handle_repository_command(owner: str, repo: str) -> None:
     """Handle the repository command logic."""
+    log.info("models command: owner=%s repo=%s", owner, repo)
     data = fr.fetch_repo_data(owner=owner, repo=repo)
+    log.debug("models: fetched keys=%s", list(data.keys())[:12])
     formatted_data = _format_repository_data(data, owner, repo)
     counts_info = _get_repository_counts_info(data)
-
     _display_repository_info(formatted_data, counts_info)
     _display_scores(data)
+    log.info("models command: success owner=%s repo=%s", owner, repo)
 
 
 def _handle_model_command(model_id: str) -> None:
     """Handle the Hugging Face model command logic."""
+    log.info("hf_model command: model_id=%s", model_id)
     data = fr.fetch_hf_model(model_id=model_id)
+    log.debug("hf_model: fetched keys=%s", list(data.keys())[:12])
     formatted_data = _format_model_data(data, model_id)
 
     _display_model_info(formatted_data)
     _display_scores(data)
+    log.info("hf_model command: success model_id=%s", model_id)
 
 
 @app.command()
@@ -261,7 +268,10 @@ def _handle_github_repository_interactive() -> None:
 
     # Display repositories for the selected owner
     _display_owner_repositories(owner_choice)
-    repo = _get_user_input("Enter repository name", "transformers")
+
+    # Accept name OR number (1–5)
+    raw = _get_user_input("Enter repository (name or 1-5)", "transformers")
+    repo = _pick_repo_for_owner(owner, raw)
 
     print(f"\nFetching data for {owner}/{repo}...")
     try:
@@ -273,6 +283,23 @@ def _handle_github_repository_interactive() -> None:
         print("\n\n👋 Operation cancelled by user")
     except (ValueError, ConnectionError, TimeoutError) as e:
         print(f"❌ Network or data error: {e}")
+
+
+def _pick_repo_for_owner(owner: str, raw: str) -> str:
+    """Allow user to enter either a repo name or an index like '1'."""
+    options_by_owner = {
+        "huggingface": ["transformers", "diffusers", "accelerate", "datasets", "trl"],
+        "openai": ["openai-cookbook", "whisper", "gym", "baselines", "microscope"],
+        "facebookresearch": ["fairseq", "llama", "detectron2", "pytorch3d", "esm"],
+        "google-research": ["bert", "t5x", "vision_transformer", "biggan", "scenic"],
+        "microsoft": ["DeepSpeed", "LoRA", "onnxruntime", "lightgbm", "NCCL"],
+    }
+    if raw.isdigit():
+        idx = int(raw)
+        choices = options_by_owner.get(owner, [])
+        if 1 <= idx <= len(choices):
+            return choices[idx - 1]
+    return raw  # treat as a literal repo name
 
 
 def _handle_huggingface_model_interactive() -> None:

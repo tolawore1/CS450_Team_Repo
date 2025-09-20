@@ -19,7 +19,7 @@ HEADERS = {
 if GITHUB_TOKEN:
     HEADERS["Authorization"] = f"token {GITHUB_TOKEN}"
 
-logging.basicConfig(level=logging.INFO)
+log = logging.getLogger(__name__)
 log = logging.getLogger("catalog")
 
 SAMPLE_ACTION_RUN = {
@@ -46,15 +46,22 @@ class RepositoryDataError(Exception):
 def _make_github_request(url: str, params: Optional[Dict] = None) -> requests.Response:
     """Make a GitHub API request with proper error handling"""
     try:
+        log.info("GET %s", url)
+        log.debug("GET %s params=%s", url, params)
         response = requests.get(url, headers=HEADERS, params=params, timeout=15)
 
         if response.status_code == 403:
+            log.warning("GitHub API 403 (rate limit?) for %s", url)
             raise GitHubAPIError("GitHub API rate limit exceeded")
 
         response.raise_for_status()
+        log.debug(
+            "OK %s status=%s len=%s", url, response.status_code, len(response.content)
+        )
         return response
 
     except requests.RequestException as e:
+        log.exception("HTTP error for %s", url)
         raise GitHubAPIError(f"Failed to fetch data from {url}: {str(e)}") from e
 
 
@@ -117,11 +124,14 @@ def _fetch_readme_content(owner: str, repo: str) -> str:
     readme_url = f"{GITHUB_API}/repos/{owner}/{repo}/readme"
 
     try:
+        log.info("Fetch README meta %s/%s", owner, repo)
         response = _make_github_request(readme_url)
         readme_data = response.json()
 
         if "download_url" not in readme_data:
             raise RepositoryDataError("README metadata missing download_url")
+
+        log.debug("README download url=%s", readme_data.get("download_url"))
 
         download_response = requests.get(readme_data["download_url"], timeout=15)
         download_response.raise_for_status()
@@ -138,6 +148,7 @@ def _fetch_readme_content(owner: str, repo: str) -> str:
 def _fetch_repository_counts(owner: str, repo: str) -> Dict[str, int]:
     """Fetch all repository counts using Link headers"""
     base_url = f"{GITHUB_API}/repos/{owner}/{repo}"
+    log.info("Fetch counts %s/%s", owner, repo)
 
     endpoints = {
         "commits_count": f"{base_url}/commits",
@@ -161,6 +172,7 @@ def _fetch_repository_counts(owner: str, repo: str) -> Dict[str, int]:
 def _fetch_repository_samples(owner: str, repo: str) -> Dict[str, List[Dict[str, Any]]]:
     """Fetch sample data from repository endpoints"""
     base_url = f"{GITHUB_API}/repos/{owner}/{repo}"
+    log.info("Fetch samples %s/%s", owner, repo)
 
     endpoints = {
         "commits_data": f"{base_url}/commits?per_page=5",
