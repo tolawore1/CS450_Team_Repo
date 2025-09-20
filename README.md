@@ -261,8 +261,7 @@ examples:
 2025-09-19 19:30:18 DEBUG ai_model_catalog.fetch_repo: OK https://api.github.com/repos/huggingface/transformers status=200 len=12345
 2025-09-19 19:30:19 INFO ai_model_catalog.score_model: NetScore=0.842
 
-
-
+```
 
 ## Development
 
