@@ -320,6 +320,49 @@ def _fetch_hf_readme(model_id: str) -> str:
         ) from e
 
 
+def fetch_model_data(model_id: str) -> Dict[str, Any]:
+    """
+    Fetch Hugging Face Hub model metadata and shape it for ModelHandler usage.
+    """
+    model_url = f"{HF_API}/models/{model_id}"
+
+    try:
+        response = requests.get(model_url, timeout=15)
+        response.raise_for_status()
+        model_data = response.json()
+    except requests.RequestException as e:
+        log.error(f"Failed to fetch model data from Hugging Face for {model_id}: {e}")
+        raise RepositoryDataError(
+            f"Failed to fetch model data from Hugging Face: {e}"
+        ) from e
+
+    license_type = model_data.get("license", "unknown")
+
+    card_data = model_data.get("cardData", {})
+    readme_text = card_data.get("content", "") if card_data else ""
+
+    if not readme_text:
+        try:
+            readme_text = _fetch_hf_readme(model_id)
+        except RepositoryDataError:
+            readme_text = (
+                f"# {model_id}\n\nThis is a Hugging Face model.\n\n"
+                f"For more information, visit: https://huggingface.co/{model_id}"
+            )
+
+    model_size = _calculate_model_size(model_data)
+
+    return {
+        "modelSize": model_size,
+        "license": license_type,
+        "author": model_data.get("author"),
+        "readme": readme_text,
+        "cardData": card_data,
+        "downloads": model_data.get("downloads", 0),
+        "lastModified": model_data.get("lastModified", ""),
+    }
+
+
 def fetch_hf_model(model_id: str) -> Dict[str, Any]:
     """Fetch Hugging Face Hub model metadata and shape it for net_score()"""
     model_url = f"{HF_API}/models/{model_id}"
