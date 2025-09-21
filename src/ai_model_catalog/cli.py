@@ -1,8 +1,9 @@
 import typer
-from ai_model_catalog.model_sources.github_model import RepositoryHandler
-from ai_model_catalog.model_sources.hf_model import ModelHandler
+
 from ai_model_catalog.interactive import interactive_main
 from ai_model_catalog.logging_config import configure_logging
+from ai_model_catalog.model_sources.github_model import RepositoryHandler
+from ai_model_catalog.model_sources.hf_model import ModelHandler
 
 app = typer.Typer()
 

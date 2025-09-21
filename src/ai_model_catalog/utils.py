@@ -1,5 +1,7 @@
 from typing import Any, Dict
+
 import typer
+
 from ai_model_catalog.score_model import net_score
 
 

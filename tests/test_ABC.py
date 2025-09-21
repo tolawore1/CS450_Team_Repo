@@ -1,4 +1,5 @@
 import pytest
+
 from ai_model_catalog.metrics.base import Metric
 
 

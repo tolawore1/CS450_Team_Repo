@@ -1,4 +1,5 @@
 from unittest.mock import MagicMock, patch
+
 from ai_model_catalog.fetch_repo import fetch_hf_model
 
 

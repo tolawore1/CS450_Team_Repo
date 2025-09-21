@@ -1,12 +1,14 @@
 import logging
 from typing import Any, Dict
-from .base import BaseHandler
+
+from ai_model_catalog.fetch_repo import fetch_model_data
+
 from ..utils import (
-    _format_model_data,
     _display_model_info,
     _display_scores,
+    _format_model_data,
 )
-from ai_model_catalog.fetch_repo import fetch_model_data
+from .base import BaseHandler
 
 log = logging.getLogger("catalog")
 

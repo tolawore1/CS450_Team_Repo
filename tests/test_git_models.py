@@ -42,19 +42,49 @@ def test_fetch_repo_data(mock_get):
         fake_response(readme_json, status=200),  # readme meta
         fake_response(text_data=readme_text, json_data={}),  # readme content
         fake_response(
-            commits_json, headers={"Link": '<...page=100>; rel="last"'}
+            commits_json,
+            headers={
+                "Link": (
+                    "<https://api.github.com/repos/huggingface/transformers/"
+                    'commits?per_page=1&page=100>; rel="last"'
+                )
+            },
         ),  # commits count
         fake_response(
-            contributors_json, headers={"Link": '<...page=50>; rel="last"'}
+            contributors_json,
+            headers={
+                "Link": (
+                    "<https://api.github.com/repos/huggingface/transformers/"
+                    'contributors?per_page=1&page=50>; rel="last"'
+                )
+            },
         ),  # contributors count
         fake_response(
-            issues_json, headers={"Link": '<...page=25>; rel="last"'}
+            issues_json,
+            headers={
+                "Link": (
+                    "<https://api.github.com/repos/huggingface/transformers/"
+                    'issues?per_page=1&page=25>; rel="last"'
+                )
+            },
         ),  # issues count
         fake_response(
-            pulls_json, headers={"Link": '<...page=75>; rel="last"'}
+            pulls_json,
+            headers={
+                "Link": (
+                    "<https://api.github.com/repos/huggingface/transformers/"
+                    'pulls?per_page=1&page=75>; rel="last"'
+                )
+            },
         ),  # pulls count
         fake_response(
-            actions_json, headers={"Link": '<...page=200>; rel="last"'}
+            actions_json,
+            headers={
+                "Link": (
+                    "<https://api.github.com/repos/huggingface/transformers/"
+                    'actions/runs?per_page=1&page=200>; rel="last"'
+                )
+            },
         ),  # actions count
         fake_response(commits_json),  # commits sample
         fake_response(contributors_json),  # contributors sample

@@ -245,13 +245,13 @@ If `LOG_LEVEL=0` or `LOG_FILE` is unset, no log output is written.
 ```powershell
 $env:LOG_LEVEL="2"               # 0=silent, 1=info, 2=debug
 $env:LOG_FILE="$PWD\logs\catalog.log"
-python -m ai_model_catalog.cli models --owner huggingface --repo transformers
+python -m ai_model_catalog.cli models --owner <e.g huggingface> --repo <e.g transformers>
 Get-Content .\logs\catalog.log
 
 bash
 export LOG_LEVEL=2               # 0=silent, 1=info, 2=debug
 export LOG_FILE="$PWD/logs/catalog.log"
-python -m ai_model_catalog.cli models --owner huggingface --repo transformers
+python -m ai_model_catalog.cli models --owner <e.g huggingface> --repo <e.g transformers>
 cat ./logs/catalog.log
 
 Format

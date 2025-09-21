@@ -1,10 +1,15 @@
 """AI Model Catalog - Interactive CLI Mode"""
 
 import logging
+
+import requests
 import typer
+
+from ai_model_catalog.fetch_repo import GitHubAPIError, RepositoryDataError
 from ai_model_catalog.logging_config import configure_logging
 from ai_model_catalog.model_sources.github_model import RepositoryHandler
 from ai_model_catalog.model_sources.hf_model import ModelHandler
+from ai_model_catalog.utils import _pick_repo_for_owner
 
 app = typer.Typer()
 log = logging.getLogger("catalog")
@@ -17,8 +22,9 @@ def interactive():
     interactive_main()
 
 
-def interactive_main():
+def interactive_main() -> None:
     """Interactive main function that prompts user to select an AI model and runs CLI."""
+    log.info("Starting interactive mode")
     _display_main_menu()
 
     while True:
@@ -43,13 +49,15 @@ def interactive_main():
         except KeyboardInterrupt:
             print("\n\n👋 Goodbye!")
             break
-        except Exception as e:
+        except (ValueError,) as e:
+            log.warning("Input error: %s", e)
             print(f"❌ An error occurred: {e}")
             continue
 
 
-def _handle_github_repository_interactive():
+def _handle_github_repository_interactive() -> None:
     """Handle GitHub repository browsing in interactive mode."""
+    log.info("Interactive: GitHub repo flow selected")
     print("\n📁 GitHub Repository Browser")
     _display_available_owners()
 
@@ -70,13 +78,13 @@ def _handle_github_repository_interactive():
         "microsoft",
     ]
     owner = owners[owner_choice - 1]
+    log.debug("Owner selected: %s", owner)
 
     _display_owner_repositories(owner_choice)
     raw = _get_user_input("Enter repository (name or 1-5)", "transformers")
-
-    from ai_model_catalog.utils import _pick_repo_for_owner
-
     repo = _pick_repo_for_owner(owner, raw)
+    log.debug("Repo chosen (raw=%r -> resolved=%s)", raw, repo)
+    log.info("Fetching repo %s/%s", owner, repo)
 
     print(f"\nFetching data for {owner}/{repo}...")
     try:
@@ -84,14 +92,17 @@ def _handle_github_repository_interactive():
         raw_data = handler.fetch_data()
         formatted_data = handler.format_data(raw_data)
         handler.display_data(formatted_data, raw_data)
-    except Exception as e:
+    except (GitHubAPIError, RepositoryDataError, requests.RequestException) as e:
+        log.error("Repository fetch/display error for %s/%s: %s", owner, repo, e)
         print(f"❌ Error fetching or displaying repository data: {e}")
 
 
 def _handle_huggingface_model_interactive():
     """Handle Hugging Face model search in interactive mode."""
+    log.info("Interactive: Hugging Face model flow selected")
     print("\n🤗 Hugging Face Model Search")
     model_id = _get_user_input("Enter model ID", "bert-base-uncased")
+    log.debug("Model selected: %s", model_id)
 
     print(f"\nFetching data for model: {model_id}...")
     try:
@@ -99,7 +110,8 @@ def _handle_huggingface_model_interactive():
         raw_data = handler.fetch_data()
         formatted_data = handler.format_data(raw_data)
         handler.display_data(formatted_data, raw_data)
-    except Exception as e:
+    except (RepositoryDataError, requests.RequestException) as e:
+        log.error("HF fetch/display error for %s: %s", model_id, e)
         print(f"❌ Error fetching or displaying model data: {e}")
 
 

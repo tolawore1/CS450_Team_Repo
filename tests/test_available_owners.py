@@ -1,4 +1,5 @@
 from unittest.mock import patch
+
 from ai_model_catalog.interactive import (
     _display_available_owners,
     _display_owner_repositories,

@@ -1,7 +1,7 @@
 from ai_model_catalog.utils import (
-    _format_repository_data,
-    _format_model_data,
     _format_count_info,
+    _format_model_data,
+    _format_repository_data,
 )
 
 

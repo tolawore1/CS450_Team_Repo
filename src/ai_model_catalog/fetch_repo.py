@@ -20,7 +20,6 @@ if GITHUB_TOKEN:
     HEADERS["Authorization"] = f"token {GITHUB_TOKEN}"
 
 log = logging.getLogger(__name__)
-log = logging.getLogger("catalog")
 
 SAMPLE_ACTION_RUN = {
     "id": 1,
@@ -331,7 +330,9 @@ def fetch_model_data(model_id: str) -> Dict[str, Any]:
         response.raise_for_status()
         model_data = response.json()
     except requests.RequestException as e:
-        log.error(f"Failed to fetch model data from Hugging Face for {model_id}: {e}")
+        log.error(
+            "Failed to fetch model data from Hugging Face for %s: %s", model_id, e
+        )
         raise RepositoryDataError(
             f"Failed to fetch model data from Hugging Face: {e}"
         ) from e
