@@ -2,22 +2,29 @@ import typer
 from ai_model_catalog.model_sources.github_model import RepositoryHandler
 from ai_model_catalog.model_sources.hf_model import ModelHandler
 from ai_model_catalog.interactive import interactive_main
+from ai_model_catalog.logging_config import configure_logging
 
 app = typer.Typer()
 
 
 @app.command()
 def models(owner: str = "huggingface", repo: str = "transformers"):
-    """Fetch metadata from GitHub API for a repo."""
+    """Fetch and display metadata from GitHub API for a repository."""
+    configure_logging()
     handler = RepositoryHandler(owner, repo)
-    handler.fetch_data()
+    raw = handler.fetch_data()
+    formatted = handler.format_data(raw)
+    handler.display_data(formatted, raw)
 
 
 @app.command()
 def hf_model(model_id: str = "bert-base-uncased"):
-    """Fetch metadata from Hugging Face Hub for a given model ID."""
+    """Fetch and display metadata from Hugging Face Hub for a model."""
+    configure_logging()
     handler = ModelHandler(model_id)
-    handler.fetch_data()
+    raw = handler.fetch_data()
+    formatted = handler.format_data(raw)
+    handler.display_data(formatted, raw)
 
 
 @app.command()

@@ -3,20 +3,8 @@
 import logging
 import typer
 from ai_model_catalog.logging_config import configure_logging
-from ai_model_catalog.fetch_repo import (
-    fetch_repo_data,
-    fetch_hf_model,
-    GitHubAPIError,
-    RepositoryDataError,
-)
-from ai_model_catalog.utils import (
-    _format_repository_data,
-    _format_model_data,
-    _get_repository_counts_info,
-    _display_scores,
-    _pick_repo_for_owner,
-)
-from ai_model_catalog.score_model import net_score
+from ai_model_catalog.model_sources.github_model import RepositoryHandler
+from ai_model_catalog.model_sources.hf_model import ModelHandler
 
 app = typer.Typer()
 log = logging.getLogger("catalog")
@@ -24,8 +12,8 @@ log = logging.getLogger("catalog")
 
 @app.command()
 def interactive():
-    configure_logging()
     """Start interactive mode for browsing AI models."""
+    configure_logging()
     interactive_main()
 
 
@@ -85,16 +73,19 @@ def _handle_github_repository_interactive():
 
     _display_owner_repositories(owner_choice)
     raw = _get_user_input("Enter repository (name or 1-5)", "transformers")
+
+    from ai_model_catalog.utils import _pick_repo_for_owner
+
     repo = _pick_repo_for_owner(owner, raw)
 
     print(f"\nFetching data for {owner}/{repo}...")
     try:
-        data = fetch_repo_data(owner=owner, repo=repo)
-        _display_repository_interactive(data, owner, repo)
-    except (GitHubAPIError, RepositoryDataError) as e:
-        print(f"❌ Error fetching repository data: {e}")
+        handler = RepositoryHandler(owner, repo)
+        raw_data = handler.fetch_data()
+        formatted_data = handler.format_data(raw_data)
+        handler.display_data(formatted_data, raw_data)
     except Exception as e:
-        print(f"❌ Unexpected error: {e}")
+        print(f"❌ Error fetching or displaying repository data: {e}")
 
 
 def _handle_huggingface_model_interactive():
@@ -104,59 +95,12 @@ def _handle_huggingface_model_interactive():
 
     print(f"\nFetching data for model: {model_id}...")
     try:
-        data = fetch_hf_model(model_id=model_id)
-        _display_model_interactive(data, model_id)
-    except (GitHubAPIError, RepositoryDataError) as e:
-        print(f"❌ Error fetching model data: {e}")
+        handler = ModelHandler(model_id)
+        raw_data = handler.fetch_data()
+        formatted_data = handler.format_data(raw_data)
+        handler.display_data(formatted_data, raw_data)
     except Exception as e:
-        print(f"❌ Unexpected error: {e}")
-
-
-def _display_repository_interactive(data, owner: str, repo: str):
-    formatted = _format_repository_data(data, owner, repo)
-    counts = _get_repository_counts_info(data)
-
-    print("\n📊 Repository Information:")
-    print(f"Name: {formatted['full_name']}")
-    print(f"Description: {formatted['description']}")
-    print(f"Language: {formatted['language']}")
-    print(f"Updated: {formatted['updated']}")
-    print(f"Stars: {formatted['stars']:,}")
-    print(f"Forks: {formatted['forks']:,}")
-    print(f"Open issues: {formatted['open_issues']}")
-    print(f"Size: {formatted['size']:,} KB")
-    print(f"License: {formatted['license_name']}")
-    print(f"README length: {len(formatted['readme'])} characters")
-
-    for value in counts.values():
-        print(value)
-
-    print("\n📈 NetScore Breakdown:")
-    for k, v in _display_scores(data).items():
-        print(f"{k}: {v:.3f}")
-
-
-def _display_model_interactive(data, model_id: str):
-    formatted = _format_model_data(data, model_id)
-
-    print("\n🤖 Model Information:")
-    print(f"Model: {formatted['model_name']}")
-    print(f"Author: {formatted['author']}")
-    print(f"Description: {formatted['description']}")
-    print(f"Model Size: {formatted['model_size']:,} bytes")
-    print(f"License: {formatted['license_name']}")
-    print(f"Downloads: {formatted['downloads']:,}")
-    print(f"Last Modified: {formatted['last_modified']}")
-    print(f"README length: {len(formatted['readme'])} characters")
-
-    if formatted["tags"]:
-        print(f"Tags: {', '.join(formatted['tags'])}")
-    if formatted["task"]:
-        print(f"Task: {formatted['task']}")
-
-    print("\n📈 NetScore Breakdown:")
-    for k, v in net_score(data).items():
-        print(f"{k}: {v:.3f}")
+        print(f"❌ Error fetching or displaying model data: {e}")
 
 
 def _get_user_input(prompt: str, default: str = "") -> str:
