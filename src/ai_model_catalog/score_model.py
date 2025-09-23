@@ -48,8 +48,24 @@ def net_score(api_data: Dict) -> Dict[str, float]:
         "has_dataset": api_data.get("has_dataset", True),
     }
 
+    # Get size scores (now returns object with hardware mappings)
+    size_scores = score_size(model_data["repo_size_bytes"])
+
+    # Calculate weighted average of hardware scores for net score
+    # Weight more capable hardware more heavily
+    hardware_weights = {
+        "raspberry_pi": 0.1,  # Least capable
+        "jetson_nano": 0.2,  # More capable
+        "desktop_pc": 0.3,  # Most common
+        "aws_server": 0.4,  # Most capable
+    }
+    size_score_avg = sum(
+        size_scores[hw] * weight for hw, weight in hardware_weights.items()
+    )
+
     scores = {
-        "size": score_size(model_data["repo_size_bytes"]),
+        "size": size_scores,  # Keep the full object for NDJSON output
+        "size_score": size_score_avg,  # Single float for net score calculation
         "license": score_license(model_data["license"]),
         "ramp_up_time": score_ramp_up_time(model_data["readme"]),
         "bus_factor": score_bus_factor(model_data["maintainers"]),
@@ -62,7 +78,7 @@ def net_score(api_data: Dict) -> Dict[str, float]:
     }
 
     weights = {
-        "size": 0.1,
+        "size_score": 0.1,  # Use the averaged size score for net calculation
         "license": 0.15,
         "ramp_up_time": 0.15,
         "bus_factor": 0.1,
@@ -72,7 +88,7 @@ def net_score(api_data: Dict) -> Dict[str, float]:
         "performance_claims": 0.15,
     }
 
-    netscore = sum(scores[k] * weights[k] for k in scores)
+    netscore = sum(scores[k] * weights[k] for k in weights)
     scores["NetScore"] = round(netscore, 3)
     log.debug("component scores=%s", scores)
     log.info("NetScore=%s", scores["NetScore"])
