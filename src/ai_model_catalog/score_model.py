@@ -4,6 +4,8 @@ from typing import Dict
 from .metrics.score_available_dataset_and_code import (
     score_available_dataset_and_code as score_availability,
 )
+from .fetch_repo import fetch_model_data
+from .fetch_repo import fetch_repo_data
 from .metrics.score_bus_factor import score_bus_factor
 from .metrics.score_code_quality import score_code_quality
 from .metrics.score_dataset_quality import score_dataset_quality
@@ -75,3 +77,14 @@ def net_score(api_data: Dict) -> Dict[str, float]:
     log.debug("component scores=%s", scores)
     log.info("NetScore=%s", scores["NetScore"])
     return scores
+
+
+def score_model_from_id(model_id: str) -> Dict[str, float]:
+    api_data = fetch_model_data(model_id)
+    return net_score(api_data)
+
+
+def score_repo_from_owner_and_repo(owner: str, repo: str) -> Dict[str, float]:
+    log.info("Scoring repository %s/%s", owner, repo)
+    api_data = fetch_repo_data(owner=owner, repo=repo)
+    return net_score(api_data)
