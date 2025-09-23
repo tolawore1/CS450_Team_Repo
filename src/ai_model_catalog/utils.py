@@ -1,7 +1,5 @@
 from typing import Any, Dict
-
 import typer
-
 from ai_model_catalog.score_model import net_score
 
 
@@ -9,7 +7,6 @@ def _extract_license_name(license_info: Any) -> str:
     if isinstance(license_info, dict):
         return license_info.get("spdx_id") or "None"
     return license_info or "None"
-
 
 def _format_repository_data(
     data: Dict[str, Any], owner: str, repo: str
@@ -77,7 +74,6 @@ def _display_repository_info(
     typer.echo(counts_info["actions"])
     typer.echo(f"README length: {len(formatted_data['readme'])} characters")
 
-
 def _format_model_data(data: Dict[str, Any], model_id: str) -> Dict[str, Any]:
     return {
         "model_name": data.get("modelId", model_id),
@@ -109,7 +105,6 @@ def _display_model_info(formatted_data: Dict[str, Any]) -> None:
         typer.echo(f"Tags: {', '.join(formatted_data['tags'])}")
     if formatted_data["task"]:
         typer.echo(f"Task: {formatted_data['task']}")
-
 
 def _pick_repo_for_owner(owner: str, repo_input: str) -> str:
     """
@@ -171,15 +166,8 @@ def _pick_repo_for_owner(owner: str, repo_input: str) -> str:
     # Fallback to default if no match
     return "transformers"
 
-
 def _display_scores(data: Dict[str, Any]) -> None:
     scores = net_score(data)
     typer.echo("\nNetScore Breakdown:")
     for key, value in scores.items():
-        if key == "size" and isinstance(value, dict):
-            # Display size scores as hardware mappings
-            typer.echo(f"{key}:")
-            for hardware, score in value.items():
-                typer.echo(f"  {hardware}: {score:.3f}")
-        else:
-            typer.echo(f"{key}: {value:.3f}")
+        typer.echo(f"{key}: {value:.3f}")

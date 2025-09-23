@@ -76,7 +76,7 @@ def print_ndjson(results: List[MetricResult], stream: TextIO) -> None:
             "name": r.name,
             "score": r.score,
             "passed": r.passed,
-            "latency_s": round(r.elapsed_s, 4),
+            "latency_ms": round(r.elapsed_s * 1000, 2),
             "error": r.error,
             **(dict(r.details) if r.details else {}),
         }
