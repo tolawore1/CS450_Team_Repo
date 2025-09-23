@@ -4,13 +4,22 @@ from ai_model_catalog.cli import app
 
 runner = CliRunner()
 
+def test_models_command_smoke(monkeypatch):
+    def mock_fetch_repo_data(owner, repo):
+        return {
+            "readme": "Mocked readme",
+            "license": "mit",
+            "commits_count": 100,
+            "downloads": 42,
+            "author": "test-author",
+        }
 
-def test_models_command_smoke():
-    result = runner.invoke(
-        app, ["models", "--owner", "huggingface", "--repo", "transformers"]
-    )
+    monkeypatch.setattr("ai_model_catalog.fetch_repo.fetch_repo_data", mock_fetch_repo_data)
+
+    result = runner.invoke(app, ["models", "--owner", "huggingface", "--repo", "transformers"])
     assert result.exit_code == 0
-    assert "Stars:" in result.output
+    assert "Mocked readme" in result.output
+
 
 
 def test_hf_model_command_smoke(monkeypatch):

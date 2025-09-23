@@ -177,8 +177,8 @@ def _display_scores(data: Dict[str, Any]) -> None:
     typer.echo(f"{key}: {value:.3f}")
     if key == "size" and isinstance(value, dict):
             # Display size scores as hardware mappings
-            typer.echo(f"{key}:")
-            for hardware, score in value.items():
-                typer.echo(f"  {hardware}: {score:.3f}")
+        typer.echo(f"{key}:")
+        for hardware, score in value.items():
+            typer.echo(f"  {hardware}: {score:.3f}")
     else:
         typer.echo(f"{key}: {value:.3f}")
