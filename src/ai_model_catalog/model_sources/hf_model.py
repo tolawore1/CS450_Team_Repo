@@ -2,7 +2,7 @@ import logging
 from typing import Any, Dict
 
 from ai_model_catalog.fetch_repo import fetch_model_data
-
+from ai_model_catalog.score_model import score_model_from_id
 from ..utils import (
     _display_model_info,
     _display_scores,
@@ -26,8 +26,7 @@ class ModelHandler(BaseHandler):
     def format_data(self, data: Dict[str, Any]) -> Dict[str, Any]:
         return _format_model_data(data, self.model_id)
 
-    def display_data(
-        self, formatted_data: Dict[str, Any], raw_data: Dict[str, Any]
-    ) -> None:
+    def display_data(self, formatted_data, raw_data) -> None:
         _display_model_info(formatted_data)
-        _display_scores(raw_data)
+        scores = score_model_from_id(self.model_id)  # call here
+        _display_scores(scores)
