@@ -1,14 +1,16 @@
 import logging
 from typing import Any, Dict
+
 from ai_model_catalog.fetch_repo import fetch_repo_data
 from ai_model_catalog.score_model import score_repo_from_owner_and_repo
-from .base import BaseHandler
+
 from ..utils import (
-    _format_repository_data,
-    _get_repository_counts_info,
     _display_repository_info,
     _display_scores,
+    _format_repository_data,
+    _get_repository_counts_info,
 )
+from .base import BaseHandler
 
 log = logging.getLogger("catalog")
 

@@ -1,15 +1,15 @@
-import pytest
 from typer.testing import CliRunner
+
 from ai_model_catalog.utils import (
-    _extract_license_name,
-    _format_repository_data,
-    _format_model_data,
-    _format_count_info,
-    _get_repository_counts_info,
-    _display_repository_info,
     _display_model_info,
-    _pick_repo_for_owner,
+    _display_repository_info,
     _display_scores,
+    _extract_license_name,
+    _format_count_info,
+    _format_model_data,
+    _format_repository_data,
+    _get_repository_counts_info,
+    _pick_repo_for_owner,
 )
 
 runner = CliRunner()
@@ -130,7 +130,7 @@ def test_pick_repo_for_owner_invalid_input():
 
 
 def test_display_scores_mocked_net_score(monkeypatch, capsys):
-    def mock_score(data):
+    def mock_score(_data):
         return {
             "license": 1.0,
             "size": 0.85,  # Changed from dict to float

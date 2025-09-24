@@ -3,6 +3,7 @@ from typing import Any, Dict
 
 from ai_model_catalog.fetch_repo import fetch_model_data
 from ai_model_catalog.score_model import score_model_from_id
+
 from ..utils import (
     _display_model_info,
     _display_scores,

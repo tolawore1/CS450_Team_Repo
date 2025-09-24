@@ -402,3 +402,49 @@ def fetch_hf_model(model_id: str) -> Dict[str, Any]:
         "downloads": model_data.get("downloads", 0),
         "lastModified": model_data.get("lastModified", ""),
     }
+
+
+def fetch_dataset_data(dataset_id: str) -> Dict[str, Any]:
+    """
+    Fetch Hugging Face Hub dataset metadata for CLI usage.
+    """
+    dataset_url = f"{HF_API}/datasets/{dataset_id}"
+
+    try:
+        response = requests.get(dataset_url, timeout=15)
+        response.raise_for_status()
+        ds_data = response.json()
+    except requests.RequestException as e:
+        log.error(
+            "Failed to fetch dataset data from Hugging Face for %s: %s", dataset_id, e
+        )
+        raise RepositoryDataError(
+            f"Failed to fetch dataset data from Hugging Face: {e}"
+        ) from e
+
+    license_type = ds_data.get("license", "unknown")
+
+    card_data = ds_data.get("cardData", {})
+    readme_text = card_data.get("content", "") if card_data else ""
+
+    if not readme_text:
+        try:
+            readme_text = _fetch_hf_readme(dataset_id)
+        except RepositoryDataError:
+            readme_text = (
+                f"# {dataset_id}\n\nThis is a Hugging Face dataset.\n\n"
+                f"For more information, visit: https://huggingface.co/datasets/{dataset_id}"
+            )
+
+    return {
+        "license": license_type,
+        "author": ds_data.get("author"),
+        "readme": readme_text,
+        "cardData": card_data,
+        "downloads": ds_data.get("downloads", 0),
+        "lastModified": ds_data.get("lastModified", ""),
+        "tags": ds_data.get("tags", []),
+        "taskCategories": ds_data.get("task_categories", []),
+        "taskIds": ds_data.get("task_ids", []),
+        "description": ds_data.get("description", ""),
+    }

@@ -1,23 +1,17 @@
-import builtins
 import logging
-import pytest
-import requests
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
+from ai_model_catalog.fetch_repo import GitHubAPIError, RepositoryDataError
 from ai_model_catalog.interactive import (
-    interactive,
-    interactive_main,
-    _handle_github_repository_interactive,
-    _handle_huggingface_model_interactive,
-    _display_main_menu,
     _display_available_owners,
+    _display_main_menu,
     _display_owner_repositories,
     _get_user_input,
+    _handle_github_repository_interactive,
+    _handle_huggingface_model_interactive,
     _should_continue,
+    interactive_main,
 )
-from ai_model_catalog.model_sources.github_model import RepositoryHandler
-from ai_model_catalog.model_sources.hf_model import ModelHandler
-from ai_model_catalog.fetch_repo import GitHubAPIError, RepositoryDataError
 
 # Suppress logging during tests
 logging.getLogger("catalog").setLevel(logging.CRITICAL)
@@ -82,7 +76,9 @@ def test_should_continue_no(monkeypatch):
 @patch("ai_model_catalog.interactive._should_continue")
 @patch("ai_model_catalog.interactive._handle_huggingface_model_interactive")
 @patch("ai_model_catalog.interactive._handle_github_repository_interactive")
-def test_interactive_main_flows(mock_github, mock_hf, mock_continue, monkeypatch, capsys):
+def test_interactive_main_flows(
+    mock_github, mock_hf, mock_continue, monkeypatch, capsys
+):
     inputs = iter(["1", "2", "3"])
     monkeypatch.setattr("builtins.input", lambda _: next(inputs))
 
@@ -120,11 +116,15 @@ def test_interactive_main_keyboard_interrupt(monkeypatch, capsys):
 
 
 @patch("ai_model_catalog.interactive.RepositoryHandler")
-def test_handle_github_repository_interactive_success(mock_repo_handler, monkeypatch, capsys):
+def test_handle_github_repository_interactive_success(
+    mock_repo_handler, monkeypatch, capsys
+):
     inputs = iter(["1", "transformers"])
     monkeypatch.setattr("builtins.input", lambda _: next(inputs))
 
-    monkeypatch.setattr("ai_model_catalog.interactive._pick_repo_for_owner", lambda o, r: r)
+    monkeypatch.setattr(
+        "ai_model_catalog.interactive._pick_repo_for_owner", lambda o, r: r
+    )
 
     mock_instance = MagicMock()
     mock_instance.fetch_data.return_value = {"dummy": "data"}
@@ -142,10 +142,14 @@ def test_handle_github_repository_interactive_success(mock_repo_handler, monkeyp
 
 
 @patch("ai_model_catalog.interactive.RepositoryHandler")
-def test_handle_github_repository_interactive_error(mock_repo_handler, monkeypatch, capsys):
+def test_handle_github_repository_interactive_error(
+    mock_repo_handler, monkeypatch, capsys
+):
     inputs = iter(["1", "transformers"])
     monkeypatch.setattr("builtins.input", lambda _: next(inputs))
-    monkeypatch.setattr("ai_model_catalog.interactive._pick_repo_for_owner", lambda o, r: r)
+    monkeypatch.setattr(
+        "ai_model_catalog.interactive._pick_repo_for_owner", lambda o, r: r
+    )
 
     mock_instance = MagicMock()
     mock_instance.fetch_data.side_effect = GitHubAPIError("API error")
@@ -158,7 +162,9 @@ def test_handle_github_repository_interactive_error(mock_repo_handler, monkeypat
 
 
 @patch("ai_model_catalog.interactive.ModelHandler")
-def test_handle_huggingface_model_interactive_success(mock_model_handler, monkeypatch, capsys):
+def test_handle_huggingface_model_interactive_success(
+    mock_model_handler, monkeypatch, capsys
+):
     inputs = iter(["bert-base-uncased"])
     monkeypatch.setattr("builtins.input", lambda _: next(inputs))
 
@@ -178,7 +184,9 @@ def test_handle_huggingface_model_interactive_success(mock_model_handler, monkey
 
 
 @patch("ai_model_catalog.interactive.ModelHandler")
-def test_handle_huggingface_model_interactive_error(mock_model_handler, monkeypatch, capsys):
+def test_handle_huggingface_model_interactive_error(
+    mock_model_handler, monkeypatch, capsys
+):
     inputs = iter(["bert-base-uncased"])
     monkeypatch.setattr("builtins.input", lambda _: next(inputs))
 
