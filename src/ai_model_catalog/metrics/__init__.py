@@ -1,12 +1,22 @@
 from .base import Metric
-from .score_license import score_license
-from .score_size import score_size
-from .score_ramp_up_time import score_ramp_up_time
-from .score_bus_factor import score_bus_factor
-from .score_available_dataset_and_code import score_available_dataset_and_code
-from .score_dataset_quality import score_dataset_quality
-from .score_code_quality import score_code_quality
-from .score_performance_claims import score_performance_claims
+from .score_available_dataset_and_code import AvailableDatasetAndCodeMetric
+from .score_bus_factor import BusFactorMetric
+from .score_code_quality import CodeQualityMetric
+from .score_dataset_quality import DatasetQualityMetric
+from .score_license import LicenseMetric
+from .score_performance_claims import PerformanceClaimsMetric
+from .score_ramp_up_time import RampUpMetric
+from .score_size import SizeMetric
+
+score_license = LicenseMetric().score
+score_size = SizeMetric().score
+score_ramp_up_time = RampUpMetric().score
+score_bus_factor = BusFactorMetric().score
+score_available_dataset_and_code = AvailableDatasetAndCodeMetric().score
+score_dataset_quality = DatasetQualityMetric().score
+score_code_quality = CodeQualityMetric().score
+score_performance_claims = PerformanceClaimsMetric().score
+
 __all__ = [
     "score_size",
     "score_license",

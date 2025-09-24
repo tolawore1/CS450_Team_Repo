@@ -1,105 +1,158 @@
-"""
-AI Model Catalog - CLI for browsing AI/ML models
-"""
-import logging
+import json
+import time
+from typing import Optional
+
 import typer
-<<<<<<< HEAD
-from . import fetch_repo as fr
-=======
-from ai_model_catalog.metrics.score_model import netScore
->>>>>>> 5f3359fc5a24166aa30c90a29e31e37ce9a809de
 
-app = typer.Typer(help="AI/ML model catalog CLI")
-logging.basicConfig(level=logging.INFO)
-log = logging.getLogger("catalog")
+from .fetch_repo import fetch_dataset_data
+from .interactive import interactive_main
+from .logging_config import configure_logging
+from .model_sources.github_model import RepositoryHandler
+from .model_sources.hf_model import ModelHandler
+from .score_model import (
+    score_dataset_from_id,
+    score_model_from_id,
+    score_repo_from_owner_and_repo,
+)
 
-# --- GitHub repo command ---
+app = typer.Typer()
+
+
 @app.command()
-def models(owner: str = "huggingface", repo: str = "transformers"):
-    """Fetch metadata from GitHub API for a repo."""
-<<<<<<< HEAD
-    fr.models(owner=owner, repo=repo)
-=======
-    url = f"https://api.github.com/repos/{owner}/{repo}"
-    r = requests.get(url, timeout=15)
-    r.raise_for_status()
-    data = r.json()
-    log.info("Repo: %s ⭐ %s", data["full_name"], data["stargazers_count"])
-    typer.echo(data.get("description", ""))
-    scores = netScore(data)
-    typer.echo("\nNetScore Breakdown:")
-    for k, v in scores.items():
-        typer.echo(f"{k}: {v}")
->>>>>>> 5f3359fc5a24166aa30c90a29e31e37ce9a809de
+def models(
+    owner: str = "huggingface",
+    repo: str = "transformers",
+    output_format: Optional[str] = typer.Option(
+        "text", "--format", help="Output format (text or ndjson)"
+    ),
+):
+    """Fetch and display metadata from GitHub API for a repository."""
+    configure_logging()
+    handler = RepositoryHandler(owner, repo)
+    raw = handler.fetch_data()
 
-# --- Hugging Face model command ---
+    if output_format == "ndjson":
+        # Measure scoring time
+        start_time = time.time()
+        scores = score_repo_from_owner_and_repo(owner, repo)
+        scoring_time = round((time.time() - start_time) * 1000)
+
+        # Create simplified NDJSON output with total latency only
+        line = {
+            "name": raw.get("full_name") or f"{owner}/{repo}",
+            "category": "REPOSITORY",
+            "net_score": scores.get("NetScore", 0.0),
+            "ramp_up_time": scores.get("ramp_up_time", 0.0),
+            "bus_factor": scores.get("bus_factor", 0.0),
+            "performance_claims": scores.get("performance_claims", 0.0),
+            "license": scores.get("license", 0.0),
+            "size_score": scores.get("size", {}),
+            "dataset_and_code_score": scores.get("availability", 0.0),
+            "dataset_quality": scores.get("dataset_quality", 0.0),
+            "code_quality": scores.get("code_quality", 0.0),
+            "latency": scoring_time,
+        }
+        typer.echo(json.dumps(line))
+        return
+
+    formatted = handler.format_data(raw)
+    handler.display_data(formatted, raw)
+
+
+@app.command(name="hf-model")
+def hf_model(
+    model_id: str = "bert-base-uncased",
+    output_format: Optional[str] = typer.Option(
+        "text", "--format", help="Output format (text or ndjson)"
+    ),
+):
+    """Fetch and display metadata from Hugging Face Hub for a model."""
+    configure_logging()
+    handler = ModelHandler(model_id)
+    raw = handler.fetch_data()
+
+    if output_format == "ndjson":
+        # Measure scoring time
+        start_time = time.time()
+        scores = score_model_from_id(model_id)
+        scoring_time = round((time.time() - start_time) * 1000)
+
+        # Create simplified NDJSON output with total latency only
+        line = {
+            "name": model_id,
+            "category": "MODEL",
+            "net_score": scores.get("NetScore", 0.0),
+            "ramp_up_time": scores.get("ramp_up_time", 0.0),
+            "bus_factor": scores.get("bus_factor", 0.0),
+            "performance_claims": scores.get("performance_claims", 0.0),
+            "license": scores.get("license", 0.0),
+            "size_score": scores.get("size", {}),
+            "dataset_and_code_score": scores.get("availability", 0.0),
+            "dataset_quality": scores.get("dataset_quality", 0.0),
+            "code_quality": scores.get("code_quality", 0.0),
+            "latency": scoring_time,
+        }
+        typer.echo(json.dumps(line))
+        return
+
+    formatted = handler.format_data(raw)
+    handler.display_data(formatted, raw)
+
+
+@app.command(name="hf-dataset")
+def hf_dataset(
+    dataset_id: str = "imdb",
+    output_format: Optional[str] = typer.Option(
+        "text", "--format", help="Output format (text or ndjson)"
+    ),
+):
+    """Fetch and display metadata from Hugging Face Hub for a dataset."""
+    configure_logging()
+    raw = fetch_dataset_data(dataset_id)
+
+    if output_format == "ndjson":
+        # Measure scoring time
+        start_time = time.time()
+        scores = score_dataset_from_id(dataset_id)
+        scoring_time = round((time.time() - start_time) * 1000)
+
+        # Create simplified NDJSON output with total latency only
+        line = {
+            "name": dataset_id,
+            "category": "DATASET",
+            "net_score": scores.get("NetScore", 0.0),
+            "ramp_up_time": scores.get("ramp_up_time", 0.0),
+            "bus_factor": scores.get("bus_factor", 0.0),
+            "performance_claims": scores.get("performance_claims", 0.0),
+            "license": scores.get("license", 0.0),
+            "size_score": scores.get("size", {}),
+            "dataset_and_code_score": scores.get("availability", 0.0),
+            "dataset_quality": scores.get("dataset_quality", 0.0),
+            "code_quality": scores.get("code_quality", 0.0),
+            "latency": scoring_time,
+        }
+        typer.echo(json.dumps(line))
+        return
+
+    # text output
+    typer.echo(f"Dataset: {dataset_id}")
+    typer.echo(f"Author: {raw.get('author') or 'Unknown'}")
+    typer.echo(f"License: {raw.get('license')}")
+    typer.echo(f"Downloads: {raw.get('downloads', 0)}")
+    typer.echo(f"Last Modified: {raw.get('lastModified', '')}")
+    tags = raw.get("tags") or []
+    if tags:
+        typer.echo(f"Tags: {', '.join(tags)}")
+    tcats = raw.get("taskCategories") or []
+    if tcats:
+        typer.echo(f"Task Categories: {', '.join(map(str, tcats))}")
+
+
 @app.command()
-def hf_model(model_id: str = "bert-base-uncased"):
-    """Fetch metadata from Hugging Face Hub for a given model ID."""
-    fr.hf_model(model_id=model_id)
+def interactive():
+    """Start interactive mode for browsing AI models."""
+    interactive_main()
 
-<<<<<<< HEAD
-def interactive_main():
-    """Interactive main function that prompts user to select an AI model and runs CLI."""
-    print("🤖 Welcome to AI Model Catalog!")
-    print("Choose an option to explore AI models:")
-    print("1. Browse GitHub repositories (e.g., Hugging Face Transformers)")
-    print("2. Search Hugging Face models")
-    print("3. Exit")
-
-    while True:
-        try:
-            choice = input("\nEnter your choice (1-3): ").strip()
-
-            if choice == "1":
-                print("\n📁 GitHub Repository Browser")
-                owner = (input("Enter repository owner (default: huggingface): ")
-                        .strip() or "huggingface")
-                repo = (input("Enter repository name (default: transformers): ")
-                       .strip() or "transformers")
-                print(f"\nFetching data for {owner}/{repo}...")
-                fr.models(owner=owner, repo=repo)
-
-            elif choice == "2":
-                print("\n🤗 Hugging Face Model Search")
-                model_id = (input("Enter model ID (default: bert-base-uncased): ")
-                           .strip() or "bert-base-uncased")
-                print(f"\nFetching data for model: {model_id}...")
-                fr.hf_model(model_id=model_id)
-
-            elif choice == "3":
-                print("👋 Goodbye!")
-                break
-
-            else:
-                print("❌ Invalid choice. Please enter 1, 2, or 3.")
-                continue
-
-            continue_choice = (input("\nWould you like to explore another model? (y/n): ")
-                              .strip().lower())
-            if continue_choice not in ['y', 'yes']:
-                print("👋 Goodbye!")
-                break
-
-        except KeyboardInterrupt:
-            print("\n\n👋 Goodbye!")
-            break
-        except (ValueError, ConnectionError, TimeoutError) as e:
-            print(f"❌ An error occurred: {e}")
-            continue
-=======
-    typer.echo(f"Model: {data['modelId']}")
-    typer.echo(f"Last Modified: {data['lastModified']}")
-    typer.echo(f"Downloads: {data.get('downloads', 'N/A')}")
-    typer.echo(f"Tags: {', '.join(data.get('tags', []))}")
-    if "pipeline_tag" in data:
-        typer.echo(f"Task: {data['pipeline_tag']}")
-        
-    scores = netScore(data)
-    typer.echo("\nNetScore Breakdown:")
-    for k, v in scores.items():
-        typer.echo(f"{k}: {v}")
->>>>>>> 5f3359fc5a24166aa30c90a29e31e37ce9a809de
 
 if __name__ == "__main__":
-    app(prog_name="cli.py")
+    app()
