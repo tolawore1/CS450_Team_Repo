@@ -1,4 +1,5 @@
 import json
+import time
 from typing import Optional
 
 import typer
@@ -8,6 +9,11 @@ from .interactive import interactive_main
 from .logging_config import configure_logging
 from .model_sources.github_model import RepositoryHandler
 from .model_sources.hf_model import ModelHandler
+from .score_model import (
+    score_dataset_from_id,
+    score_model_from_id,
+    score_repo_from_owner_and_repo,
+)
 
 app = typer.Typer()
 
@@ -26,14 +32,25 @@ def models(
     raw = handler.fetch_data()
 
     if output_format == "ndjson":
-        # For repos, output summary as ndjson
+        # Measure scoring time
+        start_time = time.time()
+        scores = score_repo_from_owner_and_repo(owner, repo)
+        scoring_time = round((time.time() - start_time) * 1000)
+
+        # Create simplified NDJSON output with total latency only
         line = {
-            "full_name": raw.get("full_name") or f"{owner}/{repo}",
-            "stars": raw.get("stars", 0),
-            "forks": raw.get("forks", 0),
-            "open_issues": raw.get("open_issues", 0),
-            "license": raw.get("license"),
-            "updated_at": raw.get("updated_at") or raw.get("pushed_at"),
+            "name": raw.get("full_name") or f"{owner}/{repo}",
+            "category": "REPOSITORY",
+            "net_score": scores.get("NetScore", 0.0),
+            "ramp_up_time": scores.get("ramp_up_time", 0.0),
+            "bus_factor": scores.get("bus_factor", 0.0),
+            "performance_claims": scores.get("performance_claims", 0.0),
+            "license": scores.get("license", 0.0),
+            "size_score": scores.get("size", {}),
+            "dataset_and_code_score": scores.get("availability", 0.0),
+            "dataset_quality": scores.get("dataset_quality", 0.0),
+            "code_quality": scores.get("code_quality", 0.0),
+            "latency": scoring_time,
         }
         typer.echo(json.dumps(line))
         return
@@ -55,12 +72,25 @@ def hf_model(
     raw = handler.fetch_data()
 
     if output_format == "ndjson":
+        # Measure scoring time
+        start_time = time.time()
+        scores = score_model_from_id(model_id)
+        scoring_time = round((time.time() - start_time) * 1000)
+
+        # Create simplified NDJSON output with total latency only
         line = {
-            "model_id": model_id,
-            "model_size": raw.get("modelSize", 0),
-            "downloads": raw.get("downloads", 0),
-            "license": raw.get("license"),
-            "last_modified": raw.get("lastModified", ""),
+            "name": model_id,
+            "category": "MODEL",
+            "net_score": scores.get("NetScore", 0.0),
+            "ramp_up_time": scores.get("ramp_up_time", 0.0),
+            "bus_factor": scores.get("bus_factor", 0.0),
+            "performance_claims": scores.get("performance_claims", 0.0),
+            "license": scores.get("license", 0.0),
+            "size_score": scores.get("size", {}),
+            "dataset_and_code_score": scores.get("availability", 0.0),
+            "dataset_quality": scores.get("dataset_quality", 0.0),
+            "code_quality": scores.get("code_quality", 0.0),
+            "latency": scoring_time,
         }
         typer.echo(json.dumps(line))
         return
@@ -81,12 +111,25 @@ def hf_dataset(
     raw = fetch_dataset_data(dataset_id)
 
     if output_format == "ndjson":
+        # Measure scoring time
+        start_time = time.time()
+        scores = score_dataset_from_id(dataset_id)
+        scoring_time = round((time.time() - start_time) * 1000)
+
+        # Create simplified NDJSON output with total latency only
         line = {
-            "dataset_id": dataset_id,
-            "downloads": raw.get("downloads", 0),
-            "license": raw.get("license"),
-            "last_modified": raw.get("lastModified", ""),
-            "task_categories": raw.get("taskCategories", []),
+            "name": dataset_id,
+            "category": "DATASET",
+            "net_score": scores.get("NetScore", 0.0),
+            "ramp_up_time": scores.get("ramp_up_time", 0.0),
+            "bus_factor": scores.get("bus_factor", 0.0),
+            "performance_claims": scores.get("performance_claims", 0.0),
+            "license": scores.get("license", 0.0),
+            "size_score": scores.get("size", {}),
+            "dataset_and_code_score": scores.get("availability", 0.0),
+            "dataset_quality": scores.get("dataset_quality", 0.0),
+            "code_quality": scores.get("code_quality", 0.0),
+            "latency": scoring_time,
         }
         typer.echo(json.dumps(line))
         return

@@ -325,8 +325,14 @@ def fetch_model_data(model_id: str) -> Dict[str, Any]:
     """
     model_url = f"{HF_API}/models/{model_id}"
 
+    # Add authentication header if token is available
+    headers = {}
+    hf_token = os.getenv("HUGGINGFACE_HUB_TOKEN") or os.getenv("HF_TOKEN")
+    if hf_token:
+        headers["Authorization"] = f"Bearer {hf_token}"
+
     try:
-        response = requests.get(model_url, timeout=15)
+        response = requests.get(model_url, headers=headers, timeout=15)
         response.raise_for_status()
         model_data = response.json()
     except requests.RequestException as e:
@@ -410,8 +416,14 @@ def fetch_dataset_data(dataset_id: str) -> Dict[str, Any]:
     """
     dataset_url = f"{HF_API}/datasets/{dataset_id}"
 
+    # Add authentication header if token is available
+    headers = {}
+    hf_token = os.getenv("HUGGINGFACE_HUB_TOKEN") or os.getenv("HF_TOKEN")
+    if hf_token:
+        headers["Authorization"] = f"Bearer {hf_token}"
+
     try:
-        response = requests.get(dataset_url, timeout=15)
+        response = requests.get(dataset_url, headers=headers, timeout=15)
         response.raise_for_status()
         ds_data = response.json()
     except requests.RequestException as e:

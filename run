@@ -101,15 +101,21 @@ process_urls() {
         log_info "Processing: $url"
 
         if [[ "$url" =~ huggingface\.co/datasets/ ]]; then
-            # Hugging Face dataset URL (e.g., https://huggingface.co/datasets/imdb)
-            id=$(echo "$url" | sed -E 's|.*huggingface\.co/datasets/([^/]+/?[^/]*).*|\1|' | sed 's|/$||')
+            # Hugging Face dataset URL (e.g., https://huggingface.co/datasets/imdb or https://huggingface.co/datasets/xlangai/AgentNet)
+            # Extract dataset ID - handle both single and multi-segment paths
+            if [[ "$url" =~ huggingface\.co/datasets/([^/]+/[^/]+) ]]; then
+                id="${BASH_REMATCH[1]}"
+            elif [[ "$url" =~ huggingface\.co/datasets/([^/]+) ]]; then
+                id="${BASH_REMATCH[1]}"
+            fi
+            id=$(echo "$id" | sed 's|/$||')
             if ! python3 -m src.ai_model_catalog hf-dataset --dataset-id "$id" --format ndjson; then
                 log_error "Failed to process dataset URL: $url"
                 status=1
             fi
 
-        elif [[ "$url" =~ huggingface\.co/[^/]+/[^/]+$ ]] && [[ ! "$url" =~ huggingface\.co/datasets/ ]]; then
-            # Hugging Face model URL (e.g., https://huggingface.co/microsoft/DialoGPT-medium)
+        elif [[ "$url" =~ huggingface\.co/[^/]+/[^/]+ ]] && [[ ! "$url" =~ huggingface\.co/datasets/ ]]; then
+            # Hugging Face model URL (e.g., https://huggingface.co/microsoft/DialoGPT-medium or https://huggingface.co/google/gemma-3-270m/tree/main)
             id=$(echo "$url" | sed -E 's|.*huggingface\.co/([^/]+/[^/]+).*|\1|')
             if ! python3 -m src.ai_model_catalog hf-model --model-id "$id" --format ndjson; then
                 log_error "Failed to process model URL: $url"
@@ -117,7 +123,7 @@ process_urls() {
             fi
 
         elif [[ "$url" =~ github\.com ]]; then
-            # GitHub repository URL (e.g., https://github.com/huggingface/transformers)
+            # GitHub repository URL (e.g., https://github.com/huggingface/transformers or https://github.com/microsoft/vscode/tree/main)
             repo_path=$(echo "$url" | sed -E 's|.*github\.com/([^/]+/[^/]+).*|\1|')
             owner=$(echo "$repo_path" | cut -d/ -f1)
             repo=$(echo "$repo_path" | cut -d/ -f2)

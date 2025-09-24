@@ -54,10 +54,11 @@ pip install -e ".[dev]"
 # 3. Enable pre-commit hooks
 pre-commit install
 
-# 4. Set up environment variables (optional)
-export GITHUB_TOKEN="your_github_token_here"  # For higher rate limits
-export LOG_FILE="catalog.log"                 # For logging
-export LOG_LEVEL="1"                          # 0=silent, 1=info, 2=debug
+# 4. Set up environment variables (recommended for full functionality)
+export GITHUB_TOKEN="your_github_token_here"     # For higher rate limits
+export HUGGINGFACE_HUB_TOKEN="hf_your_token"     # For Hugging Face API access
+export LOG_FILE="catalog.log"                    # For logging
+export LOG_LEVEL="1"                             # 0=silent, 1=info, 2=debug
 ```
 
 ## Usage
@@ -161,32 +162,26 @@ NetScore: 0.889
 ```json
 {
   "name": "huggingface/transformers",
-  "category": "MODEL",
+  "category": "REPOSITORY",
   "net_score": 0.889,
-  "net_score_latency": 150,
   "ramp_up_time": 1.000,
-  "ramp_up_time_latency": 25,
   "bus_factor": 1.000,
-  "bus_factor_latency": 15,
   "performance_claims": 0.500,
-  "performance_claims_latency": 30,
   "license": 1.000,
-  "license_latency": 10,
   "size_score": {
     "raspberry_pi": 0.200,
     "jetson_nano": 0.400,
     "desktop_pc": 0.800,
     "aws_server": 0.950
   },
-  "size_score_latency": 45,
   "dataset_and_code_score": 1.000,
-  "dataset_and_code_score_latency": 20,
   "dataset_quality": 0.750,
-  "dataset_quality_latency": 35,
   "code_quality": 0.875,
-  "code_quality_latency": 40
+  "latency": 150
 }
 ```
+
+**Note:** The `latency` field represents the total time (in milliseconds) taken to calculate all scores.
 
 ## Scoring Methodology
 
@@ -232,6 +227,24 @@ Measures evidence of performance benchmarks:
 - **1.0** - State-of-the-art claims with evidence
 - **0.0** - No performance claims
 
+## Authentication
+
+### GitHub API Token
+For GitHub repository analysis, a token is recommended to avoid rate limits:
+
+1. Go to [GitHub Settings > Developer settings > Personal access tokens](https://github.com/settings/tokens)
+2. Generate a new token with `public_repo` scope
+3. Set the environment variable: `export GITHUB_TOKEN="your_token_here"`
+
+### Hugging Face API Token
+For Hugging Face dataset/model access, a token may be required:
+
+1. Go to [Hugging Face Settings > Access Tokens](https://huggingface.co/settings/tokens)
+2. Create a new token with `read` access
+3. Set the environment variable: `export HUGGINGFACE_HUB_TOKEN="hf_your_token_here"`
+
+**Note:** Some Hugging Face models/datasets may require authentication for access. Without a token, you may encounter 401 Unauthorized errors.
+
 ## Configuration
 
 ### Environment Variables
@@ -239,6 +252,7 @@ Measures evidence of performance benchmarks:
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `GITHUB_TOKEN` | GitHub API token for higher rate limits | None |
+| `HUGGINGFACE_HUB_TOKEN` | Hugging Face API token for dataset/model access | None |
 | `LOG_FILE` | Path to log file | `catalog.log` |
 | `LOG_LEVEL` | Log verbosity (0=silent, 1=info, 2=debug) | `0` |
 

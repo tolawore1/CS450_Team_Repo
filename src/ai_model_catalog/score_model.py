@@ -1,7 +1,7 @@
 import logging
 from typing import Dict
 
-from .fetch_repo import fetch_model_data, fetch_repo_data
+from .fetch_repo import fetch_dataset_data, fetch_model_data, fetch_repo_data
 from .metrics.score_available_dataset_and_code import (
     score_available_dataset_and_code as score_availability,
 )
@@ -103,3 +103,57 @@ def score_repo_from_owner_and_repo(owner: str, repo: str) -> Dict[str, float]:
     log.info("Scoring repository %s/%s", owner, repo)
     api_data = fetch_repo_data(owner=owner, repo=repo)
     return net_score(api_data)
+
+
+def score_dataset_from_id(dataset_id: str) -> Dict[str, float]:
+    """Score a Hugging Face dataset using available metrics."""
+    api_data = fetch_dataset_data(dataset_id)
+
+    # Create model_data structure for scoring
+    model_data = {
+        "repo_size_bytes": 0,  # Datasets don't have size in same way
+        "license": api_data.get("license"),
+        "readme": api_data.get("readme", ""),
+        "maintainers": [api_data.get("author")],
+        "has_code": False,  # Datasets typically don't have code
+        "has_dataset": True,  # It is a dataset
+    }
+
+    # Get size scores (minimal for datasets)
+    size_scores = {
+        "raspberry_pi": 0.5,
+        "jetson_nano": 0.5,
+        "desktop_pc": 0.5,
+        "aws_server": 0.5,
+    }
+
+    scores = {
+        "size": size_scores,
+        "size_score": 0.5,  # Neutral score for datasets
+        "license": score_license(model_data["license"]),
+        "ramp_up_time": score_ramp_up_time(model_data["readme"]),
+        "bus_factor": score_bus_factor(model_data["maintainers"]),
+        "availability": score_availability(
+            model_data["has_code"], model_data["has_dataset"]
+        ),
+        "dataset_quality": score_dataset_quality(api_data),
+        "code_quality": 0.0,  # Datasets don't have code quality
+        "performance_claims": score_performance_claims(model_data["readme"]),
+    }
+
+    # Calculate NetScore
+    weights = {
+        "size_score": 0.1,
+        "license": 0.15,
+        "ramp_up_time": 0.15,
+        "bus_factor": 0.1,
+        "availability": 0.1,
+        "dataset_quality": 0.2,  # Higher weight for dataset quality
+        "code_quality": 0.0,  # No weight for code quality
+        "performance_claims": 0.2,  # Higher weight for performance claims
+    }
+
+    netscore = sum(scores[k] * weights[k] for k in weights if weights[k] > 0)
+    scores["NetScore"] = round(netscore, 3)
+
+    return scores
