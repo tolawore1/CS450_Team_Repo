@@ -2,9 +2,10 @@
 
 from unittest.mock import patch
 
+from ai_model_catalog.__main__ import main
+
 # import pytest
 
-from ai_model_catalog.__main__ import main
 
 
 def test_main_function():

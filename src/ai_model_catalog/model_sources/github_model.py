@@ -1,18 +1,18 @@
 # --- stdlib ---
 from __future__ import annotations
+
 import json
 import logging
 from dataclasses import dataclass
 from typing import Any, Dict
+
 import typer
 
 # --- first-party ---
-from ai_model_catalog import (
-    fetch_repo as fr,
-)  # <-- module import (pytest can monkeypatch)
+from ai_model_catalog import fetch_repo as fr  # <-- module import (pytest can monkeypatch)
 
 # --- local ---
-from ..utils import _as_int, _as_bool
+from ..utils import _as_bool, _as_int
 from .base import BaseHandler
 
 log = logging.getLogger(__name__)

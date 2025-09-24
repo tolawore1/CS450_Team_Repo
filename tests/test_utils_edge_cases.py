@@ -3,10 +3,10 @@
 # No imports needed for this test file
 
 from ai_model_catalog.utils import (
-    _as_int,
     _as_bool,
-    _format_repository_data,
+    _as_int,
     _format_model_data,
+    _format_repository_data,
 )
 
 

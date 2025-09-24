@@ -2,9 +2,10 @@
 
 from unittest.mock import patch
 
+from ai_model_catalog.model_sources.github_model import RepositoryHandler
+
 # import pytest
 
-from ai_model_catalog.model_sources.github_model import RepositoryHandler
 
 
 def test_repository_handler_initialization():

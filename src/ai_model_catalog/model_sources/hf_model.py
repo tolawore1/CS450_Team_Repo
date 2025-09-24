@@ -1,5 +1,6 @@
 # --- stdlib ---
 from __future__ import annotations
+
 import json
 import logging
 from dataclasses import dataclass
@@ -11,7 +12,7 @@ import typer
 from ai_model_catalog import fetch_repo as fr  # <-- module import
 
 # --- local ---
-from ..utils import _as_int, _as_bool
+from ..utils import _as_bool, _as_int
 from .base import BaseHandler
 
 log = logging.getLogger(__name__)

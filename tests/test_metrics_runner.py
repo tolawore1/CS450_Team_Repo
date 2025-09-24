@@ -2,12 +2,13 @@
 
 from io import StringIO
 
+from ai_model_catalog.metrics.runner import print_ndjson, run_metrics
+from ai_model_catalog.metrics.types import MetricResult
+
 # from unittest.mock import MagicMock, patch
 
 # import pytest
 
-from ai_model_catalog.metrics.runner import print_ndjson, run_metrics
-from ai_model_catalog.metrics.types import MetricResult
 
 
 def create_mock_metric(name, score_value=None, error=None):

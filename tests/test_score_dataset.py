@@ -2,9 +2,10 @@
 
 from unittest.mock import patch
 
+from ai_model_catalog.score_model import score_dataset_from_id
+
 # import pytest
 
-from ai_model_catalog.score_model import score_dataset_from_id
 
 
 def test_score_dataset_from_id():

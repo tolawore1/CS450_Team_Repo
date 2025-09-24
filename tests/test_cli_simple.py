@@ -1,7 +1,8 @@
 """Simple CLI tests to boost coverage."""
 
 import json
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
+
 from typer.testing import CliRunner
 
 from ai_model_catalog.cli import app
