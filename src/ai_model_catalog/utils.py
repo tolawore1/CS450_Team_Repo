@@ -5,6 +5,25 @@ import typer
 from ai_model_catalog.score_model import net_score
 
 
+def _as_int(v: Any, default: int = 0) -> int:
+    """Convert value to int with default fallback."""
+    try:
+        return int(v)
+    except (ValueError, TypeError):
+        return default
+
+
+def _as_bool(v: Any) -> bool:
+    """Convert value to bool, treating empty/false strings as False."""
+    return bool(v) and str(v).strip().lower() not in {
+        "",
+        "false",
+        "0",
+        "none",
+        "null",
+    }
+
+
 def _extract_license_name(license_info: Any) -> str:
     if isinstance(license_info, dict):
         return license_info.get("spdx_id") or "None"

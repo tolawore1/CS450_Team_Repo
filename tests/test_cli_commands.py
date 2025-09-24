@@ -1,3 +1,5 @@
+import json
+
 import pytest
 from typer.testing import CliRunner
 
@@ -68,7 +70,7 @@ def test_hf_model_command_smoke(monkeypatch):
         raising=True,
     )
 
-    result = runner.invoke(app, ["hf_model", "--model-id", "bert-base-uncased"])
+    result = runner.invoke(app, ["hf-model", "--model-id", "bert-base-uncased"])
     assert result.exit_code == 0, result.stdout
 
     data = json.loads(result.stdout)

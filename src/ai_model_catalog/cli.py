@@ -1,13 +1,61 @@
 import json
-from typing import Optional
+import os
+from pathlib import Path
+from typing import Dict, Optional, Tuple
 
 import typer
+
+# Try to import GitPython, but make it optional
+try:
+    from git import Repo
+except ImportError:
+    Repo = None
 
 from .fetch_repo import fetch_dataset_data
 from .interactive import interactive_main
 from .logging_config import configure_logging
 from .model_sources.github_model import RepositoryHandler
 from .model_sources.hf_model import ModelHandler
+from .score_model import net_score
+
+app = typer.Typer()
+
+
+def _detect_source(source: str) -> Tuple[str, Dict]:
+    """Detect if source is a GitHub URL or local path."""
+    if source.startswith(("https://github.com/", "http://github.com/")):
+        # Extract owner/repo from GitHub URL
+        parts = source.rstrip("/").split("/")
+        if len(parts) >= 5:
+            owner = parts[-2]
+            repo = parts[-1]
+            return "github", {"owner": owner, "repo": repo}
+
+    # Check if it's a local path
+    path = Path(source).expanduser()
+    if path.exists():
+        return "local", {"path": str(path)}
+
+    return "unknown", {}
+
+
+def _scan_local_repo(path: Path) -> Dict:
+    """Scan a local repository for metadata."""
+    data = {
+        "source": "local",
+        "path": str(path),
+        "size_bytes": 0,
+        "file_count": 0,
+        "py_files": 0,
+        "test_files": 0,
+        "has_readme": False,
+        "readme": "",
+        "license_file": "",
+        "is_git": False,
+        "branch": "",
+        "last_commit": "",
+        "contributors": [],
+    }
 
     # Optional Git metadata
     if Repo is not None:
@@ -28,11 +76,11 @@ from .model_sources.hf_model import ModelHandler
                 key=lambda x: x["commits"],
                 reverse=True,
             )[:10]
-        except Exception:
+        except (OSError, ValueError, TypeError):
             pass  # not a git repo or GitPython unavailable
 
     # Filesystem scan (skip heavy dirs)
-    SKIP = {
+    skip_dirs = {
         ".git",
         ".venv",
         "__pycache__",
@@ -43,13 +91,14 @@ from .model_sources.hf_model import ModelHandler
         "build",
         ".dist",
     }
+
     for root, dirs, files in os.walk(path):
-        dirs[:] = [d for d in dirs if d not in SKIP]
+        dirs[:] = [d for d in dirs if d not in skip_dirs]
         for f in files:
             fp = Path(root) / f
             try:
                 data["size_bytes"] += fp.stat().st_size
-            except Exception:
+            except (OSError, PermissionError):
                 pass
             data["file_count"] += 1
             low = f.lower()
@@ -72,6 +121,9 @@ from .model_sources.hf_model import ModelHandler
                 "copying",
             }:
                 data["license_file"] = str(fp.relative_to(path))
+
+    return data
+
 
 @app.command()
 def models(
@@ -100,7 +152,7 @@ def models(
         return
 
     formatted = handler.format_data(raw)
-    handler.display_data(formatted, raw)
+    handler.display_data(formatted)
 
 
 @app.command(name="hf-model")
@@ -127,7 +179,8 @@ def hf_model(
         return
 
     formatted = handler.format_data(raw)
-    handler.display_data(formatted, raw)
+    handler.display_data(formatted)
+
 
 @app.command(name="hf-dataset")
 def hf_dataset(
@@ -200,7 +253,8 @@ def analyze(
             data = _scan_local_repo(p)
         else:
             typer.echo(
-                f"Error: could not determine source for {source!r}. Provide a GitHub URL or an existing local path.",
+                f"Error: could not determine source for {source!r}. "
+                "Provide a GitHub URL or an existing local path.",
                 err=True,
             )
             raise typer.Exit(2)
@@ -208,7 +262,7 @@ def analyze(
     # Optional score
     try:
         data["net_score"] = net_score(data)
-    except Exception:
+    except (KeyError, ValueError, TypeError):
         pass
 
     # Output

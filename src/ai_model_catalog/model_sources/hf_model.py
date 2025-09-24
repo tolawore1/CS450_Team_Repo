@@ -3,20 +3,15 @@ from __future__ import annotations
 import json
 import logging
 from dataclasses import dataclass
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
-from ai_model_catalog.fetch_repo import fetch_model_data
-from ai_model_catalog.score_model import score_model_from_id
+# --- third-party ---
+import typer
 
-from ..utils import (
-    _display_model_info,
-    _display_scores,
-    _format_model_data,
-)
-from .base import BaseHandler
+from ai_model_catalog import fetch_repo as fr  # <-- module import
 
 # --- local ---
-from ai_model_catalog import fetch_repo as fr  # <-- module import
+from ..utils import _as_int, _as_bool
 
 log = logging.getLogger(__name__)
 
@@ -33,21 +28,6 @@ class ModelHandler:
         return data
 
     def format_data(self, raw: Dict[str, Any]) -> Dict[str, Any]:
-        def _as_int(v: Any, default: int = 0) -> int:
-            try:
-                return int(v)
-            except Exception:
-                return default
-
-        def _as_bool(v: Any) -> bool:
-            return bool(v) and str(v).strip().lower() not in {
-                "",
-                "false",
-                "0",
-                "none",
-                "null",
-            }
-
         formatted: Dict[str, Any] = {
             "source": "huggingface",
             "id": raw.get("modelId") or raw.get("id") or self.model_id,
@@ -65,7 +45,5 @@ class ModelHandler:
 
         return formatted
 
-    def display_data(
-        self, formatted: Dict[str, Any], raw: Optional[Dict[str, Any]] = None
-    ) -> None:
+    def display_data(self, formatted: Dict[str, Any]) -> None:
         typer.echo(json.dumps(formatted, indent=2, ensure_ascii=False))

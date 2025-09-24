@@ -84,6 +84,50 @@ catalog interactive [OPTIONS]
 - Interactive model selection
 - Real-time scoring display
 
+#### `catalog analyze`
+Analyze a repository from GitHub URL or local directory with comprehensive scoring.
+
+```bash
+catalog analyze [OPTIONS] SOURCE
+```
+
+**Arguments:**
+- `SOURCE`: GitHub URL (e.g., `https://github.com/owner/repo`) or local path (e.g., `.`)
+
+**Options:**
+- `--output, -o PATH`: Write output to file instead of stdout
+- `--format, -f [json|ndjson]`: Output format (default: json)
+- `--help`: Show help message
+
+**Features:**
+- GitHub repository analysis via API
+- Local repository analysis with Git integration
+- Comprehensive NetScore calculation
+- Filesystem scanning and Git metadata extraction
+- Support for both JSON and NDJSON output formats
+
+**Examples:**
+```bash
+# Analyze GitHub repository
+catalog analyze https://github.com/huggingface/transformers
+
+# Analyze local directory
+catalog analyze . --format ndjson
+
+# Save output to file
+catalog analyze /path/to/repo --output results.json
+
+# Local repository with Git metadata
+catalog analyze . --format json
+```
+
+**Local Repository Analysis Features:**
+- Git branch and commit information
+- Contributor analysis (top 10 by commits)
+- File system scanning (size, count, Python files, tests)
+- README and license file detection
+- Smart directory skipping (`.git`, `__pycache__`, etc.)
+
 ### Auto-Grader Interface
 
 #### `./run install`
@@ -475,6 +519,53 @@ class CustomMetric(Metric):
 # Use custom metric
 metric = CustomMetric()
 score = metric.score({"readme": "Long documentation..."})
+```
+
+### Local Repository Analysis
+
+```python
+from pathlib import Path
+from ai_model_catalog.cli import _scan_local_repo, _detect_source
+from ai_model_catalog.score_model import net_score
+
+# Analyze local repository
+repo_path = Path("/path/to/repository")
+local_data = _scan_local_repo(repo_path)
+
+# Calculate NetScore for local repository
+scores = net_score(local_data)
+print(f"Local repository NetScore: {scores['NetScore']}")
+
+# Detect source type (GitHub URL or local path)
+source_type, info = _detect_source("https://github.com/owner/repo")
+print(f"Source type: {source_type}")  # "github"
+print(f"Info: {info}")  # {"owner": "owner", "repo": "repo"}
+
+source_type, info = _detect_source("/path/to/local/repo")
+print(f"Source type: {source_type}")  # "local"
+print(f"Info: {info}")  # {"path": "/path/to/local/repo"}
+```
+
+**Local Repository Data Structure:**
+```python
+{
+    "source": "local",
+    "path": "/path/to/repository",
+    "size_bytes": 1024000,
+    "file_count": 150,
+    "py_files": 25,
+    "test_files": 10,
+    "has_readme": True,
+    "readme": "README.md",
+    "license_file": "LICENSE",
+    "is_git": True,
+    "branch": "main",
+    "last_commit": "abc123def456 1640995200",
+    "contributors": [
+        {"id": "user@example.com", "commits": 45},
+        {"id": "developer@example.com", "commits": 23}
+    ]
+}
 ```
 
 ### Batch Processing

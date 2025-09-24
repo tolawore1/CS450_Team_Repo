@@ -103,15 +103,15 @@ process_urls() {
         if [[ "$url" =~ huggingface\.co/datasets/ ]]; then
             # Hugging Face dataset URL (e.g., https://huggingface.co/datasets/imdb)
             id=$(echo "$url" | sed -E 's|.*huggingface\.co/datasets/([^/]+/?[^/]*).*|\1|' | sed 's|/$||')
-            if ! python3 -m src.ai_model_catalog hf-dataset --dataset-id "$id" --format ndjson; then
+            if ! python3 -m src.ai_model_catalog hf-dataset "$id" --format ndjson; then
                 log_error "Failed to process dataset URL: $url"
                 status=1
             fi
 
-        elif [[ "$url" =~ huggingface\.co/[^/]+/[^/]+$ ]] && [[ ! "$url" =~ huggingface\.co/datasets/ ]]; then
-            # Hugging Face model URL (e.g., https://huggingface.co/microsoft/DialoGPT-medium)
-            id=$(echo "$url" | sed -E 's|.*huggingface\.co/([^/]+/[^/]+).*|\1|')
-            if ! python3 -m src.ai_model_catalog hf-model --model-id "$id" --format ndjson; then
+        elif [[ "$url" =~ huggingface\.co/[^/]+/[^/]+ ]] && [[ ! "$url" =~ huggingface\.co/datasets/ ]]; then
+            # Hugging Face model URL (e.g., https://huggingface.co/microsoft/DialoGPT-medium or with /tree/main)
+            id=$(echo "$url" | sed -E 's|.*huggingface\.co/([^/]+/[^/]+)(/.*)?|\1|')
+            if ! python3 -m src.ai_model_catalog hf-model "$id" --format ndjson; then
                 log_error "Failed to process model URL: $url"
                 status=1
             fi
