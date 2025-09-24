@@ -2,10 +2,10 @@
 
 from unittest.mock import patch
 
+from ai_model_catalog.model_sources.base import BaseHandler
 from ai_model_catalog.model_sources.github_model import RepositoryHandler
 
 # import pytest
-
 
 
 def test_repository_handler_initialization():
@@ -93,8 +93,6 @@ def test_repository_handler_inheritance():
     handler = RepositoryHandler("test_owner", "test_repo")
 
     # Check inheritance
-    from ai_model_catalog.model_sources.base import BaseHandler
-
     assert isinstance(handler, BaseHandler)
 
     # Check that all required methods exist

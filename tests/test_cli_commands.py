@@ -1,3 +1,5 @@
+import json
+
 import pytest
 from typer.testing import CliRunner
 
@@ -75,7 +77,6 @@ def test_invalid_command():
 
 def test_ndjson_output_structure():
     """Test NDJSON output structure validation."""
-    import json
 
     # Test the expected NDJSON structure for each command type
     test_cases = [
@@ -199,7 +200,6 @@ def test_ndjson_output_structure():
 
 def test_ndjson_format_validation():
     """Test that NDJSON output is properly formatted."""
-    import json
 
     # Test valid NDJSON structure
     test_data = {

@@ -7,7 +7,6 @@ from ai_model_catalog.__main__ import main
 # import pytest
 
 
-
 def test_main_function():
     """Test that main function calls configure_logging and app."""
     with (

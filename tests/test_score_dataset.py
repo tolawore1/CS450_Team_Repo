@@ -7,7 +7,6 @@ from ai_model_catalog.score_model import score_dataset_from_id
 # import pytest
 
 
-
 def test_score_dataset_from_id():
     """Test scoring a dataset with mocked data."""
     with patch("ai_model_catalog.score_model.fetch_dataset_data") as mock_fetch:

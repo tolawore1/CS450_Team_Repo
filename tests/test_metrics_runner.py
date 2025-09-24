@@ -1,5 +1,6 @@
 """Tests for the metrics runner module."""
 
+import json
 from io import StringIO
 
 from ai_model_catalog.metrics.runner import print_ndjson, run_metrics
@@ -10,7 +11,6 @@ from ai_model_catalog.metrics.types import MetricResult
 # import pytest
 
 
-
 def create_mock_metric(name, score_value=None, error=None):
     """Create a mock metric with a specific class name."""
 
@@ -19,9 +19,9 @@ def create_mock_metric(name, score_value=None, error=None):
             self.score_value = score_val
             self.error = err
 
-        def score(self, ctx):
+        def score(self, _ctx=None):  # Make ctx optional and unused
             if self.error:
-                raise Exception(self.error)
+                raise ValueError(self.error)  # Use more specific exception
             return self.score_value
 
     # Set the class name
@@ -159,7 +159,6 @@ def test_print_ndjson():
     assert len(lines) == 2
 
     # Parse first line
-    import json
 
     line1 = json.loads(lines[0])
     assert line1["name"] == "test1"

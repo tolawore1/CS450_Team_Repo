@@ -2,9 +2,9 @@
 
 from abc import ABC
 
-import pytest
-
 from ai_model_catalog.model_sources.base import BaseHandler
+
+# import pytest
 
 
 class ConcreteHandler(BaseHandler):
@@ -22,8 +22,9 @@ class ConcreteHandler(BaseHandler):
 
 def test_base_handler_is_abstract():
     """Test that BaseHandler is abstract and cannot be instantiated."""
-    with pytest.raises(TypeError):
-        BaseHandler()
+    # Test that BaseHandler is abstract by checking its ABC status
+    assert BaseHandler.__abstractmethods__ != set()
+    assert hasattr(BaseHandler, "__abstractmethods__")
 
 
 def test_concrete_handler_can_be_instantiated():
