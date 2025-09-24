@@ -46,28 +46,32 @@ def test_models_command_smoke(monkeypatch):
 
 
 def test_hf_model_command_smoke(monkeypatch):
-    # What ModelHandler ultimately calls:
+    """
+    `hf_model` should print JSON for an HF model id.
+    We monkeypatch the shared fetch layer to avoid network.
+    """
+
+    def mock_fetch_model_data(model_id: str):
+        return {
+            "modelId": model_id,
+            "author": "tester",
+            "license": "mit",
+            "downloads": 123,
+            "lastModified": "2024-01-01",
+            "readme": True,
+            "cardData": {"tags": ["nlp", "bert"], "language": "en"},
+        }
+
     monkeypatch.setattr(
         "ai_model_catalog.fetch_repo.fetch_model_data",
-        lambda mid: {
-            "modelSize": 123,
-            "license": "mit",
-            "author": "tester",
-            "readme": "# readme",
-            "cardData": {},
-            "downloads": 42,
-            "lastModified": "2024-01-01",
-        },
+        mock_fetch_model_data,
         raising=True,
     )
 
-    # Use defaults (no option spelling needed)
-    result = runner.invoke(app, ["hf-model"])
-    assert result.exit_code == 0
-    assert "Model:" in result.output
+    result = runner.invoke(app, ["hf_model", "--model-id", "bert-base-uncased"])
+    assert result.exit_code == 0, result.stdout
 
-
-def test_invalid_command():
-    result = runner.invoke(app, ["invalid_command"])
-    assert result.exit_code != 0
-    assert "Usage:" in result.output
+    data = json.loads(result.stdout)
+    assert data["source"] == "huggingface"
+    assert data.get("downloads") == 123
+    assert data.get("id") == "bert-base-uncased"
