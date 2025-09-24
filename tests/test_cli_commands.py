@@ -1,4 +1,4 @@
-# import pytest
+import pytest
 from typer.testing import CliRunner
 
 from ai_model_catalog.cli import app
@@ -49,7 +49,7 @@ def test_hf_model_command_smoke(monkeypatch):
     # What ModelHandler ultimately calls:
     monkeypatch.setattr(
         "ai_model_catalog.fetch_repo.fetch_model_data",
-        lambda mid: {
+        lambda model_id: {
             "modelSize": 123,
             "license": "mit",
             "author": "tester",
@@ -64,7 +64,7 @@ def test_hf_model_command_smoke(monkeypatch):
     # Use defaults (no option spelling needed)
     result = runner.invoke(app, ["hf-model"])
     assert result.exit_code == 0
-    assert "Model:" in result.output
+    assert "bert-base-uncased" in result.output
 
 
 def test_invalid_command():
@@ -165,8 +165,8 @@ def test_ndjson_output_structure():
         # Verify latency field is integer and non-negative
         assert isinstance(
             parsed_data["latency"], int
-        ), f"Latency field should be integer"
-        assert parsed_data["latency"] >= 0, f"Latency field should be non-negative"
+        ), "Latency field should be integer"
+        assert parsed_data["latency"] >= 0, "Latency field should be non-negative"
 
         # Verify size_score is a dictionary with required keys
         assert isinstance(parsed_data["size_score"], dict)
@@ -250,5 +250,5 @@ def test_ndjson_format_validation():
         assert field in parsed_data, f"Missing required field: {field}"
 
     # Check latency field is integer
-    assert isinstance(parsed_data["latency"], int), f"Latency field should be integer"
-    assert parsed_data["latency"] >= 0, f"Latency field should be non-negative"
+    assert isinstance(parsed_data["latency"], int), "Latency field should be integer"
+    assert parsed_data["latency"] >= 0, "Latency field should be non-negative"

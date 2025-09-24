@@ -12,12 +12,13 @@ from ai_model_catalog import fetch_repo as fr  # <-- module import
 
 # --- local ---
 from ..utils import _as_int, _as_bool
+from .base import BaseHandler
 
 log = logging.getLogger(__name__)
 
 
 @dataclass
-class ModelHandler:
+class ModelHandler(BaseHandler):
     model_id: str
 
     def fetch_data(self) -> Dict[str, Any]:
@@ -27,23 +28,27 @@ class ModelHandler:
             raise TypeError("fetch_model_data() must return a dict")
         return data
 
-    def format_data(self, raw: Dict[str, Any]) -> Dict[str, Any]:
+    def format_data(self, data: Dict[str, Any]) -> Dict[str, Any]:
         formatted: Dict[str, Any] = {
             "source": "huggingface",
-            "id": raw.get("modelId") or raw.get("id") or self.model_id,
-            "author": raw.get("author") or raw.get("owner") or "",
-            "license": raw.get("license") or "",
-            "downloads": _as_int(raw.get("downloads")),  # mock supplies this
-            "last_modified": raw.get("lastModified") or raw.get("last_modified") or "",
-            "has_readme": _as_bool(raw.get("readme"))
-            or _as_bool(raw.get("has_readme")),
+            "id": data.get("modelId") or data.get("id") or self.model_id,
+            "author": data.get("author") or data.get("owner") or "",
+            "license": data.get("license") or "",
+            "downloads": _as_int(data.get("downloads")),  # mock supplies this
+            "last_modified": data.get("lastModified")
+            or data.get("last_modified")
+            or "",
+            "has_readme": _as_bool(data.get("readme"))
+            or _as_bool(data.get("has_readme")),
         }
 
-        card = raw.get("cardData")
+        card = data.get("cardData")
         if isinstance(card, dict):
             formatted["card_keys"] = sorted(card.keys())[:10]
 
         return formatted
 
-    def display_data(self, formatted: Dict[str, Any]) -> None:
-        typer.echo(json.dumps(formatted, indent=2, ensure_ascii=False))
+    def display_data(
+        self, formatted_data: Dict[str, Any], raw_data: Dict[str, Any]
+    ) -> None:
+        typer.echo(json.dumps(formatted_data, indent=2, ensure_ascii=False))

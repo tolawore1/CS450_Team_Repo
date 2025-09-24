@@ -1,6 +1,7 @@
 """Tests for the metrics runner module."""
 
 from io import StringIO
+
 # from unittest.mock import MagicMock, patch
 
 # import pytest

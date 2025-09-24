@@ -2,7 +2,7 @@
 
 from abc import ABC
 
-# import pytest
+import pytest
 
 from ai_model_catalog.model_sources.base import BaseHandler
 
