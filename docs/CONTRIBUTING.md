@@ -25,6 +25,7 @@ This project follows the [Contributor Covenant Code of Conduct](CODE_OF_CONDUCT.
 
 - Python 3.10 or higher
 - Git
+- GitPython (for local repository analysis)
 - Basic understanding of AI/ML model evaluation
 - Familiarity with command-line tools
 
@@ -200,7 +201,7 @@ def process_model_data(
 ```
 src/ai_model_catalog/
 ├── __init__.py
-├── cli.py                    # CLI interface
+├── cli.py                    # CLI interface (includes local repo analysis)
 ├── fetch_repo.py             # API integration
 ├── score_model.py            # NetScore calculation
 └── metrics/                  # Individual metrics
@@ -211,6 +212,39 @@ src/ai_model_catalog/
     └── score_*.py            # Individual metrics
 ```
 
+## Local Repository Analysis
+
+### Contributing to Local Repository Features
+
+The AI Model Catalog CLI now supports local repository analysis with Git integration. Key areas for contribution:
+
+#### Core Functions (`cli.py`)
+- `_scan_local_repo(path: Path) -> Dict`: Main local repository scanning function
+- `_detect_source(source: str) -> Tuple[str, Dict]`: Source type detection
+
+#### Features to Enhance
+- **Git Integration**: Improve Git metadata extraction (branches, tags, merge commits)
+- **File Analysis**: Add support for more file types and patterns
+- **Performance**: Optimize large repository scanning
+- **Error Handling**: Improve handling of corrupted or inaccessible repositories
+
+#### Testing Local Repository Features
+```python
+# Test local repository scanning
+def test_scan_local_repo_with_git(tmp_path: Path):
+    # Create test repository structure
+    # Test Git metadata extraction
+    # Verify filesystem scanning
+    pass
+
+# Test source detection
+def test_detect_source_github_url():
+    kind, info = _detect_source("https://github.com/owner/repo")
+    assert kind == "github"
+    assert info["owner"] == "owner"
+    assert info["repo"] == "repo"
+```
+
 ## Testing Guidelines
 
 ### Test Structure
@@ -218,6 +252,7 @@ src/ai_model_catalog/
 - **Unit tests**: Test individual functions and classes
 - **Integration tests**: Test API interactions and data flow
 - **End-to-end tests**: Test complete CLI workflows
+- **Local repository tests**: Test Git integration and filesystem scanning
 
 ### Test Naming
 

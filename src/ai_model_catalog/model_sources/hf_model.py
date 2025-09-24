@@ -1,33 +1,49 @@
+# --- stdlib ---
+from __future__ import annotations
+import json
 import logging
+from dataclasses import dataclass
 from typing import Any, Dict
 
-from ai_model_catalog.fetch_repo import fetch_model_data
-from ai_model_catalog.score_model import score_model_from_id
+# --- third-party ---
+import typer
 
-from ..utils import (
-    _display_model_info,
-    _display_scores,
-    _format_model_data,
-)
-from .base import BaseHandler
+from ai_model_catalog import fetch_repo as fr  # <-- module import
 
-log = logging.getLogger("catalog")
+# --- local ---
+from ..utils import _as_int, _as_bool
+
+log = logging.getLogger(__name__)
 
 
-class ModelHandler(BaseHandler):
-    """Concrete handler for Hugging Face model data."""
-
-    def __init__(self, model_id: str):
-        self.model_id = model_id
+@dataclass
+class ModelHandler:
+    model_id: str
 
     def fetch_data(self) -> Dict[str, Any]:
-        log.info("Fetching model data for %s", self.model_id)
-        return fetch_model_data(self.model_id)
+        log.info("Fetching HF model data: %s", self.model_id)
+        data = fr.fetch_model_data(model_id=self.model_id)
+        if not isinstance(data, dict):
+            raise TypeError("fetch_model_data() must return a dict")
+        return data
 
-    def format_data(self, data: Dict[str, Any]) -> Dict[str, Any]:
-        return _format_model_data(data, self.model_id)
+    def format_data(self, raw: Dict[str, Any]) -> Dict[str, Any]:
+        formatted: Dict[str, Any] = {
+            "source": "huggingface",
+            "id": raw.get("modelId") or raw.get("id") or self.model_id,
+            "author": raw.get("author") or raw.get("owner") or "",
+            "license": raw.get("license") or "",
+            "downloads": _as_int(raw.get("downloads")),  # mock supplies this
+            "last_modified": raw.get("lastModified") or raw.get("last_modified") or "",
+            "has_readme": _as_bool(raw.get("readme"))
+            or _as_bool(raw.get("has_readme")),
+        }
 
-    def display_data(self, formatted_data, raw_data) -> None:
-        _display_model_info(formatted_data)
-        scores = score_model_from_id(self.model_id)  # call here
-        _display_scores(scores)
+        card = raw.get("cardData")
+        if isinstance(card, dict):
+            formatted["card_keys"] = sorted(card.keys())[:10]
+
+        return formatted
+
+    def display_data(self, formatted: Dict[str, Any]) -> None:
+        typer.echo(json.dumps(formatted, indent=2, ensure_ascii=False))
