@@ -1,4 +1,5 @@
 from typing import Dict
+
 from ai_model_catalog.metrics.base import Metric
 
 # Hardware compatibility thresholds (in bytes)

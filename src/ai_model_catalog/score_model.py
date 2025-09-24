@@ -1,11 +1,10 @@
 import logging
 from typing import Dict
 
+from .fetch_repo import fetch_model_data, fetch_repo_data
 from .metrics.score_available_dataset_and_code import (
     score_available_dataset_and_code as score_availability,
 )
-from .fetch_repo import fetch_model_data
-from .fetch_repo import fetch_repo_data
 from .metrics.score_bus_factor import score_bus_factor
 from .metrics.score_code_quality import score_code_quality
 from .metrics.score_dataset_quality import score_dataset_quality

@@ -30,6 +30,8 @@ The AI Model Catalog CLI evaluates AI/ML models across eight key dimensions to p
 - 🖥️ **Interactive Mode** - User-friendly interface for model exploration
 - 📈 **Performance Metrics** - Latency measurements for each scoring component
 - 🔧 **Extensible Design** - Modular architecture for easy metric addition
+- 🤖 **Auto-Grader Compatible** - Full support for automated evaluation with NDJSON output
+- 🌐 **Cross-Platform** - Works on Windows, Linux, and macOS
 
 ## Installation
 
@@ -86,6 +88,25 @@ catalog hf-model --model-id microsoft/DialoGPT-medium
 catalog interactive
 ```
 
+### Module Entry Point
+
+The tool can also be run as a Python module:
+
+```bash
+# GitHub repository analysis
+python3 -m src.ai_model_catalog models --owner huggingface --repo transformers --format ndjson
+
+# Hugging Face model analysis  
+python3 -m src.ai_model_catalog hf-model --model-id bert-base-uncased --format ndjson
+
+# Hugging Face dataset analysis
+python3 -m src.ai_model_catalog hf-dataset --dataset-id imdb --format ndjson
+```
+
+**Format Options:**
+- `--format text` - Human-readable output (default)
+- `--format ndjson` - Machine-readable NDJSON for auto-grader
+
 ### Auto-Grader Interface
 
 The tool supports the required auto-grader interface for automated evaluation:
@@ -94,12 +115,19 @@ The tool supports the required auto-grader interface for automated evaluation:
 # Install dependencies
 ./run install
 
-# Process URL file
+# Process URL file (supports HF models, datasets, and GitHub repos)
 ./run /path/to/url_file.txt
 
-# Run test suite
+# Run test suite with coverage validation
 ./run test
 ```
+
+**Supported URL formats:**
+- Hugging Face Models: `https://huggingface.co/microsoft/DialoGPT-medium`
+- Hugging Face Datasets: `https://huggingface.co/datasets/imdb`
+- GitHub Repositories: `https://github.com/huggingface/transformers`
+
+**Output:** All commands output NDJSON format for auto-grader compatibility.
 
 ## Output Format
 
@@ -368,6 +396,19 @@ chmod +x run
 ```bash
 # Reinstall in development mode
 pip install -e ".[dev]"
+```
+
+**Module Not Found Error**
+```bash
+# Set Python path for module execution
+export PYTHONPATH=src
+python3 -m src.ai_model_catalog --help
+```
+
+**Line Ending Issues (Windows)**
+```bash
+# Fix CRLF line endings in run script
+sed -i 's/\r$//' run
 ```
 
 ### Debug Mode

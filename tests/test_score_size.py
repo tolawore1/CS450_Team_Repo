@@ -1,9 +1,9 @@
 import pytest
 
 from ai_model_catalog.metrics.score_size import (
+    HARDWARE_THRESHOLDS,
     SizeMetric,
     score_size,
-    HARDWARE_THRESHOLDS,
 )
 
 

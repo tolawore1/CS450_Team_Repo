@@ -5,8 +5,15 @@ import logging
 from dataclasses import dataclass
 from typing import Any, Dict, Optional
 
-# --- third-party ---
-import typer
+from ai_model_catalog.fetch_repo import fetch_model_data
+from ai_model_catalog.score_model import score_model_from_id
+
+from ..utils import (
+    _display_model_info,
+    _display_scores,
+    _format_model_data,
+)
+from .base import BaseHandler
 
 # --- local ---
 from ai_model_catalog import fetch_repo as fr  # <-- module import

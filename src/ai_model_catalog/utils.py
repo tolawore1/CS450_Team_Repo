@@ -1,5 +1,7 @@
 from typing import Any, Dict
+
 import typer
+
 from ai_model_catalog.score_model import net_score
 
 
@@ -171,14 +173,13 @@ def _pick_repo_for_owner(owner: str, repo_input: str) -> str:
 
 
 def _display_scores(data: Dict[str, Any]) -> None:
-   scores = net_score(data)
-   typer.echo("\nNetScore Breakdown:")
-   for key, value in scores.items():
-    typer.echo(f"{key}: {value:.3f}")
-    if key == "size" and isinstance(value, dict):
+    scores = net_score(data)
+    typer.echo("\nNetScore Breakdown:")
+    for key, value in scores.items():
+        if key == "size" and isinstance(value, dict):
             # Display size scores as hardware mappings
-        typer.echo(f"{key}:")
-        for hardware, score in value.items():
-            typer.echo(f"  {hardware}: {score:.3f}")
-    else:
-        typer.echo(f"{key}: {value:.3f}")
+            typer.echo(f"{key}:")
+            for hardware, score in value.items():
+                typer.echo(f"  {hardware}: {score:.3f}")
+        else:
+            typer.echo(f"{key}: {value:.3f}")
