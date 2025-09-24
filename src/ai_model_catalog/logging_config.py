@@ -24,8 +24,15 @@ def configure_logging() -> None:
     root.setLevel(level)
 
     path = os.getenv("LOG_FILE")
-    if not path or level == _SILENT:
-        return  # silent by default per spec
+    if not path:
+        return  # no log file specified
+
+    # For LOG_LEVEL=0, create empty log file if LOG_FILE is specified
+    if level == _SILENT:
+        p = Path(path)
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.touch()  # Create empty file
+        return
 
     p = Path(path)
     p.parent.mkdir(parents=True, exist_ok=True)
