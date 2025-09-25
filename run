@@ -1,7 +1,4 @@
 #!/usr/bin/env bash
-# Cross-platform AI Model Catalog CLI - Auto-Grader Interface
-# Dependency installation follows Dockerfile pattern: requirements.txt first, then dev dependencies
-# Installs packages directly to system Python (for Docker container environment)
 
 set -euo pipefail
 
@@ -43,14 +40,17 @@ check_python() {
     fi
 }
 install_deps() {
+    log_info "Starting dependency installation..."
     check_python
     log_info "Installing dependencies directly to system Python (Docker container)..."
 
     # Determine pip command (prefer pip3 like Dockerfile)
     if command -v pip3 &>/dev/null; then
         PIP_CMD="pip3"
+        log_info "Using pip3 for installation"
     else
         PIP_CMD="pip"
+        log_info "Using pip for installation"
     fi
     
     # Install dependencies from requirements.txt first (like Dockerfile)
@@ -60,15 +60,20 @@ install_deps() {
             log_error "Failed to install requirements.txt dependencies"
             exit 1
         fi
+        log_info "Requirements.txt dependencies installed successfully"
+    else
+        log_warn "requirements.txt not found, skipping..."
     fi
     
     # Then install the package in development mode
+    log_info "Installing package in development mode..."
     if ! $PIP_CMD install --break-system-packages -e ".[dev]"; then
         log_error "Dependency installation failed"
         exit 1
     fi
 
     log_info "Dependencies (including dev) installed successfully."
+    log_info "Installation completed successfully"
     exit 0
 }
 
@@ -76,11 +81,15 @@ install_deps() {
 
 # Run tests and enforce 80% coverage with summary line
 run_tests() {
+    log_info "Starting test execution..."
     check_python
     log_info "Running tests and checking code coverage..."
 
     # Run tests and collect coverage (using system Python)
-    $PYTHON_CMD -m coverage run -m pytest tests || true
+    log_info "Running pytest with coverage..."
+    if ! $PYTHON_CMD -m coverage run -m pytest tests; then
+        log_warn "Some tests failed, but continuing with coverage report..."
+    fi
 
     # Generate coverage report and extract percentage
     coverage_report=$($PYTHON_CMD -m coverage report -m)
