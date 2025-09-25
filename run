@@ -39,30 +39,21 @@ check_python() {
         exit 1
     fi
 }
+
 install_deps() {
     log_info "Starting dependency installation..."
     check_python
 
-    # Detect pip
-    if command -v pip3 &>/dev/null; then
-        PIP_CMD="pip3"
-    else
-        PIP_CMD="pip"
-    fi
+    # Use python3 -m pip directly to avoid confusion
+    PIP_CMD="$PYTHON_CMD -m pip"
 
-    # Check if we are inside a venv
-    if [[ -n "${VIRTUAL_ENV-}" ]]; then
-        log_info "Virtual environment detected: $VIRTUAL_ENV"
-        EXTRA_ARGS=""
-    else
-        log_warn "No virtual environment detected. Using --break-system-packages."
-        EXTRA_ARGS="--break-system-packages"
-    fi
+    # Upgrade pip first (avoid old version issues)
+    $PIP_CMD install --upgrade pip --break-system-packages
 
-    # Install from requirements.txt if it exists
+    # Install requirements.txt first
     if [[ -f "requirements.txt" ]]; then
         log_info "Installing dependencies from requirements.txt..."
-        if ! $PIP_CMD install $EXTRA_ARGS -r requirements.txt; then
+        if ! $PIP_CMD install --break-system-packages -r requirements.txt; then
             log_error "Failed to install requirements.txt dependencies"
             exit 1
         fi
@@ -70,17 +61,15 @@ install_deps() {
         log_warn "requirements.txt not found, skipping..."
     fi
 
-    # Install editable package with dev extras
+    # Install dev extras from pyproject
     log_info "Installing package in development mode..."
-    if ! $PIP_CMD install $EXTRA_ARGS -e ".[dev]"; then
+    if ! $PIP_CMD install --break-system-packages -e ".[dev]"; then
         log_error "Dependency installation failed"
         exit 1
     fi
 
     log_info "Dependencies installed successfully."
 }
-
-
 
 
 # Run tests and enforce 80% coverage with summary line
