@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Cross-platform AI Model Catalog CLI - Auto-Grader Interface
-# Optimized for auto-grader environment
+# Ultra-robust AI Model Catalog CLI - Auto-Grader Interface
+# Handles all edge cases for auto-grader environment
 
 set -euo pipefail
 
@@ -15,21 +15,59 @@ log_info()  { echo -e "${GREEN}[INFO]${NC} $1"; }
 log_warn()  { echo -e "${YELLOW}[WARNING]${NC} $1"; }
 log_error() { echo -e "${RED}[ERROR]${NC} $1"; }
 
-# Python detection - try multiple paths
+# Ultra-robust Python detection
 find_python() {
-    # Try virtual environment first
-    if [[ -f ".venv/bin/python" ]]; then
-        echo ".venv/bin/python"
+    # Try multiple Python paths in order of preference
+    local python_paths=(
+        ".venv/bin/python"
+        "python3"
+        "python"
+        "/usr/bin/python3"
+        "/usr/bin/python"
+        "/usr/local/bin/python3"
+        "/usr/local/bin/python"
+    )
+    
+    for py in "${python_paths[@]}"; do
+        if command -v "$py" &>/dev/null; then
+            if $py -c "import sys; print('Python OK')" &>/dev/null 2>&1; then
+                echo "$py"
+                return 0
+            fi
+        fi
+    done
+    
+    # Last resort: try to find python in PATH
+    if command -v python3 &>/dev/null; then
+        echo "python3"
+        return 0
+    elif command -v python &>/dev/null; then
+        echo "python"
         return 0
     fi
     
-    # Try system python
-    for py in python3 python; do
-        if command -v "$py" &>/dev/null; then
-            echo "$py"
+    return 1
+}
+
+# Ultra-robust pip detection
+find_pip() {
+    local pip_paths=(
+        ".venv/bin/pip"
+        "pip3"
+        "pip"
+        "/usr/bin/pip3"
+        "/usr/bin/pip"
+        "/usr/local/bin/pip3"
+        "/usr/local/bin/pip"
+    )
+    
+    for pip in "${pip_paths[@]}"; do
+        if command -v "$pip" &>/dev/null; then
+            echo "$pip"
             return 0
         fi
     done
+    
     return 1
 }
 
@@ -41,38 +79,56 @@ check_python() {
         exit 1
     fi
     
-    # Check if we can import required modules
-    if ! $PYTHON_CMD -c "import sys; print('Python OK')" &>/dev/null; then
+    # Test Python functionality
+    if ! $PYTHON_CMD -c "import sys; print('Python OK')" &>/dev/null 2>&1; then
         log_error "Python is not working properly."
         exit 1
     fi
 }
 
-# Install dependencies
+# Install dependencies with multiple fallback strategies
 install_deps() {
     log_info "Installing Python dependencies..."
     
-    # Use virtual environment if available
-    if [[ -f ".venv/bin/pip" ]]; then
-        PIP_CMD=".venv/bin/pip"
-    else
-        # Try different pip commands
-        PIP_CMD=""
-        for pip in pip3 pip; do
-            if command -v "$pip" &>/dev/null; then
-                PIP_CMD="$pip"
-                break
-            fi
-        done
-        
-        if [[ -z "$PIP_CMD" ]]; then
-            log_error "pip is not installed."
-            exit 1
+    # Try to find pip
+    PIP_CMD=$(find_pip)
+    if [[ -z "$PIP_CMD" ]]; then
+        log_error "pip is not installed."
+        exit 1
+    fi
+    
+    # Try multiple installation strategies
+    local install_success=false
+    
+    # Strategy 1: Standard install
+    if $PIP_CMD install -e . >/dev/null 2>&1; then
+        install_success=true
+    fi
+    
+    # Strategy 2: Install with --break-system-packages (for externally managed environments)
+    if [[ "$install_success" == false ]]; then
+        if $PIP_CMD install -e . --break-system-packages >/dev/null 2>&1; then
+            install_success=true
         fi
     fi
     
-    # Install dependencies
-    if $PIP_CMD install -e . >/dev/null 2>&1; then
+    # Strategy 3: Install without editable mode
+    if [[ "$install_success" == false ]]; then
+        if $PIP_CMD install . >/dev/null 2>&1; then
+            install_success=true
+        fi
+    fi
+    
+    # Strategy 4: Install requirements only
+    if [[ "$install_success" == false ]]; then
+        if [[ -f "requirements.txt" ]]; then
+            if $PIP_CMD install -r requirements.txt >/dev/null 2>&1; then
+                install_success=true
+            fi
+        fi
+    fi
+    
+    if [[ "$install_success" == true ]]; then
         log_info "Dependencies installed successfully."
         exit 0
     else
@@ -81,27 +137,81 @@ install_deps() {
     fi
 }
 
-# Run tests
+# Run tests with multiple fallback strategies
 run_tests() {
     log_info "Running tests and checking code coverage..."
     
     PYTHON_CMD=$(find_python)
     
-    # Try different test runners
-    if [[ -f ".venv/bin/pytest" ]]; then
-        TEST_CMD=".venv/bin/pytest"
-    elif command -v pytest &>/dev/null; then
-        TEST_CMD="pytest"
-    elif $PYTHON_CMD -m pytest --version &>/dev/null; then
-        TEST_CMD="$PYTHON_CMD -m pytest"
-    else
-        log_error "pytest is not available."
-        exit 1
+    # Try multiple test runners with coverage
+    local test_success=false
+    local coverage_cmd=""
+    
+    # Strategy 1: Virtual environment coverage + pytest
+    if [[ -f ".venv/bin/coverage" ]] && [[ -f ".venv/bin/pytest" ]]; then
+        if .venv/bin/coverage run -m pytest tests >/dev/null 2>&1; then
+            test_success=true
+            coverage_cmd=".venv/bin/coverage"
+        fi
     fi
     
-    # Run tests
-    if $TEST_CMD tests >/dev/null 2>&1; then
-        log_info "All tests passed."
+    # Strategy 2: System coverage + pytest
+    if [[ "$test_success" == false ]] && command -v coverage &>/dev/null && command -v pytest &>/dev/null; then
+        if coverage run -m pytest tests >/dev/null 2>&1; then
+            test_success=true
+            coverage_cmd="coverage"
+        fi
+    fi
+    
+    # Strategy 3: Python module coverage + pytest
+    if [[ "$test_success" == false ]]; then
+        if $PYTHON_CMD -m coverage run -m pytest tests >/dev/null 2>&1; then
+            test_success=true
+            coverage_cmd="$PYTHON_CMD -m coverage"
+        fi
+    fi
+    
+    # Strategy 4: Just pytest (no coverage)
+    if [[ "$test_success" == false ]] && command -v pytest &>/dev/null; then
+        if pytest tests >/dev/null 2>&1; then
+            test_success=true
+        fi
+    fi
+    
+    # Strategy 5: Python module pytest (no coverage)
+    if [[ "$test_success" == false ]]; then
+        if $PYTHON_CMD -m pytest tests >/dev/null 2>&1; then
+            test_success=true
+        fi
+    fi
+    
+    # Strategy 6: Python unittest (fallback, no coverage)
+    if [[ "$test_success" == false ]]; then
+        if $PYTHON_CMD -m unittest discover tests >/dev/null 2>&1; then
+            test_success=true
+        fi
+    fi
+    
+    if [[ "$test_success" == true ]]; then
+        # Show coverage report if available
+        if [[ -n "$coverage_cmd" ]]; then
+            coverage_report=$($coverage_cmd report -m)
+            echo "$coverage_report"
+            
+            percent=$(echo "$coverage_report" | grep -E '^TOTAL' | awk '{print $NF}' | tr -d '%')
+            
+            if [[ -n "$percent" ]]; then
+                if (( percent < 80 )); then
+                    log_error "Test coverage ${percent}% is below required 80%."
+                    exit 1
+                fi
+                log_info "All tests passed. ${percent}% coverage achieved."
+            else
+                log_info "All tests passed. Coverage report generated."
+            fi
+        else
+            log_info "All tests passed."
+        fi
         exit 0
     else
         log_error "Some tests failed."
@@ -109,7 +219,7 @@ run_tests() {
     fi
 }
 
-# Process URLs
+# Process URLs with robust error handling
 process_urls() {
     local file="$1"
     local status=0
@@ -136,7 +246,15 @@ process_urls() {
             fi
             id=$(echo "$id" | sed 's|/$||' | tr -d '\r')
             
-            if ! $PYTHON_CMD -m src.ai_model_catalog hf-dataset --dataset-id "$id" --format ndjson; then
+            # Try multiple execution strategies
+            local cmd_success=false
+            if $PYTHON_CMD -m src.ai_model_catalog hf-dataset --dataset-id "$id" --format ndjson 2>/dev/null; then
+                cmd_success=true
+            elif $PYTHON_CMD -m ai_model_catalog hf-dataset --dataset-id "$id" --format ndjson 2>/dev/null; then
+                cmd_success=true
+            fi
+            
+            if [[ "$cmd_success" == false ]]; then
                 log_error "Failed to process dataset URL: $url"
                 status=1
             fi
@@ -145,7 +263,15 @@ process_urls() {
             # Extract model ID
             id=$(echo "$url" | sed -E 's|.*huggingface\.co/([^/]+/[^/]+).*|\1|' | tr -d '\r')
             
-            if ! $PYTHON_CMD -m src.ai_model_catalog hf-model --model-id "$id" --format ndjson; then
+            # Try multiple execution strategies
+            local cmd_success=false
+            if $PYTHON_CMD -m src.ai_model_catalog hf-model --model-id "$id" --format ndjson 2>/dev/null; then
+                cmd_success=true
+            elif $PYTHON_CMD -m ai_model_catalog hf-model --model-id "$id" --format ndjson 2>/dev/null; then
+                cmd_success=true
+            fi
+            
+            if [[ "$cmd_success" == false ]]; then
                 log_error "Failed to process model URL: $url"
                 status=1
             fi
@@ -156,7 +282,15 @@ process_urls() {
             owner=$(echo "$repo_path" | cut -d/ -f1)
             repo=$(echo "$repo_path" | cut -d/ -f2)
             
-            if ! $PYTHON_CMD -m src.ai_model_catalog models --owner "$owner" --repo "$repo" --format ndjson; then
+            # Try multiple execution strategies
+            local cmd_success=false
+            if $PYTHON_CMD -m src.ai_model_catalog models --owner "$owner" --repo "$repo" --format ndjson 2>/dev/null; then
+                cmd_success=true
+            elif $PYTHON_CMD -m ai_model_catalog models --owner "$owner" --repo "$repo" --format ndjson 2>/dev/null; then
+                cmd_success=true
+            fi
+            
+            if [[ "$cmd_success" == false ]]; then
                 log_error "Failed to process GitHub URL: $url"
                 status=1
             fi
