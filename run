@@ -25,12 +25,13 @@ find_python() {
     fi
   done
   for cmd in python3 python py; do
-    if command -v "${cmd}" >/dev/null 2^&1 && "${cmd}" -c "import sys; print(sys.version_info.major)" >/dev/null 2>&1; then
+    if command -v "${cmd}" >/dev/null 2>&1 && "${cmd}" -c "import sys; print(sys.version_info.major)" >/dev/null 2>&1; then
       echo "${cmd}"; return 0
     fi
   done
   return 1
 }
+
 
 install_deps() {
   log_info "Installing Python dependencies..."
