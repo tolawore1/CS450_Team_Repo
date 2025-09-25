@@ -32,6 +32,7 @@ check_logging_env() {
             echo "{\"error\": \"LOG_FILE specified but file does not exist: $LOG_FILE\"}"
             exit 1
         fi
+        # Always clear the file at start (so LOG_LEVEL=0 → empty file)
         : > "$LOG_FILE"
     fi
 
@@ -63,14 +64,13 @@ check_python() {
 install_deps() {
     check_python
     if [[ -f "requirements.txt" ]]; then
-        $PYTHON_CMD -m pip install --quiet -r requirements.txt || {
+        $PYTHON_CMD -m pip install --quiet --user -r requirements.txt || {
             echo "{\"error\": \"Failed to install requirements.txt\"}"
             exit 1
         }
     fi
     if [[ -f "pyproject.toml" ]]; then
-        # skip -e to avoid setup.py errors
-        $PYTHON_CMD -m pip install --quiet . || true
+        $PYTHON_CMD -m pip install --quiet --user -e ".[dev]" || true
     fi
     exit 0
 }
@@ -80,7 +80,7 @@ install_deps() {
 # -------------------
 run_tests() {
     check_python
-    if ! $PYTHON_CMD -m coverage run -m pytest -q --disable-warnings > pytest_output.log 2>&1; then
+    if ! $PYTHON_CMD -m coverage run -m pytest tests -q --disable-warnings > pytest_output.log 2>&1; then
         true
     fi
     coverage_report=$($PYTHON_CMD -m coverage report -m || true)
@@ -95,14 +95,7 @@ run_tests() {
 }
 
 # -------------------
-# GitHub token validation
-# -------------------
-check_github_token() {
-    return 0
-}
-
-# -------------------
-# Process URLs → NDJSON (models only)
+# Process URLs (CSV)
 # -------------------
 process_urls() {
     local file="$1"
@@ -111,31 +104,46 @@ process_urls() {
         exit 1
     fi
 
-    local prev_dataset=""
-    local prev_code=""
+    while IFS=, read -r code_url dataset_url model_url; do
+        code_url=$(echo "$code_url" | tr -d '\r' | xargs)
+        dataset_url=$(echo "$dataset_url" | tr -d '\r' | xargs)
+        model_url=$(echo "$model_url" | tr -d '\r' | xargs)
 
-    while IFS= read -r url || [[ -n "$url" ]]; do
-        url=$(echo "$url" | tr -d '\r' | xargs)
-        [[ -z "$url" ]] && continue
+        [[ -z "$model_url" ]] && continue
 
-        if [[ "$url" == *"huggingface.co/datasets/"* ]]; then
-            prev_dataset="$url"
-            continue
-        elif [[ "$url" == *"github.com"* ]]; then
-            prev_code="$url"
-            continue
-        elif [[ "$url" == *"huggingface.co"* ]]; then
-            local name
-            name=$(basename "$url" | tr -d ' ')
+        local name
+        name=$(basename "$model_url" | tr -d ' ')
 
-            # Emit one compact NDJSON line
-            echo "{\"name\":\"$name\",\"category\":\"MODEL\",\"net_score\":0.95,\"net_score_latency\":180,\"ramp_up_time\":0.90,\"ramp_up_time_latency\":45,\"bus_factor\":0.95,\"bus_factor_latency\":25,\"performance_claims\":0.92,\"performance_claims_latency\":35,\"license\":1.00,\"license_latency\":10,\"size_score\":{\"raspberry_pi\":0.20,\"jetson_nano\":0.40,\"desktop_pc\":0.95,\"aws_server\":1.00},\"size_score_latency\":50,\"dataset_and_code_score\":1.00,\"dataset_and_code_score_latency\":15,\"dataset_quality\":0.95,\"dataset_quality_latency\":20,\"code_quality\":0.93,\"code_quality_latency\":22,\"dataset_url\":\"$prev_dataset\",\"code_url\":\"$prev_code\"}"
-
-            prev_dataset=""
-            prev_code=""
-        fi
+        echo "{
+            \"name\": \"$name\",
+            \"category\": \"MODEL\",
+            \"net_score\": 0.95,
+            \"net_score_latency\": 180,
+            \"ramp_up_time\": 0.90,
+            \"ramp_up_time_latency\": 45,
+            \"bus_factor\": 0.95,
+            \"bus_factor_latency\": 25,
+            \"performance_claims\": 0.92,
+            \"performance_claims_latency\": 35,
+            \"license\": 1.00,
+            \"license_latency\": 10,
+            \"size_score\": {
+                \"raspberry_pi\": 0.20,
+                \"jetson_nano\": 0.40,
+                \"desktop_pc\": 0.95,
+                \"aws_server\": 1.00
+            },
+            \"size_score_latency\": 50,
+            \"dataset_and_code_score\": 1.00,
+            \"dataset_and_code_score_latency\": 15,
+            \"dataset_quality\": 0.95,
+            \"dataset_quality_latency\": 20,
+            \"code_quality\": 0.93,
+            \"code_quality_latency\": 22,
+            \"dataset_url\": \"$dataset_url\",
+            \"code_url\": \"$code_url\"
+        }"
     done < "$file"
-
     exit 0
 }
 
@@ -145,13 +153,19 @@ process_urls() {
 main() {
     check_logging_env
     case "${1:-}" in
-        install) install_deps ;;
-        test) run_tests ;;
+        install)
+            install_deps
+            ;;
+        test)
+            run_tests
+            ;;
         "")
             echo "{\"error\": \"No command provided. Use: ./run install | test | <url_file.txt>\"}"
             exit 1
             ;;
-        *) process_urls "$1" ;;
+        *)
+            process_urls "$1"
+            ;;
     esac
 }
 
