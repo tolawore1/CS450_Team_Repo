@@ -41,34 +41,8 @@ check_python() {
 }
 
 install_deps() {
-    log_info "Starting dependency installation..."
-    check_python
-
-    # Use python3 -m pip directly to avoid confusion
-    PIP_CMD="$PYTHON_CMD -m pip"
-
-    # Upgrade pip first (avoid old version issues)
-    $PIP_CMD install --upgrade pip --break-system-packages
-
-    # Install requirements.txt first
-    if [[ -f "requirements.txt" ]]; then
-        log_info "Installing dependencies from requirements.txt..."
-        if ! $PIP_CMD install --break-system-packages -r requirements.txt; then
-            log_error "Failed to install requirements.txt dependencies"
-            exit 1
-        fi
-    else
-        log_warn "requirements.txt not found, skipping..."
-    fi
-
-    # Install dev extras from pyproject
-    log_info "Installing package in development mode..."
-    if ! $PIP_CMD install --break-system-packages -e ".[dev]"; then
-        log_error "Dependency installation failed"
-        exit 1
-    fi
-
-    log_info "Dependencies installed successfully."
+    log_info "Dependencies should already be installed by Dockerfile."
+    exit 0
 }
 
 
