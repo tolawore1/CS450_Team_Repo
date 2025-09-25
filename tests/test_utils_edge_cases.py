@@ -73,11 +73,11 @@ def test_format_repository_data_with_complete_data():
     """Test _format_repository_data with complete data."""
     data = {
         "full_name": "test/repo",
-        "stars": 100,
-        "forks": 50,
-        "open_issues": 5,
-        "license": {"spdx_id": "mit"},
-        "updated_at": "2024-01-01T00:00:00Z",
+        "stars": 200,
+        "forks": 75,
+        "open_issues": 10,
+        "license": {"spdx_id": "apache-2.0"},
+        "updated_at": "2024-02-01T00:00:00Z",
         "description": "Test repository",
         "topics": ["ai", "ml"],
         "default_branch": "main",
@@ -86,11 +86,11 @@ def test_format_repository_data_with_complete_data():
     result = _format_repository_data(data, "test", "repo")
 
     assert result["full_name"] == "test/repo"
-    assert result["stars"] == 100
-    assert result["forks"] == 50
-    assert result["open_issues"] == 5
-    assert result["license_name"] == "mit"
-    assert result["updated"] == "2024-01-01T00:00:00Z"
+    assert result["stars"] == 200
+    assert result["forks"] == 75
+    assert result["open_issues"] == 10
+    assert result["license_name"] == "apache-2.0"
+    assert result["updated"] == "2024-02-01T00:00:00Z"
     assert result["description"] == "Test repository"
     assert result["default_branch"] == "main"
 
