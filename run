@@ -69,6 +69,7 @@ install_deps() {
     fi
 
     log_info "Dependencies (including dev) installed successfully."
+    exit 0
 }
 
 
@@ -160,7 +161,7 @@ process_urls() {
             repo_path=$(echo "$url" | sed -E 's|.*github\.com/([^/]+/[^/]+).*|\1|' | tr -d '\r')
             owner=$(echo "$repo_path" | cut -d/ -f1)
             repo=$(echo "$repo_path" | cut -d/ -f2)
-            if ! venv/bin/python -m src.ai_model_catalog models --owner "$owner" --repo "$repo" --format ndjson; then
+            if ! $(get_venv_python) -m src.ai_model_catalog models --owner "$owner" --repo "$repo" --format ndjson; then
                 log_error "Failed to process GitHub URL: $url"
                 status=1
             fi
