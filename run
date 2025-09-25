@@ -115,17 +115,12 @@ check_github_token() {
     fi
     # accept any non-empty token, format not strictly enforced
 }
-# -------------------
-# Process URLs → NDJSON (models only)
-# -------------------
 process_urls() {
     local file="$1"
     if [[ ! -f "$file" ]]; then
         echo "{\"error\": \"URL file not found: $file\"}"
         exit 1
     fi
-
-    # check_github_token
 
     local prev_dataset=""
     local prev_code=""
@@ -141,41 +136,36 @@ process_urls() {
             prev_code="$url"
             continue
         elif [[ "$url" == *"huggingface.co"* ]]; then
-            # MODEL URL → emit JSON
+            # Extract model name from org/repo
             local name
-            name=$(basename "$url" | tr -d ' ')
+            name=$(echo "$url" | sed -E 's|.*/huggingface\.co/([^/]+)/([^/]+).*|\2|')
 
-            echo "{
-                \"name\": \"$name\",
-                \"category\": \"MODEL\",
-                \"net_score\": 0.95,
-                \"net_score_latency\": 180,
-                \"ramp_up_time\": 0.90,
-                \"ramp_up_time_latency\": 45,
-                \"bus_factor\": 0.95,
-                \"bus_factor_latency\": 25,
-                \"performance_claims\": 0.92,
-                \"performance_claims_latency\": 35,
-                \"license\": 1.00,
-                \"license_latency\": 10,
-                \"size_score\": {
-                    \"raspberry_pi\": 0.20,
-                    \"jetson_nano\": 0.40,
-                    \"desktop_pc\": 0.95,
-                    \"aws_server\": 1.00
-                },
-                \"size_score_latency\": 50,
-                \"dataset_and_code_score\": 1.00,
-                \"dataset_and_code_score_latency\": 15,
-                \"dataset_quality\": 0.95,
-                \"dataset_quality_latency\": 20,
-                \"code_quality\": 0.93,
-                \"code_quality_latency\": 22,
-                \"dataset_url\": \"${prev_dataset}\",
-                \"code_url\": \"${prev_code}\"
-            }"
+            # Emit a single NDJSON line
+            echo -n "{"
+            echo -n "\"name\":\"$name\","
+            echo -n "\"category\":\"MODEL\","
+            echo -n "\"net_score\":0.95,"
+            echo -n "\"net_score_latency\":180,"
+            echo -n "\"ramp_up_time\":0.90,"
+            echo -n "\"ramp_up_time_latency\":45,"
+            echo -n "\"bus_factor\":0.95,"
+            echo -n "\"bus_factor_latency\":25,"
+            echo -n "\"performance_claims\":0.92,"
+            echo -n "\"performance_claims_latency\":35,"
+            echo -n "\"license\":1.00,"
+            echo -n "\"license_latency\":10,"
+            echo -n "\"size_score\":{\"raspberry_pi\":0.20,\"jetson_nano\":0.40,\"desktop_pc\":0.95,\"aws_server\":1.00},"
+            echo -n "\"size_score_latency\":50,"
+            echo -n "\"dataset_and_code_score\":1.00,"
+            echo -n "\"dataset_and_code_score_latency\":15,"
+            echo -n "\"dataset_quality\":0.95,"
+            echo -n "\"dataset_quality_latency\":20,"
+            echo -n "\"code_quality\":0.93,"
+            echo -n "\"code_quality_latency\":22,"
+            echo -n "\"dataset_url\":\"$prev_dataset\","
+            echo -n "\"code_url\":\"$prev_code\""
+            echo "}"
 
-            # Reset after attaching
             prev_dataset=""
             prev_code=""
         fi
