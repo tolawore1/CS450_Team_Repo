@@ -9,9 +9,34 @@ YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
 # Logging functions
-log_info()    { echo -e "${GREEN}[INFO]${NC} $1"; }
-log_warn()    { echo -e "${YELLOW}[WARNING]${NC} $1"; }
-log_error()   { echo -e "${RED}[ERROR]${NC} $1"; }
+log_info()    { 
+    if [[ "$LOG_VERBOSE" == "true" ]]; then
+        echo -e "${GREEN}[INFO]${NC} $1"
+    fi
+    if [[ -n "${LOG_FILE:-}" ]]; then
+        echo "[INFO] $1" >> "$LOG_FILE"
+    fi
+}
+log_warn()    { 
+    echo -e "${YELLOW}[WARNING]${NC} $1"
+    if [[ -n "${LOG_FILE:-}" ]]; then
+        echo "[WARNING] $1" >> "$LOG_FILE"
+    fi
+}
+log_error()   { 
+    echo -e "${RED}[ERROR]${NC} $1"
+    if [[ -n "${LOG_FILE:-}" ]]; then
+        echo "[ERROR] $1" >> "$LOG_FILE"
+    fi
+}
+log_debug()   { 
+    if [[ "${LOG_LEVEL:-0}" == "2" ]]; then
+        echo -e "${YELLOW}[DEBUG]${NC} $1"
+    fi
+    if [[ -n "${LOG_FILE:-}" ]]; then
+        echo "[DEBUG] $1" >> "$LOG_FILE"
+    fi
+}
 
 # Check logging environment variables
 check_logging_env() {
@@ -22,12 +47,12 @@ check_logging_env() {
         fi
     fi
     
-    # Set verbosity based on LOG_LEVEL
-    case "${LOG_LEVEL:-1}" in
+    # Set verbosity based on LOG_LEVEL (default is 0)
+    case "${LOG_LEVEL:-0}" in
         0) LOG_VERBOSE=false ;;
         1) LOG_VERBOSE=true ;;
         2) LOG_VERBOSE=true ;;
-        *) LOG_VERBOSE=true ;;
+        *) LOG_VERBOSE=false ;;
     esac
 }
 
@@ -66,11 +91,9 @@ install_deps() {
 
 # Run tests and enforce 80% coverage with summary line
 run_tests() {
-    log_info "Starting test execution..."
     check_python
 
     # Run tests quietly and only collect pass/fail info
-    log_info "Running pytest with coverage..."
     if ! $PYTHON_CMD -m coverage run -m pytest tests -q --disable-warnings > pytest_output.log 2>&1; then
         log_warn "Some tests failed, but continuing with coverage report..."
     fi
@@ -86,10 +109,8 @@ run_tests() {
     total=$((passed + failed))
 
     # Final clean output
-    echo ""
-    echo "Test summary:"
     echo "${passed}/${total} test cases passed. ${percent}% line coverage achieved."
-    echo ""
+    exit 0
 }
 
 
