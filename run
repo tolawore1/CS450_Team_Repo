@@ -10,31 +10,23 @@ NC='\033[0m' # No Color
 
 # Logging functions
 log_info()    { 
-    if [[ -n "${LOG_FILE:-}" ]]; then
+    if [[ -n "${LOG_FILE:-}" && "${LOG_LEVEL:-0}" != "0" ]]; then
         echo "[INFO] $1" >> "$LOG_FILE"
-    elif [[ "$LOG_VERBOSE" == "true" ]]; then
-        echo -e "${GREEN}[INFO]${NC} $1"
     fi
 }
 log_warn()    { 
-    if [[ -n "${LOG_FILE:-}" ]]; then
+    if [[ -n "${LOG_FILE:-}" && "${LOG_LEVEL:-0}" != "0" ]]; then
         echo "[WARNING] $1" >> "$LOG_FILE"
-    else
-        echo -e "${YELLOW}[WARNING]${NC} $1"
     fi
 }
 log_error()   { 
-    if [[ -n "${LOG_FILE:-}" ]]; then
+    if [[ -n "${LOG_FILE:-}" && "${LOG_LEVEL:-0}" != "0" ]]; then
         echo "[ERROR] $1" >> "$LOG_FILE"
-    else
-        echo -e "${RED}[ERROR]${NC} $1"
     fi
 }
 log_debug()   { 
-    if [[ -n "${LOG_FILE:-}" ]]; then
+    if [[ -n "${LOG_FILE:-}" && "${LOG_LEVEL:-0}" != "0" ]]; then
         echo "[DEBUG] $1" >> "$LOG_FILE"
-    elif [[ "${LOG_LEVEL:-0}" == "2" ]]; then
-        echo -e "${YELLOW}[DEBUG]${NC} $1"
     fi
 }
 
@@ -143,21 +135,13 @@ process_urls() {
     log_info "Starting URL processing..."
     log_debug "Processing file: $file"
 
-    while IFS=, read -r code_url dataset_url model_url; do
-        # Trim whitespace and carriage returns
-        code_url=$(echo "$code_url" | tr -d '\r' | xargs)
-        dataset_url=$(echo "$dataset_url" | tr -d '\r' | xargs)
-        model_url=$(echo "$model_url" | tr -d '\r' | xargs)
-        
-        # Skip empty lines
-        if [[ -z "$code_url" && -z "$dataset_url" && -z "$model_url" ]]; then
-            continue
-        fi
+    while IFS= read -r url; do
+        # Trim whitespace and carriage returns, skip empty lines
+        url=$(echo "$url" | tr -d '\r' | xargs)
+        [[ -z "$url" ]] && continue
 
-        # Extract name and category from the primary URL (prefer model, then dataset, then code)
-        primary_url="$model_url"
-        [[ -z "$primary_url" ]] && primary_url="$dataset_url"
-        [[ -z "$primary_url" ]] && primary_url="$code_url"
+        # Extract name and category from the URL
+        primary_url="$url"
         
         name=""
         category=""
@@ -196,8 +180,8 @@ main() {
         test)
             run_tests
             ;;
-        urls)
-            process_urls "${2:-urls.txt}"
+        URL_FILE)
+            process_urls "${2:-URL_FILE.txt}"
             ;;
         "")
             log_error "No command provided. Use: ./run install | test | <url_file.txt>"
