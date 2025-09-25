@@ -42,40 +42,44 @@ check_python() {
 install_deps() {
     log_info "Starting dependency installation..."
     check_python
-    log_info "Installing dependencies directly to system Python (Docker container)..."
 
-    # Determine pip command (prefer pip3 like Dockerfile)
+    # Detect pip
     if command -v pip3 &>/dev/null; then
         PIP_CMD="pip3"
-        log_info "Using pip3 for installation"
     else
         PIP_CMD="pip"
-        log_info "Using pip for installation"
     fi
-    
-    # Install dependencies from requirements.txt first (like Dockerfile)
+
+    # Check if we are inside a venv
+    if [[ -n "${VIRTUAL_ENV-}" ]]; then
+        log_info "Virtual environment detected: $VIRTUAL_ENV"
+        EXTRA_ARGS=""
+    else
+        log_warn "No virtual environment detected. Using --break-system-packages."
+        EXTRA_ARGS="--break-system-packages"
+    fi
+
+    # Install from requirements.txt if it exists
     if [[ -f "requirements.txt" ]]; then
         log_info "Installing dependencies from requirements.txt..."
-        if ! $PIP_CMD install --break-system-packages -r requirements.txt; then
+        if ! $PIP_CMD install $EXTRA_ARGS -r requirements.txt; then
             log_error "Failed to install requirements.txt dependencies"
             exit 1
         fi
-        log_info "Requirements.txt dependencies installed successfully"
     else
         log_warn "requirements.txt not found, skipping..."
     fi
-    
-    # Then install the package in development mode
+
+    # Install editable package with dev extras
     log_info "Installing package in development mode..."
-    if ! $PIP_CMD install --break-system-packages -e ".[dev]"; then
+    if ! $PIP_CMD install $EXTRA_ARGS -e ".[dev]"; then
         log_error "Dependency installation failed"
         exit 1
     fi
 
-    log_info "Dependencies (including dev) installed successfully."
-    log_info "Installation completed successfully"
-    exit 0
+    log_info "Dependencies installed successfully."
 }
+
 
 
 
