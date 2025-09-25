@@ -32,8 +32,7 @@ check_logging_env() {
             echo "{\"error\": \"LOG_FILE specified but file does not exist: $LOG_FILE\"}"
             exit 1
         fi
-        # Always clear the file at start (so LOG_LEVEL=0 → empty file)
-        : > "$LOG_FILE"
+        : > "$LOG_FILE"  # clear file at start
     fi
 
     case "${LOG_LEVEL:-0}" in
@@ -70,7 +69,7 @@ install_deps() {
         }
     fi
     if [[ -f "pyproject.toml" ]]; then
-        $PYTHON_CMD -m pip install --quiet --user -e ".[dev]" || true
+        $PYTHON_CMD -m pip install --quiet .
     fi
     exit 0
 }
@@ -95,7 +94,23 @@ run_tests() {
 }
 
 # -------------------
-# Process URLs (CSV)
+# GitHub token validation
+# -------------------
+check_github_token() {
+    if [[ -z "${GH_TOKEN:-}" ]]; then
+        echo "{\"error\": \"GitHub token (GH_TOKEN) environment variable is required\"}"
+        exit 1
+    fi
+
+    # Accept common GitHub token prefixes
+    if [[ ! "$GH_TOKEN" =~ ^gh[pousr]_[A-Za-z0-9]{36}$ ]]; then
+        echo "{\"error\": \"Invalid GitHub token format\"}"
+        exit 1
+    fi
+}
+
+# -------------------
+# Process URLs (CSV input → NDJSON output)
 # -------------------
 process_urls() {
     local file="$1"
@@ -103,6 +118,8 @@ process_urls() {
         echo "{\"error\": \"URL file not found: $file\"}"
         exit 1
     fi
+
+    check_github_token
 
     while IFS=, read -r code_url dataset_url model_url; do
         code_url=$(echo "$code_url" | tr -d '\r' | xargs)
@@ -114,6 +131,7 @@ process_urls() {
         local name
         name=$(basename "$model_url" | tr -d ' ')
 
+        # Emit NDJSON (1 line per model)
         echo "{
             \"name\": \"$name\",
             \"category\": \"MODEL\",
@@ -144,6 +162,7 @@ process_urls() {
             \"code_url\": \"$code_url\"
         }"
     done < "$file"
+
     exit 0
 }
 
