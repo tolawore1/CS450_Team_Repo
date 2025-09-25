@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 # Cross-platform AI Model Catalog CLI - Auto-Grader Interface
+# Dependency installation follows Dockerfile pattern: requirements.txt first, then dev dependencies
+# Creates fresh virtual environment for Linux compatibility
 
 set -euo pipefail
 
@@ -17,7 +19,16 @@ log_error()   { echo -e "${RED}[ERROR]${NC} $1"; }
 # Global Python command (set in check_python)
 PYTHON_CMD=""
 
-# Check for Python 3.10+
+# Get the correct Python path from virtual environment (Linux only)
+get_venv_python() {
+    if [[ -f "venv/bin/python" ]]; then
+        echo "venv/bin/python"
+    else
+        echo "$PYTHON_CMD"
+    fi
+}
+
+# Check for Python 3.10+ (prefer python3 like Dockerfile)
 check_python() {
     if command -v python3 &>/dev/null; then
         PYTHON_CMD="python3"
@@ -39,17 +50,51 @@ install_deps() {
     check_python
     log_info "Setting up virtual environment with $PYTHON_CMD..."
 
-    # Create venv if it doesn't exist
-    if [[ ! -d ".venv/bin" ]]; then
-        log_info "No venv found, creating one..."
-        $PYTHON_CMD -m venv .venv
+    # Remove existing venv if it's not Linux-compatible, then create fresh one
+    if [[ -d "venv" ]]; then
+        if [[ ! -f "venv/bin/activate" ]]; then
+            log_info "Removing non-Linux virtual environment..."
+            rm -rf venv
+        fi
+    fi
+    
+    # Create fresh venv for Linux
+    if [[ ! -d "venv/bin" ]]; then
+        log_info "Creating fresh virtual environment..."
+        $PYTHON_CMD -m venv venv
     fi
 
-    # Activate venv
-    source .venv/bin/activate
+    # Activate venv (Linux only)
+    if [[ -f "venv/bin/activate" ]]; then
+        source venv/bin/activate
+    else
+        log_error "Could not find venv/bin/activate after creation"
+        exit 1
+    fi
 
     log_info "Installing Python dependencies..."
-    if ! pip install -e ".[dev]"; then
+    
+    # Use the virtual environment's pip directly (Linux only)
+    PIP_CMD="venv/bin/pip"
+    
+    # Verify pip exists in venv
+    if [[ ! -f "$PIP_CMD" ]]; then
+        log_error "Could not find pip in virtual environment at $PIP_CMD"
+        log_error "Virtual environment may not be properly created"
+        exit 1
+    fi
+    
+    # Install dependencies from requirements.txt first (like Dockerfile)
+    if [[ -f "requirements.txt" ]]; then
+        log_info "Installing dependencies from requirements.txt..."
+        if ! $PIP_CMD install -r requirements.txt; then
+            log_error "Failed to install requirements.txt dependencies"
+            exit 1
+        fi
+    fi
+    
+    # Then install the package in development mode
+    if ! $PIP_CMD install -e ".[dev]"; then
         log_error "Dependency installation failed"
         exit 1
     fi
@@ -64,9 +109,9 @@ run_tests() {
     check_python
     log_info "Running tests and checking code coverage..."
 
-    # Activate venv if it exists
-    if [[ -d ".venv/bin" ]]; then
-        source .venv/bin/activate
+    # Activate venv if it exists (Linux only)
+    if [[ -f "venv/bin/activate" ]]; then
+        source venv/bin/activate
     fi
 
     # Run tests and collect coverage
@@ -110,50 +155,64 @@ run_tests() {
 
 # Process URL list with improved error handling
 process_urls() {
-    check_python
     local file="$1"
+    local status=0
+
     if [[ ! -f "$file" ]]; then
         log_error "URL file not found: $file"
         exit 1
     fi
 
-    log_info "Processing URLs from $file"
+    log_info "Processing URLs from $file..."
 
     while IFS= read -r url; do
         [[ -z "$url" || "$url" =~ ^# ]] && continue
-
         log_info "Processing: $url"
 
-        if [[ "$url" =~ huggingface\.co/.*/models ]]; then
-            id=$(echo "$url" | sed -E 's|.*huggingface\.co/([^/]+/[^/]+).*|\1|')
-            $PYTHON_CMD -m src.ai_model_catalog hf-model --model-id "$id" --format ndjson || {
-                log_error "Failed to process model URL: $url"
-                exit 1
-            }
-
-        elif [[ "$url" =~ huggingface\.co/datasets/ ]]; then
-            id=$(echo "$url" | sed -E 's|.*huggingface\.co/datasets/([^/]+/[^/]+).*|\1|')
-            $PYTHON_CMD -m src.ai_model_catalog hf-dataset --dataset-id "$id" --format ndjson || {
+        if [[ "$url" =~ huggingface\.co/datasets/ ]]; then
+            # Hugging Face dataset URL (e.g., https://huggingface.co/datasets/imdb or https://huggingface.co/datasets/xlangai/AgentNet)
+            # Extract dataset ID - handle both single and multi-segment paths
+            if [[ "$url" =~ huggingface\.co/datasets/([^/]+/[^/]+) ]]; then
+                id="${BASH_REMATCH[1]}"
+            elif [[ "$url" =~ huggingface\.co/datasets/([^/]+) ]]; then
+                id="${BASH_REMATCH[1]}"
+            fi
+            id=$(echo "$id" | sed 's|/$||' | tr -d '\r')
+            if ! $(get_venv_python) -m src.ai_model_catalog hf-dataset --dataset-id "$id" --format ndjson; then
                 log_error "Failed to process dataset URL: $url"
-                exit 1
-            }
+                status=1
+            fi
+
+        elif [[ "$url" =~ huggingface\.co/[^/]+/[^/]+ ]] && [[ ! "$url" =~ huggingface\.co/datasets/ ]]; then
+            # Hugging Face model URL (e.g., https://huggingface.co/microsoft/DialoGPT-medium or https://huggingface.co/google/gemma-3-270m/tree/main)
+            id=$(echo "$url" | sed -E 's|.*huggingface\.co/([^/]+/[^/]+).*|\1|' | tr -d '\r')
+            if ! $(get_venv_python) -m src.ai_model_catalog hf-model --model-id "$id" --format ndjson; then
+                log_error "Failed to process model URL: $url"
+                status=1
+            fi
 
         elif [[ "$url" =~ github\.com ]]; then
-            repo_path=$(echo "$url" | sed -E 's|.*github\.com/([^/]+/[^/]+).*|\1|')
+            # GitHub repository URL (e.g., https://github.com/huggingface/transformers or https://github.com/microsoft/vscode/tree/main)
+            repo_path=$(echo "$url" | sed -E 's|.*github\.com/([^/]+/[^/]+).*|\1|' | tr -d '\r')
             owner=$(echo "$repo_path" | cut -d/ -f1)
             repo=$(echo "$repo_path" | cut -d/ -f2)
-            $PYTHON_CMD -m src.ai_model_catalog models --owner "$owner" --repo "$repo" --format ndjson || {
+            if ! venv/bin/python -m src.ai_model_catalog models --owner "$owner" --repo "$repo" --format ndjson; then
                 log_error "Failed to process GitHub URL: $url"
-                exit 1
-            }
+                status=1
+            fi
 
         else
             log_warn "Unsupported URL format: $url"
         fi
     done < "$file"
 
-    log_info "URL processing complete."
-    exit 0
+    if [[ $status -eq 0 ]]; then
+        log_info "All URLs processed successfully."
+    else
+        log_error "Some URLs failed to process."
+    fi
+
+    exit $status
 }
 
 main() {
@@ -163,6 +222,9 @@ main() {
             ;;
         test)
             run_tests
+            ;;
+        urls)
+            process_urls "${2:-urls.txt}"
             ;;
         "")
             log_error "No command provided. Use: ./run install | test | <url_file.txt>"

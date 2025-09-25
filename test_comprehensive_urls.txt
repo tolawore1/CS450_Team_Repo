@@ -1,4 +1,0 @@
-# Test comprehensive NDJSON output
-https://huggingface.co/microsoft/DialoGPT-medium
-https://huggingface.co/datasets/imdb
-https://github.com/huggingface/transformers

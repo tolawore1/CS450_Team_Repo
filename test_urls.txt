@@ -1,2 +1,0 @@
-https://huggingface.co/google/gemma-3-270m
-https://github.com/huggingface/transformers
