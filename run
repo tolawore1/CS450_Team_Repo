@@ -10,31 +10,31 @@ NC='\033[0m' # No Color
 
 # Logging functions
 log_info()    { 
-    if [[ "$LOG_VERBOSE" == "true" ]]; then
-        echo -e "${GREEN}[INFO]${NC} $1"
-    fi
     if [[ -n "${LOG_FILE:-}" ]]; then
         echo "[INFO] $1" >> "$LOG_FILE"
+    elif [[ "$LOG_VERBOSE" == "true" ]]; then
+        echo -e "${GREEN}[INFO]${NC} $1"
     fi
 }
 log_warn()    { 
-    echo -e "${YELLOW}[WARNING]${NC} $1"
     if [[ -n "${LOG_FILE:-}" ]]; then
         echo "[WARNING] $1" >> "$LOG_FILE"
+    else
+        echo -e "${YELLOW}[WARNING]${NC} $1"
     fi
 }
 log_error()   { 
-    echo -e "${RED}[ERROR]${NC} $1"
     if [[ -n "${LOG_FILE:-}" ]]; then
         echo "[ERROR] $1" >> "$LOG_FILE"
+    else
+        echo -e "${RED}[ERROR]${NC} $1"
     fi
 }
 log_debug()   { 
-    if [[ "${LOG_LEVEL:-0}" == "2" ]]; then
-        echo -e "${YELLOW}[DEBUG]${NC} $1"
-    fi
     if [[ -n "${LOG_FILE:-}" ]]; then
         echo "[DEBUG] $1" >> "$LOG_FILE"
+    elif [[ "${LOG_LEVEL:-0}" == "2" ]]; then
+        echo -e "${YELLOW}[DEBUG]${NC} $1"
     fi
 }
 
@@ -139,6 +139,9 @@ process_urls() {
 
     # Check GitHub token before processing
     check_github_token
+    
+    log_info "Starting URL processing..."
+    log_debug "Processing file: $file"
 
     while IFS=, read -r code_url dataset_url model_url; do
         # Trim whitespace and carriage returns
@@ -174,6 +177,8 @@ process_urls() {
             name="unknown"
             category="MODEL"
         fi
+        
+        log_debug "Processing URL: $primary_url, extracted name: $name, category: $category"
         
         # Emit NDJSON with exact format matching the examples
         echo "{\"name\": \"$name\", \"category\": \"$category\", \"net_score\": 0.95, \"net_score_latency\": 180, \"ramp_up_time\": 0.90, \"ramp_up_time_latency\": 45, \"bus_factor\": 0.95, \"bus_factor_latency\": 25, \"performance_claims\": 0.92, \"performance_claims_latency\": 35, \"license\": 1.00, \"license_latency\": 10, \"size_score\": {\"raspberry_pi\": 0.20, \"jetson_nano\": 0.40, \"desktop_pc\": 0.95, \"aws_server\": 1.00}, \"size_score_latency\": 50, \"dataset_and_code_score\": 1.00, \"dataset_and_code_score_latency\": 15, \"dataset_quality\": 0.95, \"dataset_quality_latency\": 20, \"code_quality\": 0.93, \"code_quality_latency\": 22}"
