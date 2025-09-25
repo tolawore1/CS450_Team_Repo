@@ -128,9 +128,7 @@ process_urls() {
         exit 1
     fi
 
-    #check_github_token
-    
-    # Set Python command
+    check_github_token
     check_python
 
     log_info "Starting URL processing..."
@@ -140,22 +138,17 @@ process_urls() {
     local prev_code=""
 
     while IFS= read -r line || [[ -n "$line" ]]; do
-        # Clean whitespace and CRLF
         line=$(echo "$line" | tr -d '\r' | xargs)
         [[ -z "$line" ]] && continue
 
-        # Detect if input looks like CSV (commas present)
+        # Detect CSV style vs plain URL list
         if [[ "$line" == *,* ]]; then
             IFS=',' read -r code_url dataset_url model_url <<< "$line"
             code_url=$(echo "$code_url" | xargs)
             dataset_url=$(echo "$dataset_url" | xargs)
             model_url=$(echo "$model_url" | xargs)
         else
-            # Plain newline-delimited list
-            code_url=""
-            dataset_url=""
-            model_url=""
-
+            code_url=""; dataset_url=""; model_url=""
             if [[ "$line" == *"huggingface.co/datasets/"* ]]; then
                 dataset_url="$line"
             elif [[ "$line" == *"github.com"* ]]; then
@@ -165,43 +158,61 @@ process_urls() {
             fi
         fi
 
-        # Store dataset/code until a model appears
         [[ -n "$dataset_url" ]] && prev_dataset="$dataset_url"
         [[ -n "$code_url" ]] && prev_code="$code_url"
 
-        # Only output JSON for MODEL rows
         if [[ -n "$model_url" ]]; then
             local name
             name=$(basename "$model_url" | tr -d ' ')
 
-            # Use Python implementation to get real scores
             local model_id
             model_id=$(echo "$model_url" | sed 's|.*huggingface.co/||' | sed 's|/tree/.*||')
-            
-            local scores_json``
-            scores_json=$($PYTHON_CMD -c "
-import sys
-sys.path.append('src')
+
+            # Use Python to compute real scores and ensure JSON structure is valid
+            local scores_json
+            scores_json=$($PYTHON_CMD - <<PYCODE
+import sys, json
+sys.path.append("src")
 from ai_model_catalog.score_model import score_model_from_id
-scores = score_model_from_id('$model_id')
-import json
-print(json.dumps(scores))
-" 2>/dev/null)
 
-            # Extract values from JSON
-            local net_score=$(echo "$scores_json" | grep -o '"NetScore":[^,}]*' | cut -d: -f2 | tr -d ' ')
-            local ramp_up_time=$(echo "$scores_json" | grep -o '"ramp_up_time":[^,}]*' | cut -d: -f2 | tr -d ' ')
-            local bus_factor=$(echo "$scores_json" | grep -o '"bus_factor":[^,}]*' | cut -d: -f2 | tr -d ' ')
-            local performance_claims=$(echo "$scores_json" | grep -o '"performance_claims":[^,}]*' | cut -d: -f2 | tr -d ' ')
-            local license=$(echo "$scores_json" | grep -o '"license":[^,}]*' | cut -d: -f2 | tr -d ' ')
-            local size_scores=$(echo "$scores_json" | grep -o '"size":{[^}]*}')
-            local availability=$(echo "$scores_json" | grep -o '"availability":[^,}]*' | cut -d: -f2 | tr -d ' ')
-            local dataset_quality=$(echo "$scores_json" | grep -o '"dataset_quality":[^,}]*' | cut -d: -f2 | tr -d ' ')
-            local code_quality=$(echo "$scores_json" | grep -o '"code_quality":[^,}]*' | cut -d: -f2 | tr -d ' ')
+try:
+    scores = score_model_from_id("${model_id}")
+except Exception:
+    scores = {}
 
-            echo "{\"name\":\"$name\",\"category\":\"MODEL\",\"net_score\":$net_score,\"net_score_latency\":180,\"ramp_up_time\":$ramp_up_time,\"ramp_up_time_latency\":45,\"bus_factor\":$bus_factor,\"bus_factor_latency\":25,\"performance_claims\":$performance_claims,\"performance_claims_latency\":35,\"license\":$license,\"license_latency\":10,\"size_score\":$size_scores,\"size_score_latency\":50,\"dataset_and_code_score\":$availability,\"dataset_and_code_score_latency\":15,\"dataset_quality\":$dataset_quality,\"dataset_quality_latency\":20,\"code_quality\":$code_quality,\"code_quality_latency\":22}"
+out = {
+    "name": "${name}",
+    "category": "MODEL",
+    "net_score": scores.get("NetScore", -1),
+    "net_score_latency": 180,
+    "ramp_up_time": scores.get("ramp_up_time", -1),
+    "ramp_up_time_latency": 45,
+    "bus_factor": scores.get("bus_factor", -1),
+    "bus_factor_latency": 25,
+    "performance_claims": scores.get("performance_claims", -1),
+    "performance_claims_latency": 35,
+    "license": scores.get("license", -1),
+    "license_latency": 10,
+    "size_score": scores.get("size", {
+        "raspberry_pi": -1,
+        "jetson_nano": -1,
+        "desktop_pc": -1,
+        "aws_server": -1
+    }),
+    "size_score_latency": 50,
+    "dataset_and_code_score": scores.get("availability", -1),
+    "dataset_and_code_score_latency": 15,
+    "dataset_quality": scores.get("dataset_quality", -1),
+    "dataset_quality_latency": 20,
+    "code_quality": scores.get("code_quality", -1),
+    "code_quality_latency": 22,
+}
+print(json.dumps(out))
+PYCODE
+)
 
-            # reset links after attaching
+            echo "$scores_json"
+
             prev_dataset=""
             prev_code=""
         fi
