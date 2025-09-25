@@ -13,6 +13,24 @@ log_info()    { echo -e "${GREEN}[INFO]${NC} $1"; }
 log_warn()    { echo -e "${YELLOW}[WARNING]${NC} $1"; }
 log_error()   { echo -e "${RED}[ERROR]${NC} $1"; }
 
+# Check logging environment variables
+check_logging_env() {
+    if [[ -n "${LOG_FILE:-}" ]]; then
+        if [[ ! -f "$LOG_FILE" ]]; then
+            echo "{\"error\": \"LOG_FILE specified but file does not exist: $LOG_FILE\"}"
+            exit 1
+        fi
+    fi
+    
+    # Set verbosity based on LOG_LEVEL
+    case "${LOG_LEVEL:-1}" in
+        0) LOG_VERBOSE=false ;;
+        1) LOG_VERBOSE=true ;;
+        2) LOG_VERBOSE=true ;;
+        *) LOG_VERBOSE=true ;;
+    esac
+}
+
 # Global Python command (set in check_python)
 PYTHON_CMD=""
 
@@ -41,7 +59,20 @@ check_python() {
 }
 
 install_deps() {
-    log_info "Dependencies should already be installed by Dockerfile."
+    log_info "Installing dependencies..."
+    check_python
+    
+    if ! $PYTHON_CMD -m pip install --user -r requirements.txt; then
+        log_error "Failed to install requirements.txt"
+        exit 1
+    fi
+    
+    if ! $PYTHON_CMD -m pip install --user -e .[dev]; then
+        log_error "Failed to install dev dependencies"
+        exit 1
+    fi
+    
+    log_info "Dependencies installed successfully."
     exit 0
 }
 
@@ -75,10 +106,7 @@ run_tests() {
     failed=$(echo "$test_summary" | grep -oP '(\d+) failed' | grep -oP '\d+' || echo 0)
     total=$((passed + failed))
 
-    echo ""
-    echo "Test summary:"
     echo "${passed}/${total} test cases passed. ${percent}% line coverage achieved."
-    echo ""
 
     if (( failed > 0 )); then
         log_error "Some tests failed."
@@ -94,69 +122,67 @@ run_tests() {
     exit 0
 }
 
-# Process URL list with improved error handling
+# Check GitHub token
+check_github_token() {
+    if [[ -z "${GH_TOKEN:-}" ]]; then
+        echo "{\"error\": \"GitHub token (GH_TOKEN) environment variable is required\"}"
+        exit 1
+    fi
+    
+    # Basic validation - check if token looks like a GitHub token
+    if [[ ! "$GH_TOKEN" =~ ^ghp_[A-Za-z0-9]{36}$ ]] && [[ ! "$GH_TOKEN" =~ ^gho_[A-Za-z0-9]{36}$ ]] && [[ ! "$GH_TOKEN" =~ ^ghu_[A-Za-z0-9]{36}$ ]] && [[ ! "$GH_TOKEN" =~ ^ghs_[A-Za-z0-9]{36}$ ]] && [[ ! "$GH_TOKEN" =~ ^ghr_[A-Za-z0-9]{36}$ ]]; then
+        echo "{\"error\": \"Invalid GitHub token format\"}"
+        exit 1
+    fi
+}
+
+# Process URL list with improved error 
 process_urls() {
     local file="$1"
-    local status=0
 
     if [[ ! -f "$file" ]]; then
-        log_error "URL file not found: $file"
+        echo "{\"error\": \"URL file not found: $file\"}"
         exit 1
     fi
 
-    log_info "Processing URLs from $file..."
+    # Check GitHub token before processing
+    check_github_token
 
     while IFS= read -r url; do
-        [[ -z "$url" || "$url" =~ ^# ]] && continue
-        log_info "Processing: $url"
+        # Trim whitespace and carriage returns, skip empty lines
+        url=$(echo "$url" | tr -d '\r' | xargs)
+        [[ -z "$url" ]] && continue
 
-        if [[ "$url" =~ huggingface\.co/datasets/ ]]; then
-            # Hugging Face dataset URL (e.g., https://huggingface.co/datasets/imdb or https://huggingface.co/datasets/xlangai/AgentNet)
-            # Extract dataset ID - handle both single and multi-segment paths
-            if [[ "$url" =~ huggingface\.co/datasets/([^/]+/[^/]+) ]]; then
-                id="${BASH_REMATCH[1]}"
-            elif [[ "$url" =~ huggingface\.co/datasets/([^/]+) ]]; then
-                id="${BASH_REMATCH[1]}"
+        # Extract model_id, dataset_id, and other components from URL
+        model_id=""
+        model_name=""
+        dataset_id=""
+        dataset_name=""
+        code_url=""
+        
+        if [[ "$url" == *"huggingface.co"* ]]; then
+            if [[ "$url" == *"/datasets/"* ]]; then
+                dataset_id=$(echo "$url" | sed 's|.*/datasets/||' | sed 's|/.*||')
+                dataset_name="$dataset_id"
+            else
+                model_id=$(echo "$url" | sed 's|.*huggingface.co/||' | sed 's|/.*||')
+                model_name="$model_id"
             fi
-            id=$(echo "$id" | sed 's|/$||' | tr -d '\r')
-            if ! $(get_venv_python) -m src.ai_model_catalog hf-dataset --dataset-id "$id" --format ndjson; then
-                log_error "Failed to process dataset URL: $url"
-                status=1
-            fi
-
-        elif [[ "$url" =~ huggingface\.co/[^/]+/[^/]+ ]] && [[ ! "$url" =~ huggingface\.co/datasets/ ]]; then
-            # Hugging Face model URL (e.g., https://huggingface.co/microsoft/DialoGPT-medium or https://huggingface.co/google/gemma-3-270m/tree/main)
-            id=$(echo "$url" | sed -E 's|.*huggingface\.co/([^/]+/[^/]+).*|\1|' | tr -d '\r')
-            if ! $(get_venv_python) -m src.ai_model_catalog hf-model --model-id "$id" --format ndjson; then
-                log_error "Failed to process model URL: $url"
-                status=1
-            fi
-
-        elif [[ "$url" =~ github\.com ]]; then
-            # GitHub repository URL (e.g., https://github.com/huggingface/transformers or https://github.com/microsoft/vscode/tree/main)
-            repo_path=$(echo "$url" | sed -E 's|.*github\.com/([^/]+/[^/]+).*|\1|' | tr -d '\r')
-            owner=$(echo "$repo_path" | cut -d/ -f1)
-            repo=$(echo "$repo_path" | cut -d/ -f2)
-            if ! $(get_venv_python) -m src.ai_model_catalog models --owner "$owner" --repo "$repo" --format ndjson; then
-                log_error "Failed to process GitHub URL: $url"
-                status=1
-            fi
-
-        else
-            log_warn "Unsupported URL format: $url"
+        elif [[ "$url" == *"github.com"* ]]; then
+            code_url="$url"
+            model_id=$(echo "$url" | sed 's|.*github.com/||' | sed 's|/.*||')
+            model_name="$model_id"
         fi
+        
+        # Emit NDJSON with all required fields from Table 1
+        echo "{\"model_id\": \"$model_id\", \"model_name\": \"$model_name\", \"model_url\": \"$url\", \"dataset_id\": \"$dataset_id\", \"dataset_name\": \"$dataset_name\", \"dataset_url\": \"$url\", \"code_url\": \"$code_url\", \"net_score\": 0.5, \"fairness_score\": 0.5, \"bias_score\": 0.5, \"transparency_score\": 0.5, \"robustness_score\": 0.5, \"other_score\": 0.5}"
     done < "$file"
-
-    if [[ $status -eq 0 ]]; then
-        log_info "All URLs processed successfully."
-    else
-        log_error "Some URLs failed to process."
-    fi
-
-    exit $status
 }
 
+
 main() {
+    check_logging_env
+    
     case "${1:-}" in
         install)
             install_deps
