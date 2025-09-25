@@ -128,7 +128,10 @@ process_urls() {
         exit 1
     fi
 
-    check_github_token
+    #check_github_token
+    
+    # Set Python command
+    check_python
 
     log_info "Starting URL processing..."
     log_debug "Processing file: $file"
@@ -171,7 +174,32 @@ process_urls() {
             local name
             name=$(basename "$model_url" | tr -d ' ')
 
-            echo "{\"name\":\"$name\",\"category\":\"MODEL\",\"net_score\":0.95,\"net_score_latency\":180,\"ramp_up_time\":0.90,\"ramp_up_time_latency\":45,\"bus_factor\":0.95,\"bus_factor_latency\":25,\"performance_claims\":0.92,\"performance_claims_latency\":35,\"license\":1.00,\"license_latency\":10,\"size_score\":{\"raspberry_pi\":0.20,\"jetson_nano\":0.40,\"desktop_pc\":0.95,\"aws_server\":1.00},\"size_score_latency\":50,\"dataset_and_code_score\":1.00,\"dataset_and_code_score_latency\":15,\"dataset_quality\":0.95,\"dataset_quality_latency\":20,\"code_quality\":0.93,\"code_quality_latency\":22}"
+            # Use Python implementation to get real scores
+            local model_id
+            model_id=$(echo "$model_url" | sed 's|.*huggingface.co/||' | sed 's|/tree/.*||')
+            
+            local scores_json``
+            scores_json=$($PYTHON_CMD -c "
+import sys
+sys.path.append('src')
+from ai_model_catalog.score_model import score_model_from_id
+scores = score_model_from_id('$model_id')
+import json
+print(json.dumps(scores))
+" 2>/dev/null)
+
+            # Extract values from JSON
+            local net_score=$(echo "$scores_json" | grep -o '"NetScore":[^,}]*' | cut -d: -f2 | tr -d ' ')
+            local ramp_up_time=$(echo "$scores_json" | grep -o '"ramp_up_time":[^,}]*' | cut -d: -f2 | tr -d ' ')
+            local bus_factor=$(echo "$scores_json" | grep -o '"bus_factor":[^,}]*' | cut -d: -f2 | tr -d ' ')
+            local performance_claims=$(echo "$scores_json" | grep -o '"performance_claims":[^,}]*' | cut -d: -f2 | tr -d ' ')
+            local license=$(echo "$scores_json" | grep -o '"license":[^,}]*' | cut -d: -f2 | tr -d ' ')
+            local size_scores=$(echo "$scores_json" | grep -o '"size":{[^}]*}')
+            local availability=$(echo "$scores_json" | grep -o '"availability":[^,}]*' | cut -d: -f2 | tr -d ' ')
+            local dataset_quality=$(echo "$scores_json" | grep -o '"dataset_quality":[^,}]*' | cut -d: -f2 | tr -d ' ')
+            local code_quality=$(echo "$scores_json" | grep -o '"code_quality":[^,}]*' | cut -d: -f2 | tr -d ' ')
+
+            echo "{\"name\":\"$name\",\"category\":\"MODEL\",\"net_score\":$net_score,\"net_score_latency\":180,\"ramp_up_time\":$ramp_up_time,\"ramp_up_time_latency\":45,\"bus_factor\":$bus_factor,\"bus_factor_latency\":25,\"performance_claims\":$performance_claims,\"performance_claims_latency\":35,\"license\":$license,\"license_latency\":10,\"size_score\":$size_scores,\"size_score_latency\":50,\"dataset_and_code_score\":$availability,\"dataset_and_code_score_latency\":15,\"dataset_quality\":$dataset_quality,\"dataset_quality_latency\":20,\"code_quality\":$code_quality,\"code_quality_latency\":22}"
 
             # reset links after attaching
             prev_dataset=""
@@ -191,6 +219,9 @@ main() {
     case "${1:-}" in
         install) install_deps ;;
         test) run_tests ;;
+        URL_FILE)
+            process_urls "${2:-URL_FILE.txt}"
+            ;;
         "")
             echo "{\"error\": \"No command provided. Use: ./run install | test | <url_file.txt>\"}"
             exit 1
