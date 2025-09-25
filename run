@@ -81,12 +81,17 @@ install_deps() {
 # -------------------
 run_tests() {
     check_python
-    # Run pytest with coverage, capture to log
-    if ! $PYTHON_CMD -m coverage run -m pytest tests -q --disable-warnings > pytest_output.log 2>&1; then
-        true  # continue even if tests fail
+
+    # Install your package so imports succeed
+    if [[ -f "pyproject.toml" || -f "setup.py" ]]; then
+        $PYTHON_CMD -m pip install --quiet .
     fi
 
-    # Capture coverage output (stdout + stderr)
+    # Run pytest with coverage
+    if ! $PYTHON_CMD -m coverage run -m pytest -q --disable-warnings > pytest_output.log 2>&1; then
+        true
+    fi
+
     coverage_report=$($PYTHON_CMD -m coverage report -m 2>&1 || true)
 
     passed=$(grep -Eo '[0-9]+ passed' pytest_output.log | grep -Eo '[0-9]+' || echo 0)
@@ -97,6 +102,7 @@ run_tests() {
     echo "${passed}/${total} test cases passed. ${percent}% line coverage achieved."
     exit 0
 }
+
 
 
 # -------------------
