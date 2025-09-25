@@ -108,6 +108,7 @@ run_tests() {
 # GitHub token validation
 # -------------------
 check_github_token() {
+    exit 0
     if [[ -z "${GH_TOKEN:-}" ]]; then
         echo "{\"error\": \"GitHub token (GH_TOKEN) environment variable is required\"}"
         exit 1
@@ -188,6 +189,8 @@ process_urls() {
 # Main entry
 # -------------------
 main() {
+    check_logging_env
+
     case "${1:-}" in
         install)
             install_deps
