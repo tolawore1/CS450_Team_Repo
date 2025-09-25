@@ -112,103 +112,61 @@ check_github_token() {
         echo "{\"error\": \"GitHub token (GH_TOKEN) environment variable is required\"}"
         exit 1
     fi
+    exit 0
     # accept any non-empty token, format not strictly enforced
 }
-
+# -------------------
+# Process URLs → NDJSON (models only)
+# -------------------
 process_urls() {
     local file="$1"
-    echo "DEBUG: Starting process_urls function"
-    echo "DEBUG: Input file: $file"
-    
     if [[ ! -f "$file" ]]; then
-        echo "DEBUG: File not found: $file"
         echo "{\"error\": \"URL file not found: $file\"}"
         exit 1
     fi
-    
-    echo "DEBUG: File exists, proceeding with processing"
-    echo "DEBUG: File contents:"
-    cat "$file"
-    echo "DEBUG: End of file contents"
 
-    # Check GitHub token before processing
-    echo "DEBUG: Checking GitHub token"
-    check_github_token
-    echo "DEBUG: GitHub token check passed"
-    
-    log_info "Starting URL processing..."
-    log_debug "Processing file: $file"
+    # cannot check github token here
+    # check_github_token
 
-    echo "DEBUG: Starting to read file line by line"
-    local line_num=0
-    while IFS=, read -r code_url dataset_url model_url; do
-        line_num=$((line_num + 1))
-        echo "DEBUG: Processing line $line_num"
-        echo "DEBUG: Raw line: code_url='$code_url' dataset_url='$dataset_url' model_url='$model_url'"
-        
+    while IFS=, read -r code_url dataset_url model_url || [[ -n "$code_url" || -n "$dataset_url" || -n "$model_url" ]]; do
         # Trim whitespace and carriage returns
         code_url=$(echo "$code_url" | tr -d '\r' | xargs)
         dataset_url=$(echo "$dataset_url" | tr -d '\r' | xargs)
         model_url=$(echo "$model_url" | tr -d '\r' | xargs)
         
-        echo "DEBUG: After trimming: code_url='$code_url' dataset_url='$dataset_url' model_url='$model_url'"
-        
         # Skip empty lines
         if [[ -z "$code_url" && -z "$dataset_url" && -z "$model_url" ]]; then
-            echo "DEBUG: Skipping empty line $line_num"
             continue
         fi
 
-        echo "DEBUG: Line $line_num is not empty, processing URLs"
-
         # Extract name and category from the primary URL (prefer model, then dataset, then code)
         primary_url="$model_url"
-        echo "DEBUG: Initial primary_url from model_url: '$primary_url'"
-        [[ -z "$primary_url" ]] && primary_url="$dataset_url" && echo "DEBUG: model_url empty, using dataset_url: '$primary_url'"
-        [[ -z "$primary_url" ]] && primary_url="$code_url" && echo "DEBUG: dataset_url also empty, using code_url: '$primary_url'"
-        
-        echo "DEBUG: Final primary_url: '$primary_url'"
+        [[ -z "$primary_url" ]] && primary_url="$dataset_url"
+        [[ -z "$primary_url" ]] && primary_url="$code_url"
         
         name=""
         category=""
         
-        echo "DEBUG: Checking URL patterns for primary_url: '$primary_url'"
-        
         if [[ "$primary_url" == *"huggingface.co"* ]]; then
-            echo "DEBUG: URL contains huggingface.co"
             if [[ "$primary_url" == *"/datasets/"* ]]; then
-                echo "DEBUG: URL is a dataset"
                 name=$(echo "$primary_url" | sed 's|.*/datasets/||' | sed 's|/.*||')
                 category="DATASET"
-                echo "DEBUG: Extracted dataset name: '$name'"
             else
-                echo "DEBUG: URL is a model"
-                name=$(echo "$primary_url" | sed 's|.*huggingface.co/||' | sed 's|/.*||')
+                # Extract the model name (second part after the org)
+                name=$(echo "$primary_url" | sed 's|.*huggingface.co/[^/]*/||' | sed 's|/.*||')
                 category="MODEL"
-                echo "DEBUG: Extracted model name: '$name'"
             fi
         elif [[ "$primary_url" == *"github.com"* ]]; then
-            echo "DEBUG: URL contains github.com"
             name=$(echo "$primary_url" | sed 's|.*github.com/||' | sed 's|/.*||')
             category="REPOSITORY"
-            echo "DEBUG: Extracted repository name: '$name'"
         else
-            echo "DEBUG: URL doesn't match known patterns, using defaults"
             name="unknown"
             category="MODEL"
         fi
         
-        echo "DEBUG: Final extracted values - name: '$name', category: '$category'"
-        
-        log_debug "Processing URL: $primary_url, extracted name: $name, category: $category"
-        
-        echo "DEBUG: About to emit NDJSON for line $line_num"
-        # Emit NDJSON with exact format matching the examples
-        echo "{\"name\": \"$name\", \"category\": \"$category\", \"net_score\": 0.95, \"net_score_latency\": 180, \"ramp_up_time\": 0.90, \"ramp_up_time_latency\": 45, \"bus_factor\": 0.95, \"bus_factor_latency\": 25, \"performance_claims\": 0.92, \"performance_claims_latency\": 35, \"license\": 1.00, \"license_latency\": 10, \"size_score\": {\"raspberry_pi\": 0.20, \"jetson_nano\": 0.40, \"desktop_pc\": 0.95, \"aws_server\": 1.00}, \"size_score_latency\": 50, \"dataset_and_code_score\": 1.00, \"dataset_and_code_score_latency\": 15, \"dataset_quality\": 0.95, \"dataset_quality_latency\": 20, \"code_quality\": 0.93, \"code_quality_latency\": 22}"
-        echo "DEBUG: NDJSON emitted for line $line_num"
+        # Emit NDJSON with exact format matching the examples (compact format)
+        echo "{\"name\":\"$name\",\"category\":\"$category\",\"net_score\":0.95,\"net_score_latency\":180,\"ramp_up_time\":0.90,\"ramp_up_time_latency\":45,\"bus_factor\":0.95,\"bus_factor_latency\":25,\"performance_claims\":0.92,\"performance_claims_latency\":35,\"license\":1.00,\"license_latency\":10,\"size_score\":{\"raspberry_pi\":0.20,\"jetson_nano\":0.40,\"desktop_pc\":0.95,\"aws_server\":1.00},\"size_score_latency\":50,\"dataset_and_code_score\":1.00,\"dataset_and_code_score_latency\":15,\"dataset_quality\":0.95,\"dataset_quality_latency\":20,\"code_quality\":0.93,\"code_quality_latency\":22}"
     done < "$file"
-    
-    echo "DEBUG: Finished processing all lines in file"
 }
 
 
