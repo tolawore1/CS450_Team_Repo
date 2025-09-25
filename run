@@ -81,14 +81,7 @@ install_deps() {
 # -------------------
 run_tests() {
     check_python
-
-    # Install your package so imports succeed
-    if [[ -f "pyproject.toml" || -f "setup.py" ]]; then
-        $PYTHON_CMD -m pip install --quiet .
-    fi
-
-    # Run pytest with coverage
-    if ! $PYTHON_CMD -m coverage run -m pytest -q --disable-warnings > pytest_output.log 2>&1; then
+    if ! $PYTHON_CMD -m coverage run --source=ai_model_catalog -m pytest tests -q --disable-warnings > pytest_output.log 2>&1; then
         true
     fi
 
@@ -102,6 +95,7 @@ run_tests() {
     echo "${passed}/${total} test cases passed. ${percent}% line coverage achieved."
     exit 0
 }
+
 
 
 
