@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Cross-platform AI Model Catalog CLI - Auto-Grader Interface
 # Dependency installation follows Dockerfile pattern: requirements.txt first, then dev dependencies
-# Creates fresh virtual environment for Linux compatibility
+# Installs packages directly to system Python (for Docker container environment)
 
 set -euo pipefail
 
@@ -19,13 +19,9 @@ log_error()   { echo -e "${RED}[ERROR]${NC} $1"; }
 # Global Python command (set in check_python)
 PYTHON_CMD=""
 
-# Get the correct Python path from virtual environment (Linux only)
+# Get the system Python path (no virtual environment)
 get_venv_python() {
-    if [[ -f "venv/bin/python" ]]; then
-        echo "venv/bin/python"
-    else
-        echo "$PYTHON_CMD"
-    fi
+    echo "$PYTHON_CMD"
 }
 
 # Check for Python 3.10+ (prefer python3 like Dockerfile)
@@ -48,53 +44,26 @@ check_python() {
 }
 install_deps() {
     check_python
-    log_info "Setting up virtual environment with $PYTHON_CMD..."
+    log_info "Installing dependencies directly to system Python (Docker container)..."
 
-    # Remove existing venv if it's not Linux-compatible, then create fresh one
-    if [[ -d "venv" ]]; then
-        if [[ ! -f "venv/bin/activate" ]]; then
-            log_info "Removing non-Linux virtual environment..."
-            rm -rf venv
-        fi
-    fi
-    
-    # Create fresh venv for Linux
-    if [[ ! -d "venv/bin" ]]; then
-        log_info "Creating fresh virtual environment..."
-        $PYTHON_CMD -m venv venv
-    fi
-
-    # Activate venv (Linux only)
-    if [[ -f "venv/bin/activate" ]]; then
-        source venv/bin/activate
+    # Determine pip command (prefer pip3 like Dockerfile)
+    if command -v pip3 &>/dev/null; then
+        PIP_CMD="pip3"
     else
-        log_error "Could not find venv/bin/activate after creation"
-        exit 1
-    fi
-
-    log_info "Installing Python dependencies..."
-    
-    # Use the virtual environment's pip directly (Linux only)
-    PIP_CMD="venv/bin/pip"
-    
-    # Verify pip exists in venv
-    if [[ ! -f "$PIP_CMD" ]]; then
-        log_error "Could not find pip in virtual environment at $PIP_CMD"
-        log_error "Virtual environment may not be properly created"
-        exit 1
+        PIP_CMD="pip"
     fi
     
     # Install dependencies from requirements.txt first (like Dockerfile)
     if [[ -f "requirements.txt" ]]; then
         log_info "Installing dependencies from requirements.txt..."
-        if ! $PIP_CMD install -r requirements.txt; then
+        if ! $PIP_CMD install --break-system-packages -r requirements.txt; then
             log_error "Failed to install requirements.txt dependencies"
             exit 1
         fi
     fi
     
     # Then install the package in development mode
-    if ! $PIP_CMD install -e ".[dev]"; then
+    if ! $PIP_CMD install --break-system-packages -e ".[dev]"; then
         log_error "Dependency installation failed"
         exit 1
     fi
@@ -109,12 +78,7 @@ run_tests() {
     check_python
     log_info "Running tests and checking code coverage..."
 
-    # Activate venv if it exists (Linux only)
-    if [[ -f "venv/bin/activate" ]]; then
-        source venv/bin/activate
-    fi
-
-    # Run tests and collect coverage
+    # Run tests and collect coverage (using system Python)
     $PYTHON_CMD -m coverage run -m pytest tests || true
 
     # Generate coverage report and extract percentage
