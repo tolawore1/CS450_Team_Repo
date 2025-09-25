@@ -3,7 +3,7 @@ name = "ai-model-catalog"
 version = "0.1.0"
 description = "CLI to browse and evaluate AI/ML models with metadata."
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.9"
 dependencies = [
   "typer>=0.12",
   "requests>=2.32",
