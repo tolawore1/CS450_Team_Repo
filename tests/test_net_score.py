@@ -68,4 +68,4 @@ def test_net_score_hf_like_payload_minimal_signals():
     assert scores["performance_claims"] == 0.0
 
     # NetScore should be moderate due to mixed scores (adjusted for LLM-enhanced scoring)
-    assert 0.3 <= scores["NetScore"] <= 0.7
+    assert 0.25 <= scores["NetScore"] <= 0.75

@@ -11,9 +11,6 @@ from typing import Any, Dict
 
 import requests
 
-# Add src to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
-
 from ai_model_catalog.fetch_repo import (
     HEADERS,
     HF_HEADERS,
@@ -22,8 +19,10 @@ from ai_model_catalog.fetch_repo import (
 from ai_model_catalog.llm_service import get_llm_service  # noqa: E402
 from ai_model_catalog.score_model import (
     score_model_from_id,
-    score_model_with_timing,
 )  # noqa: E402
+
+# Add src to path
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -82,7 +81,23 @@ class NetworkDebugger:
                 results[url] = {"status": "ERROR", "error": str(e), "latency_ms": None}
                 print(f"✗ {url}: Error - {e}")
 
-        return results
+        # Determine overall status based on individual URL results
+        success_count = sum(1 for r in results.values() if r.get("status") == "SUCCESS")
+        total_count = len(results)
+
+        if success_count == total_count:
+            overall_status = "SUCCESS"
+        elif success_count > 0:
+            overall_status = "PARTIAL"
+        else:
+            overall_status = "FAILED"
+
+        return {
+            "status": overall_status,
+            "details": results,
+            "success_count": success_count,
+            "total_count": total_count,
+        }
 
     def test_huggingface_api(self) -> Dict[str, Any]:
         """Test Hugging Face API specifically."""
@@ -255,7 +270,7 @@ class NetworkDebugger:
 
         try:
             start_time = time.time()
-            result = score_model_with_timing(model_id)
+            result = score_model_from_id(model_id)
             latency = (time.time() - start_time) * 1000
 
             return {

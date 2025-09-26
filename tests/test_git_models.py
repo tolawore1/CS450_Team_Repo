@@ -95,7 +95,7 @@ def test_fetch_repo_data(mock_requests_get, mock_create_session):
         fake_response(pulls_json),  # pulls sample
         fake_response(actions_json),  # actions sample
     ]
-    
+
     # Mock the direct requests.get call for README download
     mock_requests_get.return_value = fake_response(text_data=readme_text, json_data={})
 
