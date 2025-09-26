@@ -16,6 +16,26 @@ from .metrics.score_size import score_size
 log = logging.getLogger(__name__)
 
 
+def _ensure_size_score_structure(size_scores):
+    """Ensure size_scores is always a dictionary with proper structure."""
+    if not isinstance(size_scores, dict):
+        size_scores = {
+            "raspberry_pi": 0.0,
+            "jetson_nano": 0.0,
+            "desktop_pc": 0.0,
+            "aws_server": 0.0,
+        }
+
+    # Ensure all hardware keys are present
+    for hardware in ["raspberry_pi", "jetson_nano", "desktop_pc", "aws_server"]:
+        if hardware not in size_scores:
+            size_scores[hardware] = 0.0
+        # Ensure the value is a float, not boolean
+        size_scores[hardware] = float(size_scores[hardware])
+
+    return size_scores
+
+
 def net_score(api_data: Dict) -> Dict[str, float]:
     log.debug("net_score: input keys=%s", list(api_data.keys()))
 
@@ -62,18 +82,27 @@ def net_score(api_data: Dict) -> Dict[str, float]:
         size_scores[hw] * weight for hw, weight in hardware_weights.items()
     )
 
+    # Ensure size_scores is always a dictionary with proper structure
+    size_scores = _ensure_size_score_structure(size_scores)
+
     scores = {
         "size": size_scores,  # Keep the full object for NDJSON output
         "size_score": size_score_avg,  # Single float for net score calculation
-        "license": score_license(model_data["license"]),
-        "ramp_up_time": score_ramp_up_time(model_data["readme"]),
-        "bus_factor": score_bus_factor(model_data["maintainers"]),
-        "availability": score_availability(
-            model_data["has_code"], model_data["has_dataset"]
+        "license": max(0.0, min(1.0, score_license(model_data["license"]))),
+        "ramp_up_time": max(0.0, min(1.0, score_ramp_up_time(model_data["readme"]))),
+        "bus_factor": max(0.0, min(1.0, score_bus_factor(model_data["maintainers"]))),
+        "availability": max(
+            0.0,
+            min(
+                1.0,
+                score_availability(model_data["has_code"], model_data["has_dataset"]),
+            ),
         ),
-        "dataset_quality": score_dataset_quality(api_data),
-        "code_quality": score_code_quality(api_data),
-        "performance_claims": score_performance_claims(model_data["readme"]),
+        "dataset_quality": max(0.0, min(1.0, score_dataset_quality(api_data))),
+        "code_quality": max(0.0, min(1.0, score_code_quality(api_data))),
+        "performance_claims": max(
+            0.0, min(1.0, score_performance_claims(model_data["readme"]))
+        ),
     }
 
     weights = {
@@ -130,15 +159,21 @@ def score_dataset_from_id(dataset_id: str) -> Dict[str, float]:
     scores = {
         "size": size_scores,
         "size_score": 0.5,  # Neutral score for datasets
-        "license": score_license(model_data["license"]),
-        "ramp_up_time": score_ramp_up_time(model_data["readme"]),
-        "bus_factor": score_bus_factor(model_data["maintainers"]),
-        "availability": score_availability(
-            model_data["has_code"], model_data["has_dataset"]
+        "license": max(0.0, min(1.0, score_license(model_data["license"]))),
+        "ramp_up_time": max(0.0, min(1.0, score_ramp_up_time(model_data["readme"]))),
+        "bus_factor": max(0.0, min(1.0, score_bus_factor(model_data["maintainers"]))),
+        "availability": max(
+            0.0,
+            min(
+                1.0,
+                score_availability(model_data["has_code"], model_data["has_dataset"]),
+            ),
         ),
-        "dataset_quality": score_dataset_quality(api_data),
+        "dataset_quality": max(0.0, min(1.0, score_dataset_quality(api_data))),
         "code_quality": 0.0,  # Datasets don't have code quality
-        "performance_claims": score_performance_claims(model_data["readme"]),
+        "performance_claims": max(
+            0.0, min(1.0, score_performance_claims(model_data["readme"]))
+        ),
     }
 
     # Calculate NetScore

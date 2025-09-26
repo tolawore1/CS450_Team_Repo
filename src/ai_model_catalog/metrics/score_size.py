@@ -29,6 +29,11 @@ class SizeMetric(Metric):
                 oversize_ratio = repo_size_bytes / max_size
                 # Score decreases rapidly as oversize increases
                 scores[hardware] = round(max(0.0, 1.0 - (oversize_ratio - 1.0) * 2), 3)
+        for hardware in HARDWARE_THRESHOLDS:
+            if hardware not in scores:
+                scores[hardware] = 0.0
+            # Ensure the value is a float, not boolean
+            scores[hardware] = float(scores[hardware])
 
         return scores
 
