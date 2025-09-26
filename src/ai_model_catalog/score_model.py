@@ -88,7 +88,7 @@ def net_score(api_data: Dict) -> Dict[str, float]:
     scores = {
         "size": size_scores,  # Keep the full object for NDJSON output
         "size_score": size_score_avg,  # Single float for net score calculation
-        "license": max(0.0, min(1.0, score_license(model_data["license"]))),
+        "license": max(0.0, min(1.0, score_license(model_data))),
         "ramp_up_time": max(0.0, min(1.0, score_ramp_up_time(model_data["readme"]))),
         "bus_factor": max(0.0, min(1.0, score_bus_factor(model_data["maintainers"]))),
         "availability": max(
@@ -100,9 +100,7 @@ def net_score(api_data: Dict) -> Dict[str, float]:
         ),
         "dataset_quality": max(0.0, min(1.0, score_dataset_quality(api_data))),
         "code_quality": max(0.0, min(1.0, score_code_quality(api_data))),
-        "performance_claims": max(
-            0.0, min(1.0, score_performance_claims(model_data["readme"]))
-        ),
+        "performance_claims": max(0.0, min(1.0, score_performance_claims(model_data))),
     }
 
     weights = {
@@ -159,7 +157,7 @@ def score_dataset_from_id(dataset_id: str) -> Dict[str, float]:
     scores = {
         "size": size_scores,
         "size_score": 0.5,  # Neutral score for datasets
-        "license": max(0.0, min(1.0, score_license(model_data["license"]))),
+        "license": max(0.0, min(1.0, score_license(model_data))),
         "ramp_up_time": max(0.0, min(1.0, score_ramp_up_time(model_data["readme"]))),
         "bus_factor": max(0.0, min(1.0, score_bus_factor(model_data["maintainers"]))),
         "availability": max(
@@ -171,9 +169,7 @@ def score_dataset_from_id(dataset_id: str) -> Dict[str, float]:
         ),
         "dataset_quality": max(0.0, min(1.0, score_dataset_quality(api_data))),
         "code_quality": 0.0,  # Datasets don't have code quality
-        "performance_claims": max(
-            0.0, min(1.0, score_performance_claims(model_data["readme"]))
-        ),
+        "performance_claims": max(0.0, min(1.0, score_performance_claims(model_data))),
     }
 
     # Calculate NetScore

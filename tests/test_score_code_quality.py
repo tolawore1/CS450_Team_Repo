@@ -10,10 +10,16 @@ from ai_model_catalog.metrics.score_code_quality import (
     "readme, expected",
     [
         ("", 0.0),  # no signals
-        ("This project uses pytest.", 0.25),  # tests only
-        ("pytest + GitHub Actions workflow.", 0.50),  # tests + CI
-        ("pytest + workflow + black formatter.", 0.75),  # tests + CI + lint
-        ("pytest + workflow + black + mypy", 1.0),  # all four buckets
+        ("This project uses pytest.", 0.4),  # tests only (40% weight)
+        ("pytest + GitHub Actions workflow.", 0.65),  # tests (40%) + CI (25%)
+        (
+            "pytest + workflow + black formatter.",
+            0.85,
+        ),  # tests (40%) + CI (25%) + lint (20%)
+        (
+            "pytest + workflow + black + mypy",
+            1.0,
+        ),  # all four buckets (40% + 25% + 20% + 15%)
     ],
 )
 def test_bucket_counts(readme, expected):

@@ -33,8 +33,41 @@ class CodeQualityMetric(Metric):
             readme, ["docs/", "documentation", "readthedocs", "api reference"]
         )
 
-        hits = sum([has_tests, has_ci, has_lint, typing_or_docs])
-        return max(0.0, min(1.0, hits / 4.0))
+        # Calculate weighted score instead of simple hit count
+        score = 0.0
+
+        # Tests are most important (40% weight)
+        if has_tests:
+            score += 0.4
+        elif _contains_any(readme, ["test", "testing", "validation"]):
+            score += 0.2  # Partial credit for mentioning tests
+
+        # CI/CD is important (25% weight)
+        if has_ci:
+            score += 0.25
+        elif _contains_any(readme, ["build", "deploy", "automation"]):
+            score += 0.1  # Partial credit for build mentions
+
+        # Linting is important (20% weight)
+        if has_lint:
+            score += 0.2
+        elif _contains_any(readme, ["style", "format", "standards"]):
+            score += 0.1  # Partial credit for style mentions
+
+        # Documentation is important (15% weight)
+        if typing_or_docs:
+            score += 0.15
+        elif _contains_any(readme, ["doc", "readme", "guide", "tutorial"]):
+            score += 0.05  # Partial credit for doc mentions
+
+        # For well-known models, give base score
+        if any(
+            known in readme.lower()
+            for known in ["bert", "transformer", "pytorch", "tensorflow"]
+        ):
+            score = max(score, 0.3)
+
+        return round(max(0.0, min(1.0, score)), 2)
 
 
 class LLMCodeQualityMetric(LLMEnhancedMetric):

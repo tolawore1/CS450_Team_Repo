@@ -17,6 +17,8 @@ KNOWN_DATASETS = [
     "laion",
     "pile",
     "kitti",
+    "bookcorpus",
+    "wikipedia",
 ]
 
 # CI/CD keywords
