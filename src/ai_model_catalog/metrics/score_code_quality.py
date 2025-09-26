@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import time
 import os
 from typing import Any, Dict, Iterable, Union
 
@@ -146,3 +147,9 @@ def score_code_quality(arg: Union[dict, float]) -> float:
     except (TypeError, ValueError):
         return 0.0
     return 0.0 if v < 0.0 else 1.0 if v > 1.0 else v
+
+def score_code_quality_with_latency(arg: Union[dict, float]) -> tuple[float, int]:
+    start = time.time()
+    score = score_code_quality(arg)
+    latency = int((time.time() - start) * 1000)
+    return score, latency

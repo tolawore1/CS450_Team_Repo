@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import time
 import os
 from typing import Any, Dict, Iterable, List, Union
 
@@ -152,3 +153,9 @@ def score_dataset_quality(arg: Union[dict, float]) -> float:
     if v > 1.0:
         return 1.0
     return v
+
+def score_dataset_quality_with_latency(arg: Union[dict, float]) -> tuple[float, int]:
+    start = time.time()
+    score = score_dataset_quality(arg)
+    latency = int((time.time() - start) * 1000)
+    return score, latency

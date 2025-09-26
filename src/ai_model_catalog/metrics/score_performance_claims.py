@@ -1,3 +1,4 @@
+import time
 from .base import Metric
 
 
@@ -69,3 +70,9 @@ def score_performance_claims(model_data) -> float:
         # Backward compatibility for string input
         return PerformanceClaimsMetric().score({"readme": model_data})
     return PerformanceClaimsMetric().score(model_data)
+
+def score_performance_claims_with_latency(model_data) -> tuple[float, int]:
+    start = time.time()
+    score = score_performance_claims(model_data)
+    latency = int((time.time() - start) * 1000)
+    return score, latency

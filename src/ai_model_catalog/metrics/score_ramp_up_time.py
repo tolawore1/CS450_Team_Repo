@@ -1,3 +1,4 @@
+import time
 import os
 from typing import Any, Dict
 
@@ -61,3 +62,9 @@ def score_ramp_up_time(readme: str) -> float:
         return LLMRampUpMetric().score(data)
     # Use traditional version
     return RampUpMetric().score({"readme": readme})
+
+def score_ramp_up_time_with_latency(readme: str) -> tuple[float, int]:
+    start = time.time()
+    score = score_ramp_up_time(readme)
+    latency = int((time.time() - start) * 1000)
+    return score, latency
