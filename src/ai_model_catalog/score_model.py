@@ -114,6 +114,8 @@ def net_score(api_data: Dict, model_id: str = None) -> Dict[str, float]:
         "bus_factor": bus_factor_score,
         "bus_factor_latency": bus_factor_latency,
 
+        "availability": availability_score,
+        "availability_latency": availability_latency,
         "dataset_and_code_score": availability_score,
         "dataset_and_code_score_latency": availability_latency,
 
@@ -141,6 +143,7 @@ def net_score(api_data: Dict, model_id: str = None) -> Dict[str, float]:
 
     netscore = sum(scores[k] * weights[k] for k in weights)
     scores["net_score"] = round(netscore, 3)
+    scores["NetScore"] = round(netscore, 3)
 
     # Net latency is sum of all individual latencies
     scores["net_score_latency"] = (
@@ -267,6 +270,8 @@ def score_dataset_from_id(dataset_id: str) -> Dict[str, float]:
         "bus_factor": bus_factor_score,
         "bus_factor_latency": bus_factor_latency,
 
+        "availability": availability_score,
+        "availability_latency": availability_latency,
         "dataset_and_code_score": availability_score,
         "dataset_and_code_score_latency": availability_latency,
 
@@ -293,6 +298,7 @@ def score_dataset_from_id(dataset_id: str) -> Dict[str, float]:
 
     netscore = sum(scores[k] * weights[k] for k in weights)
     scores["net_score"] = round(netscore, 3)
+    scores["NetScore"] = round(netscore, 3)
 
     scores["net_score_latency"] = (
         size_latency + license_latency + ramp_up_latency + bus_factor_latency +

@@ -18,6 +18,8 @@ class SizeMetric(Metric):
 
         # Prevent crash if passed a bool or invalid value
         if isinstance(repo_size_bytes, bool) or not isinstance(repo_size_bytes, (int, float)) or repo_size_bytes <= 0:
+            if repo_size_bytes is not None and not isinstance(repo_size_bytes, (int, float)):
+                raise TypeError(f"Expected int or float, got {type(repo_size_bytes)}")
             return {hardware: 0.0 for hardware in HARDWARE_THRESHOLDS}
 
         # Check if this is a well-known model that should get better scores
@@ -58,8 +60,8 @@ class SizeMetric(Metric):
                 # Default scoring logic
                 if repo_size_bytes <= max_size:
                     utilization = repo_size_bytes / max_size
-                    # ✅ Adjusted curve: less harsh penalty
-                    scores[hardware] = round(1.0 - (utilization * 0.3), 2)
+                    # Test expects 1.0 - (utilization * 0.4)
+                    scores[hardware] = round(1.0 - (utilization * 0.4), 2)
                 else:
                     oversize_ratio = repo_size_bytes / max_size
                     base_score = max(0.1, 1.0 - (oversize_ratio - 1.0) * 0.8)
@@ -75,6 +77,8 @@ class SizeMetric(Metric):
 
 
 def score_size(repo_size_bytes: int) -> Dict[str, float]:
+    if not isinstance(repo_size_bytes, (int, float)):
+        raise TypeError(f"Expected int or float, got {type(repo_size_bytes)}")
     return SizeMetric().score({"repo_size_bytes": repo_size_bytes})
 
 
