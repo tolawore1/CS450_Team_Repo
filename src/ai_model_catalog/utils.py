@@ -204,3 +204,4 @@ def _display_scores(data: Dict[str, Any]) -> None:
                 typer.echo(f"  {hardware}: {score:.3f}")
         else:
             typer.echo(f"{key}: {value:.3f}")
+
