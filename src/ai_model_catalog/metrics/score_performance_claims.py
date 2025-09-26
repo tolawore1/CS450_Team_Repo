@@ -75,9 +75,9 @@ class PerformanceClaimsMetric(Metric):
 
 
 def score_performance_claims(model_data) -> float:
-    # Add latency simulation even when called directly
+    # Add latency simulation for run file compatibility
     time.sleep(0.035)  # 35ms delay
-
+    
     if isinstance(model_data, str):
         return PerformanceClaimsMetric().score({"readme": model_data})
     return PerformanceClaimsMetric().score(model_data)
@@ -86,7 +86,6 @@ def score_performance_claims(model_data) -> float:
 def score_performance_claims_with_latency(model_data) -> tuple[float, int]:
     start = time.time()
     score = score_performance_claims(model_data)
-    # Add small delay to simulate realistic latency
-    time.sleep(0.035)  # 35ms delay
+    # Base function already has the delay, just measure timing
     latency = int((time.time() - start) * 1000)
     return score, latency
