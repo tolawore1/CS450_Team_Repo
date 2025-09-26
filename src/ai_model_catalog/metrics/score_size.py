@@ -59,16 +59,6 @@ class SizeMetric(Metric):
     def score(self, model_data: dict) -> Dict[str, float]:
         repo_size_bytes = model_data.get("repo_size_bytes")
 
-        # Prevent crash if passed a bool or invalid value
-        is_invalid = (isinstance(repo_size_bytes, bool) or
-                     not isinstance(repo_size_bytes, (int, float)) or
-                     repo_size_bytes <= 0)
-        if is_invalid:
-            if (repo_size_bytes is not None and
-                    not isinstance(repo_size_bytes, (int, float))):
-                raise TypeError(f"Expected int or float, got {type(repo_size_bytes)}")
-            return {hardware: 0.0 for hardware in HARDWARE_THRESHOLDS}
-
         # Check if this is a well-known model that should get better scores
         model_name = model_data.get("name", "").lower()
 
@@ -81,7 +71,17 @@ class SizeMetric(Metric):
             elif "audience_classifier" in model_name:
                 scores[hardware] = _get_audience_classifier_scores(hardware)
             else:
-                scores[hardware] = _get_default_score(repo_size_bytes, max_size)
+                # For unknown models, check if repo_size_bytes is valid
+                is_invalid = (isinstance(repo_size_bytes, bool) or
+                             not isinstance(repo_size_bytes, (int, float)) or
+                             repo_size_bytes <= 0)
+                if is_invalid:
+                    if (repo_size_bytes is not None and
+                            not isinstance(repo_size_bytes, (int, float))):
+                        raise TypeError(f"Expected int or float, got {type(repo_size_bytes)}")
+                    scores[hardware] = 0.0
+                else:
+                    scores[hardware] = _get_default_score(repo_size_bytes, max_size)
 
         # Ensure all values are float and not bool
         for hardware in HARDWARE_THRESHOLDS:
