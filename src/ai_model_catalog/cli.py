@@ -32,25 +32,29 @@ def models(
     raw = handler.fetch_data()
 
     if output_format == "ndjson":
-        # Measure scoring time
-        start_time = time.time()
         scores = score_repo_from_owner_and_repo(owner, repo)
-        scoring_time = round((time.time() - start_time) * 1000)
-
-        # Create simplified NDJSON output with total latency only
+        # Construct line with all latency fields expected
         line = {
             "name": raw.get("full_name") or f"{owner}/{repo}",
             "category": "REPOSITORY",
-            "net_score": scores.get("NetScore", 0.0),
+            "net_score": scores.get("net_score", 0.0),
+            "net_score_latency": scores.get("net_score_latency", 0),
             "ramp_up_time": scores.get("ramp_up_time", 0.0),
+            "ramp_up_time_latency": scores.get("ramp_up_time_latency", 0),
             "bus_factor": scores.get("bus_factor", 0.0),
+            "bus_factor_latency": scores.get("bus_factor_latency", 0),
             "performance_claims": scores.get("performance_claims", 0.0),
+            "performance_claims_latency": scores.get("performance_claims_latency", 0),
             "license": scores.get("license", 0.0),
+            "license_latency": scores.get("license_latency", 0),
             "size_score": scores.get("size", {}),
+            "size_score_latency": scores.get("size_latency", 0),
             "dataset_and_code_score": scores.get("availability", 0.0),
+            "dataset_and_code_score_latency": scores.get("availability_latency", 0),
             "dataset_quality": scores.get("dataset_quality", 0.0),
+            "dataset_quality_latency": scores.get("dataset_quality_latency", 0),
             "code_quality": scores.get("code_quality", 0.0),
-            "latency": scoring_time,
+            "code_quality_latency": scores.get("code_quality_latency", 0),
         }
         typer.echo(json.dumps(line))
         return
@@ -72,25 +76,28 @@ def hf_model(
     raw = handler.fetch_data()
 
     if output_format == "ndjson":
-        # Measure scoring time
-        start_time = time.time()
         scores = score_model_from_id(model_id)
-        scoring_time = round((time.time() - start_time) * 1000)
-
-        # Create simplified NDJSON output with total latency only
         line = {
             "name": model_id,
             "category": "MODEL",
-            "net_score": scores.get("NetScore", 0.0),
+            "net_score": scores.get("net_score", 0.0),
+            "net_score_latency": scores.get("net_score_latency", 0),
             "ramp_up_time": scores.get("ramp_up_time", 0.0),
+            "ramp_up_time_latency": scores.get("ramp_up_time_latency", 0),
             "bus_factor": scores.get("bus_factor", 0.0),
+            "bus_factor_latency": scores.get("bus_factor_latency", 0),
             "performance_claims": scores.get("performance_claims", 0.0),
+            "performance_claims_latency": scores.get("performance_claims_latency", 0),
             "license": scores.get("license", 0.0),
+            "license_latency": scores.get("license_latency", 0),
             "size_score": scores.get("size", {}),
+            "size_score_latency": scores.get("size_latency", 0),
             "dataset_and_code_score": scores.get("availability", 0.0),
+            "dataset_and_code_score_latency": scores.get("availability_latency", 0),
             "dataset_quality": scores.get("dataset_quality", 0.0),
+            "dataset_quality_latency": scores.get("dataset_quality_latency", 0),
             "code_quality": scores.get("code_quality", 0.0),
-            "latency": scoring_time,
+            "code_quality_latency": scores.get("code_quality_latency", 0),
         }
         typer.echo(json.dumps(line))
         return
@@ -111,25 +118,28 @@ def hf_dataset(
     raw = fetch_dataset_data(dataset_id)
 
     if output_format == "ndjson":
-        # Measure scoring time
-        start_time = time.time()
         scores = score_dataset_from_id(dataset_id)
-        scoring_time = round((time.time() - start_time) * 1000)
-
-        # Create simplified NDJSON output with total latency only
         line = {
             "name": dataset_id,
             "category": "DATASET",
-            "net_score": scores.get("NetScore", 0.0),
+            "net_score": scores.get("net_score", 0.0),
+            "net_score_latency": scores.get("net_score_latency", 0),
             "ramp_up_time": scores.get("ramp_up_time", 0.0),
+            "ramp_up_time_latency": scores.get("ramp_up_time_latency", 0),
             "bus_factor": scores.get("bus_factor", 0.0),
+            "bus_factor_latency": scores.get("bus_factor_latency", 0),
             "performance_claims": scores.get("performance_claims", 0.0),
+            "performance_claims_latency": scores.get("performance_claims_latency", 0),
             "license": scores.get("license", 0.0),
+            "license_latency": scores.get("license_latency", 0),
             "size_score": scores.get("size", {}),
+            "size_score_latency": scores.get("size_latency", 0),
             "dataset_and_code_score": scores.get("availability", 0.0),
+            "dataset_and_code_score_latency": scores.get("availability_latency", 0),
             "dataset_quality": scores.get("dataset_quality", 0.0),
+            "dataset_quality_latency": scores.get("dataset_quality_latency", 0),
             "code_quality": scores.get("code_quality", 0.0),
-            "latency": scoring_time,
+            "code_quality_latency": scores.get("code_quality_latency", 0),
         }
         typer.echo(json.dumps(line))
         return

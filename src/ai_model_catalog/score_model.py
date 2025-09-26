@@ -2,16 +2,16 @@ import logging
 from typing import Dict
 
 from .fetch_repo import fetch_dataset_data, fetch_model_data, fetch_repo_data
-from .metrics.score_available_dataset_and_code import (
-    score_available_dataset_and_code as score_availability,
-)
-from .metrics.score_bus_factor import score_bus_factor
-from .metrics.score_code_quality import score_code_quality
-from .metrics.score_dataset_quality import score_dataset_quality
-from .metrics.score_license import score_license
-from .metrics.score_performance_claims import score_performance_claims
-from .metrics.score_ramp_up_time import score_ramp_up_time
-from .metrics.score_size import score_size
+
+# Import *_with_latency versions
+from .metrics.score_available_dataset_and_code import score_available_dataset_and_code_with_latency
+from .metrics.score_bus_factor import score_bus_factor_with_latency
+from .metrics.score_code_quality import score_code_quality_with_latency
+from .metrics.score_dataset_quality import score_dataset_quality_with_latency
+from .metrics.score_license import score_license_with_latency
+from .metrics.score_performance_claims import score_performance_claims_with_latency
+from .metrics.score_ramp_up_time import score_ramp_up_time_with_latency
+from .metrics.score_size import score_size_with_latency
 
 log = logging.getLogger(__name__)
 
@@ -26,11 +26,9 @@ def _ensure_size_score_structure(size_scores):
             "aws_server": 0.0,
         }
 
-    # Ensure all hardware keys are present
     for hardware in ["raspberry_pi", "jetson_nano", "desktop_pc", "aws_server"]:
         if hardware not in size_scores:
             size_scores[hardware] = 0.0
-        # Ensure the value is a float, not boolean
         size_scores[hardware] = float(size_scores[hardware])
 
     return size_scores
@@ -49,9 +47,7 @@ def net_score(api_data: Dict) -> Dict[str, float]:
         if isinstance(api_data.get("license"), dict)
         else api_data.get("license")
     )
-    readme = api_data.get("readme", "") or api_data.get("cardData", {}).get(
-        "content", ""
-    )
+    readme = api_data.get("readme", "") or api_data.get("cardData", {}).get("content", "")
     maintainers = (
         [api_data.get("owner", {}).get("login")]
         if "owner" in api_data
@@ -67,57 +63,81 @@ def net_score(api_data: Dict) -> Dict[str, float]:
         "has_dataset": api_data.get("has_dataset", True),
     }
 
-    # Get size scores (now returns object with hardware mappings)
-    size_scores = score_size(model_data["repo_size_bytes"])
-
-    # Calculate weighted average of hardware scores for net score
-    # Weight more capable hardware more heavily
-    hardware_weights = {
-        "raspberry_pi": 0.1,  # Least capable
-        "jetson_nano": 0.2,  # More capable
-        "desktop_pc": 0.3,  # Most common
-        "aws_server": 0.4,  # Most capable
-    }
-    size_score_avg = sum(
-        size_scores[hw] * weight for hw, weight in hardware_weights.items()
-    )
-
-    # Ensure size_scores is always a dictionary with proper structure
+    # Call each metric with latency
+    size_scores, size_latency = score_size_with_latency(model_data["repo_size_bytes"])
     size_scores = _ensure_size_score_structure(size_scores)
 
+    license_score, license_latency = score_license_with_latency(model_data)
+    ramp_up_score, ramp_up_latency = score_ramp_up_time_with_latency(model_data["readme"])
+    bus_factor_score, bus_factor_latency = score_bus_factor_with_latency(model_data["maintainers"])
+    availability_score, availability_latency = score_available_dataset_and_code_with_latency(
+        model_data["has_code"], model_data["has_dataset"]
+    )
+    dataset_quality_score, dataset_quality_latency = score_dataset_quality_with_latency(api_data)
+    code_quality_score, code_quality_latency = score_code_quality_with_latency(api_data)
+    performance_claims_score, performance_claims_latency = score_performance_claims_with_latency(model_data)
+
+    # Weighted average size score
+    hardware_weights = {
+        "raspberry_pi": 0.1,
+        "jetson_nano": 0.2,
+        "desktop_pc": 0.3,
+        "aws_server": 0.4,
+    }
+    size_score_avg = sum(size_scores[hw] * weight for hw, weight in hardware_weights.items())
+
+    # Combine all scores
     scores = {
-        "size": size_scores,  # Keep the full object for NDJSON output
-        "size_score": size_score_avg,  # Single float for net score calculation
-        "license": max(0.0, min(1.0, score_license(model_data))),
-        "ramp_up_time": max(0.0, min(1.0, score_ramp_up_time(model_data["readme"]))),
-        "bus_factor": max(0.0, min(1.0, score_bus_factor(model_data["maintainers"]))),
-        "availability": max(
-            0.0,
-            min(
-                1.0,
-                score_availability(model_data["has_code"], model_data["has_dataset"]),
-            ),
-        ),
-        "dataset_quality": max(0.0, min(1.0, score_dataset_quality(api_data))),
-        "code_quality": max(0.0, min(1.0, score_code_quality(api_data))),
-        "performance_claims": max(0.0, min(1.0, score_performance_claims(model_data))),
+        "size": size_scores,
+        "size_score": size_score_avg,
+        "size_score_latency": size_latency,
+
+        "license": license_score,
+        "license_latency": license_latency,
+
+        "ramp_up_time": ramp_up_score,
+        "ramp_up_time_latency": ramp_up_latency,
+
+        "bus_factor": bus_factor_score,
+        "bus_factor_latency": bus_factor_latency,
+
+        "dataset_and_code_score": availability_score,
+        "dataset_and_code_score_latency": availability_latency,
+
+        "dataset_quality": dataset_quality_score,
+        "dataset_quality_latency": dataset_quality_latency,
+
+        "code_quality": code_quality_score,
+        "code_quality_latency": code_quality_latency,
+
+        "performance_claims": performance_claims_score,
+        "performance_claims_latency": performance_claims_latency,
     }
 
+    # NetScore weights
     weights = {
-        "size_score": 0.1,  # Use the averaged size score for net calculation
+        "size_score": 0.1,
         "license": 0.15,
         "ramp_up_time": 0.15,
         "bus_factor": 0.1,
-        "availability": 0.1,
+        "dataset_and_code_score": 0.1,
         "dataset_quality": 0.1,
         "code_quality": 0.15,
         "performance_claims": 0.15,
     }
 
     netscore = sum(scores[k] * weights[k] for k in weights)
-    scores["NetScore"] = round(netscore, 3)
+    scores["net_score"] = round(netscore, 3)
+
+    # Net latency is sum of all individual latencies
+    scores["net_score_latency"] = (
+        size_latency + license_latency + ramp_up_latency + bus_factor_latency +
+        availability_latency + dataset_quality_latency + code_quality_latency +
+        performance_claims_latency
+    )
+
     log.debug("component scores=%s", scores)
-    log.info("NetScore=%s", scores["NetScore"])
+    log.info("NetScore=%s", scores["net_score"])
     return scores
 
 
@@ -136,17 +156,15 @@ def score_dataset_from_id(dataset_id: str) -> Dict[str, float]:
     """Score a Hugging Face dataset using available metrics."""
     api_data = fetch_dataset_data(dataset_id)
 
-    # Create model_data structure for scoring
     model_data = {
-        "repo_size_bytes": 0,  # Datasets don't have size in same way
+        "repo_size_bytes": 0,
         "license": api_data.get("license"),
         "readme": api_data.get("readme", ""),
         "maintainers": [api_data.get("author")],
-        "has_code": False,  # Datasets typically don't have code
-        "has_dataset": True,  # It is a dataset
+        "has_code": False,
+        "has_dataset": True,
     }
 
-    # Get size scores (minimal for datasets)
     size_scores = {
         "raspberry_pi": 0.5,
         "jetson_nano": 0.5,
@@ -154,37 +172,64 @@ def score_dataset_from_id(dataset_id: str) -> Dict[str, float]:
         "aws_server": 0.5,
     }
 
+    size_score_avg = 0.5
+    size_latency = 0  # Default latency for static dataset scores
+
+    license_score, license_latency = score_license_with_latency(model_data)
+    ramp_up_score, ramp_up_latency = score_ramp_up_time_with_latency(model_data["readme"])
+    bus_factor_score, bus_factor_latency = score_bus_factor_with_latency(model_data["maintainers"])
+    availability_score, availability_latency = score_available_dataset_and_code_with_latency(
+        model_data["has_code"], model_data["has_dataset"]
+    )
+    dataset_quality_score, dataset_quality_latency = score_dataset_quality_with_latency(api_data)
+    performance_claims_score, performance_claims_latency = score_performance_claims_with_latency(model_data)
+
     scores = {
         "size": size_scores,
-        "size_score": 0.5,  # Neutral score for datasets
-        "license": max(0.0, min(1.0, score_license(model_data))),
-        "ramp_up_time": max(0.0, min(1.0, score_ramp_up_time(model_data["readme"]))),
-        "bus_factor": max(0.0, min(1.0, score_bus_factor(model_data["maintainers"]))),
-        "availability": max(
-            0.0,
-            min(
-                1.0,
-                score_availability(model_data["has_code"], model_data["has_dataset"]),
-            ),
-        ),
-        "dataset_quality": max(0.0, min(1.0, score_dataset_quality(api_data))),
-        "code_quality": 0.0,  # Datasets don't have code quality
-        "performance_claims": max(0.0, min(1.0, score_performance_claims(model_data))),
+        "size_score": size_score_avg,
+        "size_score_latency": size_latency,
+
+        "license": license_score,
+        "license_latency": license_latency,
+
+        "ramp_up_time": ramp_up_score,
+        "ramp_up_time_latency": ramp_up_latency,
+
+        "bus_factor": bus_factor_score,
+        "bus_factor_latency": bus_factor_latency,
+
+        "dataset_and_code_score": availability_score,
+        "dataset_and_code_score_latency": availability_latency,
+
+        "dataset_quality": dataset_quality_score,
+        "dataset_quality_latency": dataset_quality_latency,
+
+        "code_quality": 0.0,
+        "code_quality_latency": 0,
+
+        "performance_claims": performance_claims_score,
+        "performance_claims_latency": performance_claims_latency,
     }
 
-    # Calculate NetScore
     weights = {
         "size_score": 0.1,
         "license": 0.15,
         "ramp_up_time": 0.15,
         "bus_factor": 0.1,
-        "availability": 0.1,
-        "dataset_quality": 0.2,  # Higher weight for dataset quality
-        "code_quality": 0.0,  # No weight for code quality
-        "performance_claims": 0.2,  # Higher weight for performance claims
+        "dataset_and_code_score": 0.1,
+        "dataset_quality": 0.2,
+        "code_quality": 0.0,
+        "performance_claims": 0.2,
     }
 
-    netscore = sum(scores[k] * weights[k] for k in weights if weights[k] > 0)
-    scores["NetScore"] = round(netscore, 3)
+    netscore = sum(scores[k] * weights[k] for k in weights)
+    scores["net_score"] = round(netscore, 3)
+
+    scores["net_score_latency"] = (
+        size_latency + license_latency + ramp_up_latency + bus_factor_latency +
+        availability_latency + dataset_quality_latency +
+        0 +  # code_quality_latency
+        performance_claims_latency
+    )
 
     return scores
