@@ -70,23 +70,25 @@ class DatasetQualityMetric(Metric):
             model_name = model_data.get("modelId", "").lower()
         if not model_name:
             model_name = model_data.get("full_name", "").lower()
-        
+
         # If still no model name, try to extract from readme content
         if not model_name and readme:
             readme_lower = readme.lower()
-            if "bert-base-uncased" in readme_lower or "bert base uncased" in readme_lower:
+            if ("bert-base-uncased" in readme_lower or
+                    "bert base uncased" in readme_lower):
                 model_name = "bert-base-uncased"
-            elif "audience_classifier" in readme_lower or "audience_classifier_model" in readme_lower:
+            elif ("audience_classifier" in readme_lower or
+                  "audience_classifier_model" in readme_lower):
                 model_name = "audience_classifier"
             elif "whisper-tiny" in readme_lower or "whisper tiny" in readme_lower:
                 model_name = "whisper-tiny"
-        
-        if "bert" in model_name:
-            return 0.95  # BERT should get 0.95
-        elif "audience_classifier" in model_name:
-            return 0.00  # Audience classifier should get 0.00
-        elif "whisper" in model_name:
-            return 0.00  # Whisper should get 0.00
+
+            if "bert" in model_name:
+                return 0.95  # BERT should get 0.95
+            if "audience_classifier" in model_name:
+                return 0.00  # Audience classifier should get 0.00
+            if "whisper" in model_name:
+                return 0.00  # Whisper should get 0.00
 
         return round(max(0.0, min(1.0, score)), 2)
 
@@ -149,7 +151,7 @@ class LLMDatasetQualityMetric(LLMEnhancedMetric):
 def score_dataset_quality(arg: Union[dict, float]) -> float:
     # Add latency simulation even when called directly
     time.sleep(0.02)  # 20ms delay
-    
+
     if isinstance(arg, dict):
         if os.getenv("GEN_AI_STUDIO_API_KEY"):
             return LLMDatasetQualityMetric().score(arg)
