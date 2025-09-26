@@ -2,7 +2,7 @@ from typing import Any, Dict
 
 import typer
 
-from ai_model_catalog.score_model import net_score
+from .score_model import net_score
 
 
 def _as_int(v: Any, default: int = 0) -> int:

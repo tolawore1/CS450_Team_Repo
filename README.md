@@ -32,6 +32,7 @@ The AI Model Catalog CLI evaluates AI/ML models across eight key dimensions to p
 - 🔧 **Extensible Design** - Modular architecture for easy metric addition
 - 🤖 **Auto-Grader Compatible** - Full support for automated evaluation with NDJSON output
 - 🌐 **Cross-Platform** - Works on Windows, Linux, and macOS
+- 🧠 **LLM-Enhanced Analysis** - Intelligent README and metadata analysis using Purdue GenAI Studio API
 
 ## Installation
 
@@ -57,9 +58,47 @@ pre-commit install
 # 4. Set up environment variables (recommended for full functionality)
 export GITHUB_TOKEN="your_github_token_here"     # For higher rate limits
 export HUGGINGFACE_HUB_TOKEN="hf_your_token"     # For Hugging Face API access
+export PURDUE_GENAI_API_KEY="your_purdue_genai_token"  # For LLM-enhanced analysis
 export LOG_FILE="catalog.log"                    # For logging
 export LOG_LEVEL="1"                             # 0=silent, 1=info, 2=debug
 ```
+
+## LLM-Enhanced Analysis
+
+The AI Model Catalog uses Purdue GenAI Studio API (Claude-3-Sonnet) to provide intelligent analysis of README content and metadata, significantly improving the accuracy of several key metrics:
+
+### Enhanced Metrics
+
+#### Ramp-up Time Score
+- **Before**: Simple README length measurement
+- **After**: Intelligent analysis of installation instructions, examples, documentation structure, and overall quality
+- **Benefits**: Understands context, not just keywords; assesses actual usability
+
+#### Code Quality Score  
+- **Before**: Basic keyword matching for "pytest", "black", "mypy"
+- **After**: Context-aware analysis of testing frameworks, CI/CD pipelines, linting tools, and documentation
+- **Benefits**: Distinguishes between actual tool usage vs. mere mentions
+
+#### Dataset Quality Score
+- **Before**: Pattern matching for dataset keywords
+- **After**: Comprehensive analysis of dataset information, usage examples, metadata, and documentation quality
+- **Benefits**: Evaluates actual dataset documentation quality and completeness
+
+### How It Works
+
+1. **LLM Analysis**: README content is analyzed using Claude-3-Sonnet via Purdue GenAI Studio API
+2. **Context Understanding**: The LLM understands context and meaning, not just keyword presence
+3. **Enhanced Scoring**: Analysis results are combined with traditional metrics for comprehensive scoring
+4. **Graceful Fallback**: If LLM analysis fails, the system automatically falls back to keyword-based methods
+5. **Caching**: Responses are cached to improve performance and reduce API calls
+
+### Configuration
+
+The LLM service automatically detects the `PURDUE_GENAI_API_KEY` environment variable. If not provided, the system will use fallback methods and log a warning.
+
+### Rate Limiting
+
+The service includes built-in rate limiting (1 second delay between requests) and response caching to ensure efficient API usage.
 
 ## Usage
 
@@ -245,6 +284,16 @@ For Hugging Face dataset/model access, a token may be required:
 
 **Note:** Some Hugging Face models/datasets may require authentication for access. Without a token, you may encounter 401 Unauthorized errors.
 
+### Purdue GenAI Studio API Token (Required for LLM Features)
+
+For enhanced LLM analysis features, a Purdue GenAI Studio API token is required:
+
+1. Contact Purdue GenAI Studio for API access
+2. Obtain your API key from the Purdue GenAI Studio dashboard
+3. Set the environment variable: `export PURDUE_GENAI_API_KEY="your_purdue_genai_token_here"`
+
+**Note:** The Purdue GenAI token is required for enhanced LLM analysis features. Without it, the system will use fallback methods and log a warning.
+
 ## Configuration
 
 ### Environment Variables
@@ -253,6 +302,7 @@ For Hugging Face dataset/model access, a token may be required:
 |----------|-------------|---------|
 | `GITHUB_TOKEN` | GitHub API token for higher rate limits | None |
 | `HUGGINGFACE_HUB_TOKEN` | Hugging Face API token for dataset/model access | None |
+| `PURDUE_GENAI_API_KEY` | Purdue GenAI Studio API token for LLM analysis | None |
 | `LOG_FILE` | Path to log file | `catalog.log` |
 | `LOG_LEVEL` | Log verbosity (0=silent, 1=info, 2=debug) | `0` |
 
@@ -346,6 +396,60 @@ pytest tests/test_cli.py
 # Run auto-grader test command
 ./run test
 ```
+
+### Testing LLM Integration
+
+The AI Model Catalog includes LLM-enhanced analysis capabilities. Here's how to test them:
+
+#### Quick LLM Test
+```bash
+# Test with built-in sample README
+python test_llm.py
+
+# Interactive test with multiple input options
+python test_llm_interactive.py
+```
+
+#### LLM Test Options
+
+**Option 1: Built-in Sample (Recommended)**
+```bash
+python test_llm_interactive.py
+# Choose option 1 (press Enter) for built-in sample
+```
+
+**Option 2: Test Your README.md**
+```bash
+python test_llm_interactive.py
+# Choose option 2 (type 'file') to read README.md automatically
+```
+
+**Option 3: Manual Input**
+```bash
+python test_llm_interactive.py
+# Choose option 3 (type 'paste') to paste content manually
+# Paste your content, then press Ctrl+D (Linux/WSL) or Ctrl+Z+Enter (Windows) to finish
+```
+
+#### Expected Results
+
+When LLM integration is working properly, you'll see:
+- ✅ **No 401 Unauthorized errors**
+- ✅ **Detailed AI reasoning** (not "Basic keyword-based analysis")
+- ✅ **Sophisticated scoring** with context-aware analysis
+- ✅ **Scores 0.0-1.0** for different quality aspects
+
+#### Troubleshooting
+
+**If you get stuck in manual input mode:**
+- **Linux/WSL**: Press `Ctrl+D` to finish input
+- **Windows PowerShell**: Press `Ctrl+Z` then `Enter`
+- **Force exit**: Press `Ctrl+C` to cancel
+
+**If you see "Basic keyword-based analysis":**
+- Check that `PURDUE_GENAI_API_KEY` environment variable is set
+- Verify your API key is valid
+- The system will gracefully fall back to traditional methods
 
 ### Code Quality
 

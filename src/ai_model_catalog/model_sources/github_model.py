@@ -9,9 +9,7 @@ from typing import Any, Dict
 import typer
 
 # --- first-party ---
-from ai_model_catalog import (
-    fetch_repo as fr,
-)  # <-- module import (pytest can monkeypatch)
+from .. import fetch_repo as fr
 
 # --- local ---
 from ..utils import _as_bool, _as_int

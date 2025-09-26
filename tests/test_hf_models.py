@@ -12,8 +12,11 @@ def fake_response(json_data, status=200, text_data=None):
     return mock_resp
 
 
-@patch("requests.get")
-def test_fetch_hf_model(mock_get):
+@patch("ai_model_catalog.fetch_repo.create_session")
+def test_fetch_hf_model(mock_create_session):
+    mock_session = MagicMock()
+    mock_create_session.return_value = mock_session
+    mock_get = mock_session.get
     model_json = {
         "usedStorage": 54321,
         "license": "apache-2.0",

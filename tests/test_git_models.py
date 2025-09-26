@@ -17,8 +17,12 @@ def fake_response(json_data, status=200, text_data=None, headers=None):
     return mock_resp
 
 
+@patch("ai_model_catalog.fetch_repo.create_session")
 @patch("requests.get")
-def test_fetch_repo_data(mock_get):
+def test_fetch_repo_data(mock_requests_get, mock_create_session):
+    mock_session = MagicMock()
+    mock_create_session.return_value = mock_session
+    mock_get = mock_session.get
     repo_json = {
         "full_name": "huggingface/transformers",
         "size": 12345,
@@ -40,7 +44,6 @@ def test_fetch_repo_data(mock_get):
     mock_get.side_effect = [
         fake_response(repo_json),  # repo
         fake_response(readme_json, status=200),  # readme meta
-        fake_response(text_data=readme_text, json_data={}),  # readme content
         fake_response(
             commits_json,
             headers={
@@ -92,6 +95,9 @@ def test_fetch_repo_data(mock_get):
         fake_response(pulls_json),  # pulls sample
         fake_response(actions_json),  # actions sample
     ]
+
+    # Mock the direct requests.get call for README download
+    mock_requests_get.return_value = fake_response(text_data=readme_text, json_data={})
 
     data = fetch_repo_data("huggingface", "transformers")
 
