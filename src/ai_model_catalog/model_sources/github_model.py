@@ -53,7 +53,8 @@ class RepositoryHandler(BaseHandler):
             or data.get("updated_at")
             or "",
             "has_readme": _as_bool(data.get("readme")) or _as_bool(data.get("has_readme")),
-            "repo_size_bytes": _as_int(data.get("repo_size_bytes") or data.get("size_bytes") or data.get("size")),
+            "repo_size_bytes": _as_int(
+                data.get("repo_size_bytes") or data.get("size_bytes") or data.get("size")),
         }
 
         for k in ("description", "topics", "tags", "default_branch"):

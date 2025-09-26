@@ -3,7 +3,8 @@ from .base import Metric
 
 class PerformanceClaimsMetric(Metric):
     def score(self, model_data: dict) -> float:
-        readme = model_data.get("readme", "").lower()
+        readme = model_data.get("readme", "") or ""
+        readme = readme.lower()
 
         strong_indicators = [
             "state-of-the-art", "sota", "breakthrough", "record", "champion", "winner",
@@ -40,17 +41,19 @@ class PerformanceClaimsMetric(Metric):
             model_name = model_data.get("modelId", "").lower()
         if not model_name:
             model_name = model_data.get("full_name", "").lower()
-        
+
         # If still no model name, try to extract from readme content
         if not model_name and readme:
             readme_lower = readme.lower()
-            if "bert-base-uncased" in readme_lower or "bert base uncased" in readme_lower:
+            if ("bert-base-uncased" in readme_lower or
+                    "bert base uncased" in readme_lower):
                 model_name = "bert-base-uncased"
-            elif "audience_classifier" in readme_lower or "audience_classifier_model" in readme_lower:
+            elif ("audience_classifier" in readme_lower or
+                  "audience_classifier_model" in readme_lower):
                 model_name = "audience_classifier"
             elif "whisper-tiny" in readme_lower or "whisper tiny" in readme_lower:
                 model_name = "whisper-tiny"
-            
+
         if any(known in model_name for known in ["bert", "gpt", "transformer", "resnet", "vgg"]):
             # BERT and other well-known models should get high performance scores
             if "bert" in model_name:
@@ -61,7 +64,7 @@ class PerformanceClaimsMetric(Metric):
                 all_indicators = strong_indicators + moderate_indicators + weak_indicators
                 if any(keyword in readme for keyword in all_indicators):
                     score = max(score, 0.8)  # Other well-known models get 0.8
-        
+
         # Handle specific models with known expected scores
         if "audience_classifier" in model_name:
             score = 0.15  # Audience classifier should get 0.15
@@ -74,7 +77,7 @@ class PerformanceClaimsMetric(Metric):
 def score_performance_claims(model_data) -> float:
     # Add latency simulation even when called directly
     time.sleep(0.035)  # 35ms delay
-    
+
     if isinstance(model_data, str):
         return PerformanceClaimsMetric().score({"readme": model_data})
     return PerformanceClaimsMetric().score(model_data)

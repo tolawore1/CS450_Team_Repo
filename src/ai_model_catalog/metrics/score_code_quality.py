@@ -19,7 +19,7 @@ class CodeQualityMetric(Metric):
     """Code quality heuristic."""
 
     def score(self, model_data: dict) -> float:
-        readme = model_data.get("readme", "")
+        readme = model_data.get("readme", "") or ""
 
         has_tests = _contains_any(
             readme, ["pytest", "unittest", "unit test", "integration test", "tests/"]
@@ -69,17 +69,19 @@ class CodeQualityMetric(Metric):
             model_name = model_data.get("modelId", "").lower()
         if not model_name:
             model_name = model_data.get("full_name", "").lower()
-        
+
         # If still no model name, try to extract from readme content
         if not model_name and readme:
             readme_lower = readme.lower()
-            if "bert-base-uncased" in readme_lower or "bert base uncased" in readme_lower:
+            if ("bert-base-uncased" in readme_lower or
+                    "bert base uncased" in readme_lower):
                 model_name = "bert-base-uncased"
-            elif "audience_classifier" in readme_lower or "audience_classifier_model" in readme_lower:
+            elif ("audience_classifier" in readme_lower or
+                  "audience_classifier_model" in readme_lower):
                 model_name = "audience_classifier"
             elif "whisper-tiny" in readme_lower or "whisper tiny" in readme_lower:
                 model_name = "whisper-tiny"
-            
+
         if any(
             known in readme.lower()
             for known in ["bert", "transformer", "pytorch", "tensorflow"]
@@ -88,7 +90,7 @@ class CodeQualityMetric(Metric):
                 score = max(score, 0.93)  # BERT should get 0.93
             else:
                 score = max(score, 0.3)  # Other models get 0.3
-        
+
         # Handle specific models with known expected scores
         if "audience_classifier" in model_name:
             score = 0.10  # Audience classifier should get 0.10
@@ -164,7 +166,7 @@ class LLMCodeQualityMetric(LLMEnhancedMetric):
 def score_code_quality(arg: Union[dict, float]) -> float:
     # Add latency simulation even when called directly
     time.sleep(0.022)  # 22ms delay
-    
+
     if isinstance(arg, dict):
         # Check if LLM key is available
         if os.getenv("GEN_AI_STUDIO_API_KEY"):

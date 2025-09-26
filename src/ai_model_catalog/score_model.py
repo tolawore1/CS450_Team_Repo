@@ -62,10 +62,11 @@ def net_score(api_data: Dict, model_id: str = None) -> Dict[str, float]:
         "has_code": api_data.get("has_code", True),
         "has_dataset": api_data.get("has_dataset", True),
     }
-    
+
     # Add model name for performance claims scoring
     if model_id:
-        model_data["name"] = model_id.split("/")[-1]  # Extract model name from model_id
+        # Extract model name from model_id
+        model_data["name"] = model_id.split("/")[-1]
     elif "full_name" in api_data:
         model_data["name"] = api_data["full_name"]
 
@@ -84,11 +85,15 @@ def net_score(api_data: Dict, model_id: str = None) -> Dict[str, float]:
     if "full_name" in api_data:
         api_data_with_name["name"] = api_data["full_name"]
     elif model_id:  # This is a Hugging Face model
-        api_data_with_name["name"] = model_id.split("/")[-1]  # Extract model name from model_id
-    
-    dataset_quality_score, dataset_quality_latency = score_dataset_quality_with_latency(api_data_with_name)
-    code_quality_score, code_quality_latency = score_code_quality_with_latency(api_data_with_name)
-    performance_claims_score, performance_claims_latency = score_performance_claims_with_latency(model_data)
+        # Extract model name from model_id
+        api_data_with_name["name"] = model_id.split("/")[-1]
+
+    dataset_quality_score, dataset_quality_latency = (
+        score_dataset_quality_with_latency(api_data_with_name))
+    code_quality_score, code_quality_latency = (
+        score_code_quality_with_latency(api_data_with_name))
+    performance_claims_score, performance_claims_latency = (
+        score_performance_claims_with_latency(model_data))
 
     # Weighted average size score
     hardware_weights = {
@@ -164,13 +169,13 @@ def score_model_from_id(model_id: str) -> Dict[str, float]:
     def safe_score(val):
         try:
             return min(max(float(val), 0.0), 1.0)
-        except:
+        except (ValueError, TypeError):
             return 0.0
 
     def safe_latency(val):
         try:
             return max(int(val), 0)
-        except:
+        except (ValueError, TypeError):
             return 0
 
     def safe_size(size_dict):
@@ -253,8 +258,10 @@ def score_dataset_from_id(dataset_id: str) -> Dict[str, float]:
     availability_score, availability_latency = score_available_dataset_and_code_with_latency(
         model_data["has_code"], model_data["has_dataset"]
     )
-    dataset_quality_score, dataset_quality_latency = score_dataset_quality_with_latency(api_data)
-    performance_claims_score, performance_claims_latency = score_performance_claims_with_latency(model_data)
+    dataset_quality_score, dataset_quality_latency = (
+        score_dataset_quality_with_latency(api_data))
+    performance_claims_score, performance_claims_latency = (
+        score_performance_claims_with_latency(model_data))
 
     scores = {
         "size": size_scores,
