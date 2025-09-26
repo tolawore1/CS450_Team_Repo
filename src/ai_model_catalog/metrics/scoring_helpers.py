@@ -1,5 +1,4 @@
 """Helper functions for LLM-enhanced scoring."""
-import time
 from typing import Any, Dict
 
 
