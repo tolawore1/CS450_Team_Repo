@@ -143,7 +143,57 @@ def net_score(api_data: Dict) -> Dict[str, float]:
 
 def score_model_from_id(model_id: str) -> Dict[str, float]:
     api_data = fetch_model_data(model_id)
-    return net_score(api_data)
+    scores = net_score(api_data)
+
+    def safe_score(val):
+        try:
+            return min(max(float(val), 0.0), 1.0)
+        except:
+            return 0.0
+
+    def safe_latency(val):
+        try:
+            return max(int(val), 0)
+        except:
+            return 0
+
+    def safe_size(size_dict):
+        if not isinstance(size_dict, dict):
+            return {"cpu": 0.0, "gpu": 0.0, "tpu": 0.0}
+        return {
+            "cpu": safe_score(size_dict.get("raspberry_pi", 0.0)),
+            "gpu": safe_score(size_dict.get("jetson_nano", 0.0)),
+            "tpu": safe_score(size_dict.get("aws_server", 0.0)),
+        }
+
+    return {
+        "net_score": safe_score(scores.get("net_score")),
+        "net_score_latency": safe_latency(scores.get("net_score_latency")),
+
+        "ramp_up_time": safe_score(scores.get("ramp_up_time")),
+        "ramp_up_time_latency": safe_latency(scores.get("ramp_up_time_latency")),
+
+        "bus_factor": safe_score(scores.get("bus_factor")),
+        "bus_factor_latency": safe_latency(scores.get("bus_factor_latency")),
+
+        "performance_claims": safe_score(scores.get("performance_claims")),
+        "performance_claims_latency": safe_latency(scores.get("performance_claims_latency")),
+
+        "license": safe_score(scores.get("license")),
+        "license_latency": safe_latency(scores.get("license_latency")),
+
+        "size": safe_size(scores.get("size")),
+        "size_latency": safe_latency(scores.get("size_score_latency")),
+
+        "availability": safe_score(scores.get("dataset_and_code_score")),
+        "availability_latency": safe_latency(scores.get("dataset_and_code_score_latency")),
+
+        "dataset_quality": safe_score(scores.get("dataset_quality")),
+        "dataset_quality_latency": safe_latency(scores.get("dataset_quality_latency")),
+
+        "code_quality": safe_score(scores.get("code_quality")),
+        "code_quality_latency": safe_latency(scores.get("code_quality_latency")),
+    }
 
 
 def score_repo_from_owner_and_repo(owner: str, repo: str) -> Dict[str, float]:
