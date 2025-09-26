@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Iterable, List, Union
 
 from .base import Metric
+from .constants import DATASET_KEYWORDS, KNOWN_DATASETS
 
 
 def _contains_any(text: str, needles: Iterable[str]) -> bool:
@@ -18,21 +19,8 @@ class DatasetQualityMetric(Metric):
         readme = (model_data.get("readme") or "").strip()
         tags: List[str] = list(model_data.get("tags") or [])
 
-        ds_words = ["dataset", "data set", "corpus", "benchmark", "training data"]
-        known = [
-            "imagenet",
-            "coco",
-            "mnist",
-            "cifar",
-            "squad",
-            "glue",
-            "commonsenseqa",
-            "wikitext",
-            "librispeech",
-            "laion",
-            "pile",
-            "kitti",
-        ]
+        ds_words = DATASET_KEYWORDS
+        known = KNOWN_DATASETS
 
         has_dataset_word = _contains_any(readme, ds_words)
         has_known_name = _contains_any(readme, known)

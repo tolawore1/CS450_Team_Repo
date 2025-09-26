@@ -9,7 +9,7 @@ from typing import Any, Dict
 # --- third-party ---
 import typer
 
-from ai_model_catalog import fetch_repo as fr  # <-- module import
+from .. import fetch_repo as fr
 
 # --- local ---
 from ..utils import _as_bool, _as_int

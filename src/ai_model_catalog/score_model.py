@@ -2,16 +2,16 @@ import logging
 from typing import Dict
 
 from .fetch_repo import fetch_dataset_data, fetch_model_data, fetch_repo_data
-from .metrics.score_available_dataset_and_code import (
-    score_available_dataset_and_code as score_availability,
+from .metrics import score_available_dataset_and_code as score_availability
+from .metrics import (
+    score_bus_factor,
+    score_code_quality,
+    score_dataset_quality,
+    score_license,
+    score_performance_claims,
+    score_ramp_up_time,
+    score_size,
 )
-from .metrics.score_bus_factor import score_bus_factor
-from .metrics.score_code_quality import score_code_quality
-from .metrics.score_dataset_quality import score_dataset_quality
-from .metrics.score_license import score_license
-from .metrics.score_performance_claims import score_performance_claims
-from .metrics.score_ramp_up_time import score_ramp_up_time
-from .metrics.score_size import score_size
 
 log = logging.getLogger(__name__)
 
@@ -48,7 +48,7 @@ def net_score(api_data: Dict) -> Dict[str, float]:
     }
 
     # Get size scores (now returns object with hardware mappings)
-    size_scores = score_size(model_data["repo_size_bytes"])
+    size_scores = score_size(model_data)
 
     # Calculate weighted average of hardware scores for net score
     # Weight more capable hardware more heavily
@@ -65,15 +65,13 @@ def net_score(api_data: Dict) -> Dict[str, float]:
     scores = {
         "size": size_scores,  # Keep the full object for NDJSON output
         "size_score": size_score_avg,  # Single float for net score calculation
-        "license": score_license(model_data["license"]),
-        "ramp_up_time": score_ramp_up_time(model_data["readme"]),
-        "bus_factor": score_bus_factor(model_data["maintainers"]),
-        "availability": score_availability(
-            model_data["has_code"], model_data["has_dataset"]
-        ),
+        "license": score_license(license_type),
+        "ramp_up_time": score_ramp_up_time(api_data),
+        "bus_factor": score_bus_factor(model_data),
+        "availability": score_availability(model_data),
         "dataset_quality": score_dataset_quality(api_data),
         "code_quality": score_code_quality(api_data),
-        "performance_claims": score_performance_claims(model_data["readme"]),
+        "performance_claims": score_performance_claims(model_data),
     }
 
     weights = {
@@ -127,18 +125,19 @@ def score_dataset_from_id(dataset_id: str) -> Dict[str, float]:
         "aws_server": 0.5,
     }
 
+    # Extract license type for scoring
+    license_type = api_data.get("license", "unknown")
+
     scores = {
         "size": size_scores,
         "size_score": 0.5,  # Neutral score for datasets
-        "license": score_license(model_data["license"]),
-        "ramp_up_time": score_ramp_up_time(model_data["readme"]),
-        "bus_factor": score_bus_factor(model_data["maintainers"]),
-        "availability": score_availability(
-            model_data["has_code"], model_data["has_dataset"]
-        ),
+        "license": score_license(license_type),
+        "ramp_up_time": score_ramp_up_time(api_data),
+        "bus_factor": score_bus_factor(model_data),
+        "availability": score_availability(model_data),
         "dataset_quality": score_dataset_quality(api_data),
         "code_quality": 0.0,  # Datasets don't have code quality
-        "performance_claims": score_performance_claims(model_data["readme"]),
+        "performance_claims": score_performance_claims(model_data),
     }
 
     # Calculate NetScore

@@ -5,11 +5,11 @@ import logging
 import requests
 import typer
 
-from ai_model_catalog.fetch_repo import GitHubAPIError, RepositoryDataError
-from ai_model_catalog.logging_config import configure_logging
-from ai_model_catalog.model_sources.github_model import RepositoryHandler
-from ai_model_catalog.model_sources.hf_model import ModelHandler
-from ai_model_catalog.utils import _pick_repo_for_owner
+from .fetch_repo import GitHubAPIError, RepositoryDataError
+from .logging_config import configure_logging
+from .model_sources.github_model import RepositoryHandler
+from .model_sources.hf_model import ModelHandler
+from .utils import _pick_repo_for_owner
 
 app = typer.Typer()
 log = logging.getLogger("catalog")

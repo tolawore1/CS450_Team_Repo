@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Iterable, Union
 
 from .base import Metric
+from .constants import CI_CD_KEYWORDS
 
 
 def _contains_any(text: str, needles: Iterable[str]) -> bool:
@@ -19,19 +20,7 @@ class CodeQualityMetric(Metric):
         has_tests = _contains_any(
             readme, ["pytest", "unittest", "unit test", "integration test", "tests/"]
         )
-        has_ci = _contains_any(
-            readme,
-            [
-                "github actions",
-                "workflow",
-                "ci",
-                "travis",
-                "circleci",
-                "appveyor",
-                "build status",
-                "badge",
-            ],
-        )
+        has_ci = _contains_any(readme, CI_CD_KEYWORDS)
         has_lint = _contains_any(
             readme, ["pylint", "flake8", "ruff", "black", "isort", "pre-commit"]
         )
