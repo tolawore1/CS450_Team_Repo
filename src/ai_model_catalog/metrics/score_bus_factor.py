@@ -1,3 +1,4 @@
+import time
 from .base import Metric
 
 
@@ -9,3 +10,9 @@ class BusFactorMetric(Metric):
 
 def score_bus_factor(maintainers: list) -> float:
     return BusFactorMetric().score({"maintainers": maintainers})
+
+def score_bus_factor_with_latency(maintainers: list) -> tuple[float, int]:
+    start = time.time()
+    score = score_bus_factor(maintainers)
+    latency = int((time.time() - start) * 1000)
+    return score, latency
