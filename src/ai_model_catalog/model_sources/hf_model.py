@@ -41,6 +41,8 @@ class ModelHandler(BaseHandler):
             or "",
             "has_readme": _as_bool(data.get("readme"))
             or _as_bool(data.get("has_readme")),
+            "repo_size_bytes": _as_int(data.get("repo_size_bytes") or data.get("size_bytes") or data.get("size")),
+
         }
 
         card = data.get("cardData")
