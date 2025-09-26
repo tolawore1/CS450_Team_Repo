@@ -16,8 +16,8 @@ class SizeMetric(Metric):
     def score(self, model_data: dict) -> Dict[str, float]:
         repo_size_bytes = model_data.get("repo_size_bytes")
 
-        #Prevent crash if passed a bool or invalid value
-        if not isinstance(repo_size_bytes, (int, float)) or repo_size_bytes <= 0:
+        # Prevent crash if passed a bool or invalid value
+        if isinstance(repo_size_bytes, bool) or not isinstance(repo_size_bytes, (int, float)) or repo_size_bytes <= 0:
             return {hardware: 0.0 for hardware in HARDWARE_THRESHOLDS}
 
         scores = {}

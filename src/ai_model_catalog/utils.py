@@ -8,6 +8,8 @@ from .score_model import net_score
 def _as_int(v: Any, default: int = 0) -> int:
     """Convert value to int with default fallback."""
     try:
+        if isinstance(v, bool):
+            return 0
         return int(v)
     except (ValueError, TypeError):
         return default
