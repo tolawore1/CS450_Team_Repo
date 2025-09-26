@@ -63,7 +63,7 @@ class DatasetQualityMetric(Metric):
 
         # For well-known models, give base score
         if "bert" in model_data.get("name", "").lower():
-            score = max(score, 1.0)
+            return 1.0
 
         return round(max(0.0, min(1.0, score)), 2)
 
