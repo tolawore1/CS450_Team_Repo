@@ -12,6 +12,7 @@ from .metrics.score_license import score_license
 from .metrics.score_performance_claims import score_performance_claims
 from .metrics.score_ramp_up_time import score_ramp_up_time
 from .metrics.score_size import score_size
+from .utils import _as_int
 
 log = logging.getLogger(__name__)
 
@@ -68,6 +69,8 @@ def net_score(api_data: Dict) -> Dict[str, float]:
     }
 
     # Get size scores (now returns object with hardware mappings)
+    repo_size = _as_int(model_data.get("repo_size_bytes"))
+    model_data["repo_size_bytes"] = repo_size if repo_size and repo_size > 0 else 0
     size_scores = score_size(model_data["repo_size_bytes"])
 
     # Calculate weighted average of hardware scores for net score
