@@ -24,7 +24,7 @@ class SizeMetric(Metric):
                 # Within limit - score based on utilization (lower utilization = higher score)
                 utilization = repo_size_bytes / max_size
                 # Score ranges from 1.0 (empty) to 0.6 (at limit)
-                scores[hardware] = round(1.0 - (utilization * 0.4), 2)
+                scores[hardware] = round(1.0 - (utilization * 0.3), 2)
             else:
                 # Over limit - score based on how much over (penalty increases with oversize)
                 oversize_ratio = repo_size_bytes / max_size
