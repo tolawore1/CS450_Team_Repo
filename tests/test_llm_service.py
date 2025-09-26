@@ -26,6 +26,7 @@ class TestLLMService:
     def test_cache_key_generation(self):
         """Test cache key generation."""
         service = LLMService()
+        # pylint: disable=protected-access
         key1 = service._get_cache_key("test content", "analysis_type")
         key2 = service._get_cache_key("test content", "analysis_type")
         key3 = service._get_cache_key("different content", "analysis_type")
@@ -38,6 +39,7 @@ class TestLLMService:
         service = LLMService()
         readme = "This is a test README with installation instructions."
 
+        # pylint: disable=protected-access
         result = service._basic_readme_analysis(readme)
 
         assert isinstance(result, dict)
@@ -63,6 +65,7 @@ class TestLLMService:
         service = LLMService()
         readme = "This project uses pytest for testing and black for formatting."
 
+        # pylint: disable=protected-access
         result = service._basic_code_quality_analysis(readme)
 
         assert isinstance(result, dict)
@@ -92,6 +95,7 @@ class TestLLMService:
             "downloads": 1000,
         }
 
+        # pylint: disable=protected-access
         result = service._basic_dataset_analysis(dataset_info)
 
         assert isinstance(result, dict)
@@ -138,6 +142,7 @@ class TestLLMService:
 
         with patch.dict("os.environ", {"PURDUE_GENAI_API_KEY": "test_key"}):
             service = LLMService()
+            # pylint: disable=protected-access
             result = service._call_api("test prompt", "test content")
 
             assert result is not None
@@ -151,6 +156,7 @@ class TestLLMService:
 
         with patch.dict("os.environ", {"PURDUE_GENAI_API_KEY": "test_key"}):
             service = LLMService()
+            # pylint: disable=protected-access
             result = service._call_api("test prompt", "test content")
 
             assert result is None
