@@ -168,49 +168,71 @@ def multipleURLS():
         if repo_url.endswith("/"):
             repo_url = repo_url[:-1]
 
-        # Basic validation: expect URL like https://github.com/owner/repo
-        parts = repo_url.split("/")
-        if len(parts) < 5 or parts[-3] != "github.com":
-            typer.echo(f"Invalid URL: {repo_url}", err=True)
+        # More robust parsing: find 'github.com' and extract owner/repo after that
+        if "github.com" not in repo_url:
+            typer.echo(f"Invalid URL (no github.com): {repo_url}", err=True)
             continue
 
-        owner = parts[-2]
-        repo = parts[-1]
+        try:
+            # Parse URL path after github.com
+            path = repo_url.split("github.com", 1)[1].strip("/")
+            parts = path.split("/")
+            if len(parts) < 2:
+                typer.echo(f"Invalid URL (missing owner/repo): {repo_url}", err=True)
+                continue
+            owner = parts[0]
+            repo = parts[1]
+        except Exception:
+            typer.echo(f"Error parsing URL: {repo_url}", err=True)
+            continue
 
         handler = RepositoryHandler(owner, repo)
         raw = handler.fetch_data()
         scores = score_repo_from_owner_and_repo(owner, repo)
 
-        # Defensive check for size_score to avoid bool issues
+        # Defensive handling for fields
         size_score = scores.get("size", {})
         if not isinstance(size_score, dict):
             size_score = {}
 
+        def safe_float(val):
+            try:
+                return float(val)
+            except Exception:
+                return 0.0
+
+        def safe_int(val):
+            try:
+                return int(val)
+            except Exception:
+                return 0
+
         line = {
             "name": raw.get("full_name") or f"{owner}/{repo}",
             "category": "REPOSITORY",
-            "net_score": scores.get("net_score", 0.0),
-            "net_score_latency": scores.get("net_score_latency", 0),
-            "ramp_up_time": scores.get("ramp_up_time", 0.0),
-            "ramp_up_time_latency": scores.get("ramp_up_time_latency", 0),
-            "bus_factor": scores.get("bus_factor", 0.0),
-            "bus_factor_latency": scores.get("bus_factor_latency", 0),
-            "performance_claims": scores.get("performance_claims", 0.0),
-            "performance_claims_latency": scores.get("performance_claims_latency", 0),
-            "license": scores.get("license", 0.0),
-            "license_latency": scores.get("license_latency", 0),
+            "net_score": safe_float(scores.get("net_score")),
+            "net_score_latency": safe_int(scores.get("net_score_latency")),
+            "ramp_up_time": safe_float(scores.get("ramp_up_time")),
+            "ramp_up_time_latency": safe_int(scores.get("ramp_up_time_latency")),
+            "bus_factor": safe_float(scores.get("bus_factor")),
+            "bus_factor_latency": safe_int(scores.get("bus_factor_latency")),
+            "performance_claims": safe_float(scores.get("performance_claims")),
+            "performance_claims_latency": safe_int(scores.get("performance_claims_latency")),
+            "license": safe_float(scores.get("license")),
+            "license_latency": safe_int(scores.get("license_latency")),
             "size_score": size_score,
-            "size_score_latency": scores.get("size_latency", 0),
-            "dataset_and_code_score": scores.get("availability", 0.0),
-            "dataset_and_code_score_latency": scores.get("availability_latency", 0),
-            "dataset_quality": scores.get("dataset_quality", 0.0),
-            "dataset_quality_latency": scores.get("dataset_quality_latency", 0),
-            "code_quality": scores.get("code_quality", 0.0),
-            "code_quality_latency": scores.get("code_quality_latency", 0),
+            "size_score_latency": safe_int(scores.get("size_latency")),
+            "dataset_and_code_score": safe_float(scores.get("availability")),
+            "dataset_and_code_score_latency": safe_int(scores.get("availability_latency")),
+            "dataset_quality": safe_float(scores.get("dataset_quality")),
+            "dataset_quality_latency": safe_int(scores.get("dataset_quality_latency")),
+            "code_quality": safe_float(scores.get("code_quality")),
+            "code_quality_latency": safe_int(scores.get("code_quality_latency")),
         }
 
-        # Print NDJSON line
+        # Print NDJSON line without extra spacing or debugging
         typer.echo(json.dumps(line))
+
 
 @app.command()
 def interactive():
