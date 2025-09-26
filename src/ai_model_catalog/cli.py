@@ -1,4 +1,5 @@
 import json
+import time
 from typing import Optional
 
 import typer
@@ -32,6 +33,7 @@ def models(
 
     if output_format == "ndjson":
         scores = score_repo_from_owner_and_repo(owner, repo)
+        # Construct line with all latency fields expected
         line = {
             "name": raw.get("full_name") or f"{owner}/{repo}",
             "category": "REPOSITORY",
@@ -155,101 +157,32 @@ def hf_dataset(
     if tcats:
         typer.echo(f"Task Categories: {', '.join(map(str, tcats))}")
 
+@app.command()
+def multipleURLS():
+    """Fetch and display metadata from multiple GitHub repositories."""
+    configure_logging()
+    with open("URL_FILE.txt", "r") as f:
+        repos = [line.strip() for line in f if line.strip()]
+
+    for repo_url in repos:
+        if repo_url.endswith("/"):
+            repo_url = repo_url[:-1]
+        parts = repo_url.split("/")
+        if len(parts) < 2:
+            typer.echo(f"Invalid URL: {repo_url}")
+            continue
+        owner = parts[-2]
+        repo = parts[-1]
+        typer.echo(f"\nFetching data for {owner}/{repo}...")
+        handler = RepositoryHandler(owner, repo)
+        raw = handler.fetch_data()
+        formatted = handler.format_data(raw)
+        handler.display_data(formatted, raw)
 
 @app.command()
 def interactive():
     """Start interactive mode for browsing AI models."""
     interactive_main()
-
-
-@app.command(name="hf-models")
-def hf_models(
-    model_ids: list[str] = typer.Argument(..., help="List of model IDs"),
-    output_format: Optional[str] = typer.Option(
-        "text", "--format", help="Output format (text or ndjson)"
-    ),
-):
-    """Fetch and display metadata for multiple Hugging Face models."""
-    configure_logging()
-    for model_id in model_ids:
-        handler = ModelHandler(model_id)
-        raw = handler.fetch_data()
-        if output_format == "ndjson":
-            scores = score_model_from_id(model_id)
-            line = {
-                "name": model_id,
-                "category": "MODEL",
-                "net_score": scores.get("net_score", 0.0),
-                "net_score_latency": scores.get("net_score_latency", 0),
-                "ramp_up_time": scores.get("ramp_up_time", 0.0),
-                "ramp_up_time_latency": scores.get("ramp_up_time_latency", 0),
-                "bus_factor": scores.get("bus_factor", 0.0),
-                "bus_factor_latency": scores.get("bus_factor_latency", 0),
-                "performance_claims": scores.get("performance_claims", 0.0),
-                "performance_claims_latency": scores.get("performance_claims_latency", 0),
-                "license": scores.get("license", 0.0),
-                "license_latency": scores.get("license_latency", 0),
-                "size_score": scores.get("size", {}),
-                "size_score_latency": scores.get("size_latency", 0),
-                "dataset_and_code_score": scores.get("availability", 0.0),
-                "dataset_and_code_score_latency": scores.get("availability_latency", 0),
-                "dataset_quality": scores.get("dataset_quality", 0.0),
-                "dataset_quality_latency": scores.get("dataset_quality_latency", 0),
-                "code_quality": scores.get("code_quality", 0.0),
-                "code_quality_latency": scores.get("code_quality_latency", 0),
-            }
-            typer.echo(json.dumps(line))
-        else:
-            formatted = handler.format_data(raw)
-            handler.display_data(formatted, raw)
-
-
-@app.command(name="repos")
-def repos(
-    repos: list[str] = typer.Argument(..., help="List of repos in owner/repo format"),
-    output_format: Optional[str] = typer.Option(
-        "text", "--format", help="Output format (text or ndjson)"
-    ),
-):
-    """Fetch and display metadata for multiple GitHub repositories."""
-    configure_logging()
-    for full_repo in repos:
-        try:
-            owner, repo = full_repo.split("/", 1)
-        except ValueError:
-            typer.echo(f"Invalid repo format: {full_repo}, expected owner/repo")
-            continue
-
-        handler = RepositoryHandler(owner, repo)
-        raw = handler.fetch_data()
-        if output_format == "ndjson":
-            scores = score_repo_from_owner_and_repo(owner, repo)
-            line = {
-                "name": raw.get("full_name") or f"{owner}/{repo}",
-                "category": "REPOSITORY",
-                "net_score": scores.get("net_score", 0.0),
-                "net_score_latency": scores.get("net_score_latency", 0),
-                "ramp_up_time": scores.get("ramp_up_time", 0.0),
-                "ramp_up_time_latency": scores.get("ramp_up_time_latency", 0),
-                "bus_factor": scores.get("bus_factor", 0.0),
-                "bus_factor_latency": scores.get("bus_factor_latency", 0),
-                "performance_claims": scores.get("performance_claims", 0.0),
-                "performance_claims_latency": scores.get("performance_claims_latency", 0),
-                "license": scores.get("license", 0.0),
-                "license_latency": scores.get("license_latency", 0),
-                "size_score": scores.get("size", {}),
-                "size_score_latency": scores.get("size_latency", 0),
-                "dataset_and_code_score": scores.get("availability", 0.0),
-                "dataset_and_code_score_latency": scores.get("availability_latency", 0),
-                "dataset_quality": scores.get("dataset_quality", 0.0),
-                "dataset_quality_latency": scores.get("dataset_quality_latency", 0),
-                "code_quality": scores.get("code_quality", 0.0),
-                "code_quality_latency": scores.get("code_quality_latency", 0),
-            }
-            typer.echo(json.dumps(line))
-        else:
-            formatted = handler.format_data(raw)
-            handler.display_data(formatted, raw)
 
 
 if __name__ == "__main__":
