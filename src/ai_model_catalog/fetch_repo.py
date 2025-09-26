@@ -4,9 +4,12 @@ Repository fetching functions for AI Model Catalog
 
 import logging
 import os
-from typing import Any, Dict, List, Optional
+import time
+from typing import Any, Dict, List, Optional, Tuple
 
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 GITHUB_API = "https://api.github.com"
 HF_API = "https://huggingface.co/api"
@@ -14,12 +17,46 @@ GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
 
 HEADERS = {
     "Accept": "application/vnd.github+json",
+    "User-Agent": "AI-Model-Catalog/1.0",
 }
 
 if GITHUB_TOKEN:
     HEADERS["Authorization"] = f"token {GITHUB_TOKEN}"
 
+# Hugging Face specific headers
+HF_HEADERS = {
+    "User-Agent": "AI-Model-Catalog/1.0",
+    "Accept": "application/json",
+}
+
 log = logging.getLogger(__name__)
+
+
+def create_session() -> requests.Session:
+    """Create a requests session with retry strategy."""
+    session = requests.Session()
+    retry_strategy = Retry(
+        total=1,
+        backoff_factor=0.5,
+        status_forcelist=[429, 500, 502, 503, 504],
+    )
+    adapter = HTTPAdapter(max_retries=retry_strategy)
+    session.mount("http://", adapter)
+    session.mount("https://", adapter)
+    return session
+
+
+def time_request(func, *args, **kwargs) -> Tuple[Any, int]:
+    """Execute a function and return result with latency in milliseconds."""
+    start_time = time.time()
+    try:
+        result = func(*args, **kwargs)
+        latency = int((time.time() - start_time) * 1000)
+        return result, latency
+    except Exception as e:
+        latency = int((time.time() - start_time) * 1000)
+        raise e
+
 
 SAMPLE_ACTION_RUN = {
     "id": 1,
@@ -44,10 +81,11 @@ class RepositoryDataError(Exception):
 
 def _make_github_request(url: str, params: Optional[Dict] = None) -> requests.Response:
     """Make a GitHub API request with proper error handling"""
+    session = create_session()
     try:
         log.info("GET %s", url)
         log.debug("GET %s params=%s", url, params)
-        response = requests.get(url, headers=HEADERS, params=params, timeout=15)
+        response = session.get(url, headers=HEADERS, params=params, timeout=5)
 
         if response.status_code == 403:
             log.warning("GitHub API 403 (rate limit?) for %s", url)
@@ -59,6 +97,9 @@ def _make_github_request(url: str, params: Optional[Dict] = None) -> requests.Re
         )
         return response
 
+    except requests.ConnectionError as e:
+        log.error("Network connection failed for GitHub API: %s", e)
+        raise GitHubAPIError(f"Network connection failed: {e}") from e
     except requests.RequestException as e:
         log.exception("HTTP error for %s", url)
         raise GitHubAPIError(f"Failed to fetch data from {url}: {str(e)}") from e
@@ -326,22 +367,42 @@ def fetch_model_data(model_id: str) -> Dict[str, Any]:
     model_url = f"{HF_API}/models/{model_id}"
 
     # Add authentication header if token is available
-    headers = {}
+    headers = HF_HEADERS.copy()
     hf_token = os.getenv("HUGGINGFACE_HUB_TOKEN") or os.getenv("HF_TOKEN")
     if hf_token:
         headers["Authorization"] = f"Bearer {hf_token}"
 
+    session = create_session()
     try:
-        response = requests.get(model_url, headers=headers, timeout=15)
+        response = session.get(model_url, headers=headers, timeout=5)
         response.raise_for_status()
         model_data = response.json()
+    except requests.ConnectionError as e:
+        log.error("Network connection failed for Hugging Face API: %s", e)
+        # Return minimal data instead of raising
+        return {
+            "modelSize": 0,
+            "license": "unknown",
+            "author": "unknown",
+            "readme": f"# {model_id}\n\nNetwork unavailable - could not fetch model data.",
+            "cardData": {},
+            "downloads": 0,
+            "lastModified": "",
+        }
     except requests.RequestException as e:
         log.error(
             "Failed to fetch model data from Hugging Face for %s: %s", model_id, e
         )
-        raise RepositoryDataError(
-            f"Failed to fetch model data from Hugging Face: {e}"
-        ) from e
+        # Return minimal data instead of raising
+        return {
+            "modelSize": 0,
+            "license": "unknown",
+            "author": "unknown",
+            "readme": f"# {model_id}\n\nAPI request failed - could not fetch model data.",
+            "cardData": {},
+            "downloads": 0,
+            "lastModified": "",
+        }
 
     license_type = model_data.get("license", "unknown")
 
@@ -374,10 +435,14 @@ def fetch_hf_model(model_id: str) -> Dict[str, Any]:
     """Fetch Hugging Face Hub model metadata and shape it for net_score()"""
     model_url = f"{HF_API}/models/{model_id}"
 
+    session = create_session()
     try:
-        response = requests.get(model_url, timeout=15)
+        response = session.get(model_url, headers=HF_HEADERS, timeout=5)
         response.raise_for_status()
         model_data = response.json()
+    except requests.ConnectionError as e:
+        log.error("Network connection failed for Hugging Face API: %s", e)
+        raise RepositoryDataError(f"Network connection failed: {e}") from e
     except requests.RequestException as e:
         raise RepositoryDataError(
             f"Failed to fetch model data from Hugging Face: {e}"

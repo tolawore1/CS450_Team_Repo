@@ -22,7 +22,7 @@ class LLMService:
 
     def __init__(self):
         """Initialize the LLM service."""
-        self.api_key = os.getenv("PURDUE_GENAI_API_KEY")
+        self.api_key = os.getenv("GEN_AI_STUDIO_API_KEY")
         self.rate_limit_delay = 1.0  # seconds between requests
         self.last_request_time = 0.0
         self.cache: Dict[str, Any] = {}
@@ -43,7 +43,7 @@ class LLMService:
     def _call_api(self, prompt: str, content: str) -> Optional[Dict[str, Any]]:
         """Make a call to the Purdue GenAI Studio API."""
         if not self.api_key:
-            log.warning("PURDUE_GENAI_API_KEY not set, skipping LLM analysis")
+            log.warning("GEN_AI_STUDIO_API_KEY not set, skipping LLM analysis")
             return None
 
         self._rate_limit()

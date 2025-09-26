@@ -19,7 +19,7 @@ class TestLLMService:
 
     def test_init_with_api_key(self):
         """Test LLM service initialization with API key."""
-        with patch.dict("os.environ", {"PURDUE_GENAI_API_KEY": "test_key"}):
+        with patch.dict("os.environ", {"GEN_AI_STUDIO_API_KEY": "test_key"}):
             service = LLMService()
             assert service.api_key == "test_key"
 
@@ -140,7 +140,7 @@ class TestLLMService:
         mock_post.return_value.json.return_value = mock_response
         mock_post.return_value.raise_for_status.return_value = None
 
-        with patch.dict("os.environ", {"PURDUE_GENAI_API_KEY": "test_key"}):
+        with patch.dict("os.environ", {"GEN_AI_STUDIO_API_KEY": "test_key"}):
             service = LLMService()
             # pylint: disable=protected-access
             result = service._call_api("test prompt", "test content")
@@ -154,7 +154,7 @@ class TestLLMService:
         """Test API call failure."""
         mock_post.side_effect = RequestException("API Error")
 
-        with patch.dict("os.environ", {"PURDUE_GENAI_API_KEY": "test_key"}):
+        with patch.dict("os.environ", {"GEN_AI_STUDIO_API_KEY": "test_key"}):
             service = LLMService()
             # pylint: disable=protected-access
             result = service._call_api("test prompt", "test content")
