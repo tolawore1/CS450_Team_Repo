@@ -60,9 +60,3 @@ def validate_llm_response(response: Dict[str, Any], expected_keys: list) -> bool
             return False
 
     return True
-
-def score_with_latency(score_func, *args, **kwargs):
-    start = time.time()
-    score = score_func(*args, **kwargs)
-    latency_ms = int((time.time() - start) * 1000)
-    return score, latency_ms
