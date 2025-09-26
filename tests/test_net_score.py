@@ -34,7 +34,7 @@ def test_net_score_github_like_payload():
     assert 0.0 <= scores["dataset_quality"] <= 1.0
     # LLM-enhanced code quality scoring (more nuanced than keyword matching)
     assert 0.0 <= scores["code_quality"] <= 1.0
-    assert scores["performance_claims"] == 1.0
+    assert scores["performance_claims"] == 0.4  # strong indicator = 0.4
 
     # NetScore should be high due to good scores (adjusted for LLM-enhanced scoring)
     assert scores["NetScore"] >= 0.7

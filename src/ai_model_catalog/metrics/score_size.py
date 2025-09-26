@@ -1,4 +1,5 @@
-from typing import Dict
+import time
+from typing import Dict, Tuple
 
 from .base import Metric
 
@@ -22,13 +23,15 @@ class SizeMetric(Metric):
             if repo_size_bytes <= max_size:
                 # Within limit - score based on utilization (lower utilization = higher score)
                 utilization = repo_size_bytes / max_size
-                # Score ranges from 1.0 (empty) to 0.8 (at limit)
-                scores[hardware] = round(1.0 - (utilization * 0.2), 3)
+                # Score ranges from 1.0 (empty) to 0.6 (at limit)
+                scores[hardware] = round(1.0 - (utilization * 0.4), 2)
             else:
                 # Over limit - score based on how much over (penalty increases with oversize)
                 oversize_ratio = repo_size_bytes / max_size
-                # Score decreases rapidly as oversize increases
-                scores[hardware] = round(max(0.0, 1.0 - (oversize_ratio - 1.0) * 2), 3)
+                # Score decreases more gradually as oversize increases
+                scores[hardware] = round(
+                    max(0.1, 1.0 - (oversize_ratio - 1.0) * 0.8), 2
+                )
         for hardware in HARDWARE_THRESHOLDS:
             if hardware not in scores:
                 scores[hardware] = 0.0
@@ -40,3 +43,11 @@ class SizeMetric(Metric):
 
 def score_size(repo_size_bytes: int) -> Dict[str, float]:
     return SizeMetric().score({"repo_size_bytes": repo_size_bytes})
+
+
+def score_size_with_latency(repo_size_bytes: int) -> Tuple[Dict[str, float], int]:
+    """Score size with latency in milliseconds."""
+    start_time = time.time()
+    result = SizeMetric().score({"repo_size_bytes": repo_size_bytes})
+    latency = int((time.time() - start_time) * 1000)
+    return result, latency

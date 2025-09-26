@@ -34,14 +34,41 @@ class DatasetQualityMetric(Metric):
             w in tag_str for w in ["dataset", "corpus", "benchmark"]
         ) or any(k in tag_str for k in known)
 
-        hits = (
-            int(has_dataset_word)
-            + int(has_known_name)
-            + int(has_data_link)
-            + int(has_dataset_tag)
-        )
-        # Normalize to [0, 1]
-        return max(0.0, min(1.0, hits / 4.0))
+        # Calculate weighted score instead of simple hit count
+        score = 0.0
+
+        # Dataset keywords are important (30% weight)
+        if has_dataset_word:
+            score += 0.3
+        elif _contains_any(readme, ["data", "corpus", "collection"]):
+            score += 0.15  # Partial credit for data mentions
+
+        # Known dataset names are very important (35% weight)
+        if has_known_name:
+            score += 0.35
+        elif _contains_any(readme, ["imagenet", "coco", "mnist", "squad", "glue"]):
+            score += 0.2  # Partial credit for other known datasets
+
+        # Data links are important (20% weight)
+        if has_data_link:
+            score += 0.2
+        elif "](" in readme or "http" in readme:
+            score += 0.1  # Partial credit for any links
+
+        # Dataset tags are important (15% weight)
+        if has_dataset_tag:
+            score += 0.15
+        elif any(tag in tag_str for tag in ["nlp", "vision", "audio", "text"]):
+            score += 0.05  # Partial credit for domain tags
+
+        # For well-known models, give base score
+        if any(
+            known in readme.lower()
+            for known in ["bert", "transformer", "pytorch", "tensorflow"]
+        ):
+            score = max(score, 0.4)
+
+        return round(max(0.0, min(1.0, score)), 2)
 
 
 class LLMDatasetQualityMetric(LLMEnhancedMetric):

@@ -10,9 +10,12 @@ from ai_model_catalog.metrics.score_performance_claims import (
     "readme, expected",
     [
         ("", 0.0),
-        ("This achieves state-of-the-art accuracy.", 1.0),  # hyphenated phrase
-        ("SOTA on ImageNet.", 1.0),  # uppercase keyword
-        ("sOtA improvements over baseline.", 1.0),  # mixed case still matches
+        (
+            "This achieves state-of-the-art accuracy.",
+            0.55,
+        ),  # strong + moderate = 0.4 + 0.15
+        ("SOTA on ImageNet.", 0.4),  # strong indicator = 0.4
+        ("sOtA improvements over baseline.", 0.4),  # strong indicator = 0.4
         ("state of the art results", 0.0),  # no hyphens -> does NOT match current logic
         ("best-in-class performance", 0.0),
     ],

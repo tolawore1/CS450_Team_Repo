@@ -1,3 +1,6 @@
+import time
+from typing import Tuple
+
 from .base import Metric
 
 
@@ -17,6 +20,9 @@ class LicenseMetric(Metric):
     }
 
     def score(self, model_data: dict) -> float:
+        if model_data is None:
+            return 0.0
+
         license_field = model_data.get("license", "")
         if isinstance(license_field, dict):
             license_name = license_field.get("spdx_id", "").lower()
@@ -26,8 +32,42 @@ class LicenseMetric(Metric):
         for compatible in self.COMPATIBLE_LICENSES:
             if compatible in license_name:
                 return 1.0
+
+        # If API license is not found, check README content
+        readme = model_data.get("readme", "").lower()
+        for compatible in self.COMPATIBLE_LICENSES:
+            if compatible in readme:
+                return 1.0
+
+        # Also check for common license patterns in README
+        license_patterns = [
+            "license: apache-2.0",
+            "license: mit",
+            "license: bsd",
+            "apache 2.0",
+            "mit license",
+            "bsd license",
+        ]
+        for pattern in license_patterns:
+            if pattern in readme:
+                return 1.0
+
         return 0.0
 
 
-def score_license(license_type: str) -> float:
-    return LicenseMetric().score({"license": license_type})
+def score_license(model_data) -> float:
+    if isinstance(model_data, str):
+        # Backward compatibility for string input
+        return LicenseMetric().score({"license": model_data})
+    return LicenseMetric().score(model_data)
+
+
+def score_license_with_latency(model_data) -> Tuple[float, int]:
+    """Score license with latency in milliseconds."""
+    start_time = time.time()
+    if isinstance(model_data, str):
+        result = LicenseMetric().score({"license": model_data})
+    else:
+        result = LicenseMetric().score(model_data)
+    latency = int((time.time() - start_time) * 1000)
+    return result, latency
