@@ -24,14 +24,13 @@ class SizeMetric(Metric):
         for hardware, max_size in HARDWARE_THRESHOLDS.items():
             if repo_size_bytes <= max_size:
                 utilization = repo_size_bytes / max_size
-                # Reduce penalty factor from 0.3 to 0.2 for a gentler decrease
-                scores[hardware] = round(1.0 - (utilization * 0.2), 2)
+                # ✅ Adjusted curve: less harsh penalty
+                scores[hardware] = round(1.0 - (utilization * 0.3), 2)
             else:
                 oversize_ratio = repo_size_bytes / max_size
-                # Penalize less harshly and allow minimum score to be 0.3 instead of 0.1
-                penalty = (oversize_ratio - 1.0) * 0.5
-                score = max(0.3, 1.0 - penalty)
-                scores[hardware] = round(score, 2)
+                scores[hardware] = round(
+                    max(0.1, 1.0 - (oversize_ratio - 1.0) * 0.8), 2
+                )
 
         # Ensure all values are float and not bool
         for hardware in HARDWARE_THRESHOLDS:
@@ -40,6 +39,11 @@ class SizeMetric(Metric):
             scores[hardware] = float(scores[hardware])
 
         return scores
+
+
+def score_size(repo_size_bytes: int) -> Dict[str, float]:
+    return SizeMetric().score({"repo_size_bytes": repo_size_bytes})
+
 
 def score_size_with_latency(repo_size_bytes: int) -> Tuple[Dict[str, float], int]:
     """Score size with latency in milliseconds."""

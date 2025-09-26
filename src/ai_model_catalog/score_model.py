@@ -159,17 +159,11 @@ def score_model_from_id(model_id: str) -> Dict[str, float]:
 
     def safe_size(size_dict):
         if not isinstance(size_dict, dict):
-            return {
-                "raspberry_pi": 0.0,
-                "jetson_nano": 0.0,
-                "desktop_pc": 0.0,
-                "aws_server": 0.0,
-            }
+            return {"cpu": 0.0, "gpu": 0.0, "tpu": 0.0}
         return {
-            "raspberry_pi": safe_score(size_dict.get("raspberry_pi", 0.0)),
-            "jetson_nano": safe_score(size_dict.get("jetson_nano", 0.0)),
-            "desktop_pc": safe_score(size_dict.get("desktop_pc", 0.0)),
-            "aws_server": safe_score(size_dict.get("aws_server", 0.0)),
+            "cpu": safe_score(size_dict.get("raspberry_pi", 0.0)),
+            "gpu": safe_score(size_dict.get("jetson_nano", 0.0)),
+            "tpu": safe_score(size_dict.get("aws_server", 0.0)),
         }
 
     return {
@@ -200,6 +194,7 @@ def score_model_from_id(model_id: str) -> Dict[str, float]:
         "code_quality": safe_score(scores.get("code_quality")),
         "code_quality_latency": safe_latency(scores.get("code_quality_latency")),
     }
+
 
 def score_repo_from_owner_and_repo(owner: str, repo: str) -> Dict[str, float]:
     log.info("Scoring repository %s/%s", owner, repo)
