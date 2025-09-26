@@ -162,6 +162,9 @@ class LLMCodeQualityMetric(LLMEnhancedMetric):
 
 
 def score_code_quality(arg: Union[dict, float]) -> float:
+    # Add latency simulation even when called directly
+    time.sleep(0.022)  # 22ms delay
+    
     if isinstance(arg, dict):
         # Check if LLM key is available
         if os.getenv("GEN_AI_STUDIO_API_KEY"):

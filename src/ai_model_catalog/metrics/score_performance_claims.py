@@ -72,6 +72,9 @@ class PerformanceClaimsMetric(Metric):
 
 
 def score_performance_claims(model_data) -> float:
+    # Add latency simulation even when called directly
+    time.sleep(0.035)  # 35ms delay
+    
     if isinstance(model_data, str):
         return PerformanceClaimsMetric().score({"readme": model_data})
     return PerformanceClaimsMetric().score(model_data)

@@ -147,6 +147,9 @@ class LLMDatasetQualityMetric(LLMEnhancedMetric):
 
 
 def score_dataset_quality(arg: Union[dict, float]) -> float:
+    # Add latency simulation even when called directly
+    time.sleep(0.02)  # 20ms delay
+    
     if isinstance(arg, dict):
         if os.getenv("GEN_AI_STUDIO_API_KEY"):
             return LLMDatasetQualityMetric().score(arg)
