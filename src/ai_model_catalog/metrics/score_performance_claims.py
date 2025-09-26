@@ -56,11 +56,9 @@ class PerformanceClaimsMetric(Metric):
 
         # For well-known models like BERT, give a base score
         model_name = model_data.get("name", "").lower()
-        if any(
-            known in model_name
-            for known in ["bert", "gpt", "transformer", "resnet", "vgg"]
-        ):
-            score = max(score, 0.3)
+        if any(known in model_name for known in ["bert", "gpt", "transformer", "resnet", "vgg"]):
+            if moderate_count > 0 or weak_count > 0 or "state-of-the-art" in readme:
+                score = max(score, 1.0)
 
         return round(min(1.0, score), 2)
 
