@@ -32,12 +32,15 @@ def models(
 
     if output_format == "ndjson":
         scores = score_repo_from_owner_and_repo(owner, repo)
-        # Construct line with all latency fields expected
+        # Defensive get for size_score dict
+        size_score = scores.get("size_score", scores.get("size", {}))
+        if not isinstance(size_score, dict):
+            size_score = {}
+
         line = {
             "name": raw.get("full_name") or f"{owner}/{repo}",
             "category": "REPOSITORY",
             "net_score": scores.get("net_score", 0.0),
-            "latency": scores.get("net_score_latency", 0),
             "net_score_latency": scores.get("net_score_latency", 0),
             "ramp_up_time": scores.get("ramp_up_time", 0.0),
             "ramp_up_time_latency": scores.get("ramp_up_time_latency", 0),
@@ -47,10 +50,10 @@ def models(
             "performance_claims_latency": scores.get("performance_claims_latency", 0),
             "license": scores.get("license", 0.0),
             "license_latency": scores.get("license_latency", 0),
-            "size_score": scores.get("size", {}),
-            "size_score_latency": scores.get("size_latency", 0),
-            "dataset_and_code_score": scores.get("availability", 0.0),
-            "dataset_and_code_score_latency": scores.get("availability_latency", 0),
+            "size_score": size_score,
+            "size_score_latency": scores.get("size_score_latency", scores.get("size_latency", 0)),
+            "dataset_and_code_score": scores.get("dataset_and_code_score", scores.get("availability", 0.0)),
+            "dataset_and_code_score_latency": scores.get("dataset_and_code_score_latency", scores.get("availability_latency", 0)),
             "dataset_quality": scores.get("dataset_quality", 0.0),
             "dataset_quality_latency": scores.get("dataset_quality_latency", 0),
             "code_quality": scores.get("code_quality", 0.0),
@@ -77,11 +80,14 @@ def hf_model(
 
     if output_format == "ndjson":
         scores = score_model_from_id(model_id)
+        size_score = scores.get("size_score", scores.get("size", {}))
+        if not isinstance(size_score, dict):
+            size_score = {}
+
         line = {
             "name": model_id,
             "category": "MODEL",
             "net_score": scores.get("net_score", 0.0),
-            "latency": scores.get("net_score_latency", 0),
             "net_score_latency": scores.get("net_score_latency", 0),
             "ramp_up_time": scores.get("ramp_up_time", 0.0),
             "ramp_up_time_latency": scores.get("ramp_up_time_latency", 0),
@@ -91,10 +97,10 @@ def hf_model(
             "performance_claims_latency": scores.get("performance_claims_latency", 0),
             "license": scores.get("license", 0.0),
             "license_latency": scores.get("license_latency", 0),
-            "size_score": scores.get("size", {}),
-            "size_score_latency": scores.get("size_latency", 0),
-            "dataset_and_code_score": scores.get("availability", 0.0),
-            "dataset_and_code_score_latency": scores.get("availability_latency", 0),
+            "size_score": size_score,
+            "size_score_latency": scores.get("size_score_latency", scores.get("size_latency", 0)),
+            "dataset_and_code_score": scores.get("dataset_and_code_score", scores.get("availability", 0.0)),
+            "dataset_and_code_score_latency": scores.get("dataset_and_code_score_latency", scores.get("availability_latency", 0)),
             "dataset_quality": scores.get("dataset_quality", 0.0),
             "dataset_quality_latency": scores.get("dataset_quality_latency", 0),
             "code_quality": scores.get("code_quality", 0.0),
@@ -120,11 +126,14 @@ def hf_dataset(
 
     if output_format == "ndjson":
         scores = score_dataset_from_id(dataset_id)
+        size_score = scores.get("size_score", scores.get("size", {}))
+        if not isinstance(size_score, dict):
+            size_score = {}
+
         line = {
             "name": dataset_id,
             "category": "DATASET",
             "net_score": scores.get("net_score", 0.0),
-            "latency": scores.get("net_score_latency", 0),
             "net_score_latency": scores.get("net_score_latency", 0),
             "ramp_up_time": scores.get("ramp_up_time", 0.0),
             "ramp_up_time_latency": scores.get("ramp_up_time_latency", 0),
@@ -134,10 +143,10 @@ def hf_dataset(
             "performance_claims_latency": scores.get("performance_claims_latency", 0),
             "license": scores.get("license", 0.0),
             "license_latency": scores.get("license_latency", 0),
-            "size_score": scores.get("size", {}),
-            "size_score_latency": scores.get("size_latency", 0),
-            "dataset_and_code_score": scores.get("availability", 0.0),
-            "dataset_and_code_score_latency": scores.get("availability_latency", 0),
+            "size_score": size_score,
+            "size_score_latency": scores.get("size_score_latency", scores.get("size_latency", 0)),
+            "dataset_and_code_score": scores.get("dataset_and_code_score", scores.get("availability", 0.0)),
+            "dataset_and_code_score_latency": scores.get("dataset_and_code_score_latency", scores.get("availability_latency", 0)),
             "dataset_quality": scores.get("dataset_quality", 0.0),
             "dataset_quality_latency": scores.get("dataset_quality_latency", 0),
             "code_quality": scores.get("code_quality", 0.0),
@@ -158,6 +167,7 @@ def hf_dataset(
     tcats = raw.get("taskCategories") or []
     if tcats:
         typer.echo(f"Task Categories: {', '.join(map(str, tcats))}")
+
 
 @app.command()
 def multiple_urls():
@@ -192,8 +202,7 @@ def multiple_urls():
         raw = handler.fetch_data()
         scores = score_repo_from_owner_and_repo(owner, repo)
 
-        # Defensive handling for fields
-        size_score = scores.get("size", {})
+        size_score = scores.get("size_score", scores.get("size", {}))
         if not isinstance(size_score, dict):
             size_score = {}
 
@@ -223,16 +232,15 @@ def multiple_urls():
             "license": safe_float(scores.get("license")),
             "license_latency": safe_int(scores.get("license_latency")),
             "size_score": size_score,
-            "size_score_latency": safe_int(scores.get("size_latency")),
-            "dataset_and_code_score": safe_float(scores.get("availability")),
-            "dataset_and_code_score_latency": safe_int(scores.get("availability_latency")),
+            "size_score_latency": safe_int(scores.get("size_score_latency", scores.get("size_latency", 0))),
+            "dataset_and_code_score": safe_float(scores.get("dataset_and_code_score", scores.get("availability", 0.0))),
+            "dataset_and_code_score_latency": safe_int(scores.get("dataset_and_code_score_latency", scores.get("availability_latency", 0))),
             "dataset_quality": safe_float(scores.get("dataset_quality")),
             "dataset_quality_latency": safe_int(scores.get("dataset_quality_latency")),
             "code_quality": safe_float(scores.get("code_quality")),
             "code_quality_latency": safe_int(scores.get("code_quality_latency")),
         }
 
-        # Print NDJSON line without extra spacing or debugging
         typer.echo(json.dumps(line))
 
 
