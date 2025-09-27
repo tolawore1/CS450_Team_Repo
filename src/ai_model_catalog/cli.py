@@ -3,6 +3,14 @@ from typing import Optional, Dict, Any
 
 import typer
 
+
+def format_float_2dp(val: Any) -> str:
+    """Format float values to exactly 2 decimal places as string"""
+    try:
+        return f"{float(val):.2f}"
+    except (ValueError, TypeError):
+        return "0.00"
+
 from .fetch_repo import fetch_dataset_data
 from .interactive import interactive_main
 from .logging_config import configure_logging
@@ -19,7 +27,7 @@ app = typer.Typer()
 
 def safe_float(val: Any) -> float:
     try:
-        return float(val)
+        return round(float(val), 2)
     except (ValueError, TypeError):
         return 0.00
 
@@ -40,31 +48,34 @@ def build_ndjson_line(
     size_score = scores.get(size_score_key, scores.get("size", {}))
     if not isinstance(size_score, dict):
         size_score = {}
+    else:
+        # Format all size score values to 2 decimal places
+        size_score = {k: format_float_2dp(v) for k, v in size_score.items()}
 
     return {
         "name": name,
         "category": category,
-        "net_score": safe_float(scores.get("net_score")),
+        "net_score": format_float_2dp(scores.get("net_score")),
         "net_score_latency": safe_int(scores.get("net_score_latency")),
-        "ramp_up_time": safe_float(scores.get("ramp_up_time")),
+        "ramp_up_time": format_float_2dp(scores.get("ramp_up_time")),
         "ramp_up_time_latency": safe_int(scores.get("ramp_up_time_latency")),
-        "bus_factor": safe_float(scores.get("bus_factor")),
+        "bus_factor": format_float_2dp(scores.get("bus_factor")),
         "bus_factor_latency": safe_int(scores.get("bus_factor_latency")),
-        "performance_claims": safe_float(scores.get("performance_claims")),
+        "performance_claims": format_float_2dp(scores.get("performance_claims")),
         "performance_claims_latency": safe_int(scores.get("performance_claims_latency")),
-        "license": safe_float(scores.get("license")),
+        "license": format_float_2dp(scores.get("license")),
         "license_latency": safe_int(scores.get("license_latency")),
         "size_score": size_score,
         "size_score_latency": safe_int(scores.get("size_score_latency", scores.get("size_latency", 0))),
-        "dataset_and_code_score": safe_float(
+        "dataset_and_code_score": format_float_2dp(
             scores.get("dataset_and_code_score", scores.get("availability", 0.00))
         ),
         "dataset_and_code_score_latency": safe_int(
             scores.get("dataset_and_code_score_latency", scores.get("availability_latency", 0))
         ),
-        "dataset_quality": safe_float(scores.get("dataset_quality")),
+        "dataset_quality": format_float_2dp(scores.get("dataset_quality")),
         "dataset_quality_latency": safe_int(scores.get("dataset_quality_latency")),
-        "code_quality": safe_float(scores.get("code_quality")),
+        "code_quality": format_float_2dp(scores.get("code_quality")),
         "code_quality_latency": safe_int(scores.get("code_quality_latency")),
     }
 
