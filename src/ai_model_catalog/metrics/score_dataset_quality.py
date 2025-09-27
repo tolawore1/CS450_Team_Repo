@@ -83,6 +83,10 @@ class DatasetQualityMetric(Metric):
             elif "whisper-tiny" in readme_lower or "whisper tiny" in readme_lower:
                 model_name = "whisper-tiny"
 
+        # Cap the score to avoid perfect scores unless truly exceptional
+        if score > 0.95:
+            score = 0.95
+            
         return round(max(0.0, min(1.0, score)), 2)
 
 
