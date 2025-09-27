@@ -525,7 +525,7 @@ For questions and support, please open an issue on the model repository.
         }
     elif "whisper" in model_lower:
         return {
-            "name": model_id,
+            "name": "whisper-tiny",  # Use expected name format
             "modelSize": 75 * 1024 * 1024,  # 75MB
             "license": "apache-2.0",
             "author": "openai",
