@@ -368,7 +368,7 @@ def fetch_model_data(model_id: str) -> Dict[str, Any]:
 
     # Add authentication header if token is available
     headers = HF_HEADERS.copy()
-    hf_token = os.getenv("HUGGINGFACE_HUB_TOKEN") or os.getenv("HF_TOKEN")
+    hf_token = os.getenv("HF_API_TOKEN") or os.getenv("HUGGINGFACE_HUB_TOKEN") or os.getenv("HF_TOKEN")
     if hf_token:
         headers["Authorization"] = f"Bearer {hf_token}"
 
@@ -421,6 +421,7 @@ def fetch_model_data(model_id: str) -> Dict[str, Any]:
     model_size = _calculate_model_size(model_data)
 
     return {
+        "name": model_id,  # Add the missing name field
         "modelSize": model_size,
         "license": license_type,
         "author": model_data.get("author"),
@@ -430,6 +431,9 @@ def fetch_model_data(model_id: str) -> Dict[str, Any]:
         "likes": model_data.get("likes", 0),
         "lastModified": model_data.get("lastModified", ""),
         "tags": model_data.get("tags", []),
+        "pipeline_tag": model_data.get("pipeline_tag", ""),
+        "library_name": model_data.get("library_name", ""),
+        "task_categories": model_data.get("task_categories", []),
     }
 
 
@@ -487,7 +491,7 @@ def fetch_dataset_data(dataset_id: str) -> Dict[str, Any]:
 
     # Add authentication header if token is available
     headers = {}
-    hf_token = os.getenv("HUGGINGFACE_HUB_TOKEN") or os.getenv("HF_TOKEN")
+    hf_token = os.getenv("HF_API_TOKEN") or os.getenv("HUGGINGFACE_HUB_TOKEN") or os.getenv("HF_TOKEN")
     if hf_token:
         headers["Authorization"] = f"Bearer {hf_token}"
 
@@ -518,6 +522,7 @@ def fetch_dataset_data(dataset_id: str) -> Dict[str, Any]:
             )
 
     return {
+        "name": dataset_id,  # Add the missing name field
         "license": license_type,
         "author": ds_data.get("author"),
         "readme": readme_text,

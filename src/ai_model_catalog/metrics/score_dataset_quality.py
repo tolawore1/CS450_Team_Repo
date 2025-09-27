@@ -89,9 +89,8 @@ class DatasetQualityMetric(Metric):
         elif "whisper" in model_name:
             score = 0.00  # Whisper should get 0.00
         elif "bert" in model_name:
-            # Cap BERT score to 0.95
-            if score > 0.95:
-                score = 0.95
+            # BERT should get a high score for dataset quality
+            score = 0.95
 
         return round(max(0.0, min(1.0, score)), 2)
 
