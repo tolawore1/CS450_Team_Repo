@@ -40,26 +40,26 @@ class DatasetQualityMetric(Metric):
 
         # Dataset keywords (30%)
         if has_dataset_word:
-            score += 0.3
-        elif _contains_any(readme, ["data", "corpus", "collection"]):
-            score += 0.15
+            score += 0.30
+        elif _contains_any(readme, ["data", "corpus", "collection", "dataset", "datasets", "training data", "benchmark", "evaluation data"]):
+            score += 0.20
 
         # Known dataset names (35%)
         if has_known_name:
             score += 0.35
-        elif _contains_any(readme, ["imagenet", "coco", "mnist", "squad", "glue"]):
-            score += 0.2
+        elif _contains_any(readme, ["imagenet", "coco", "mnist", "squad", "glue", "wikipedia", "bookcorpus", "common crawl", "oscar", "openwebtext", "pile", "c4"]):
+            score += 0.25
 
-        # Data links (20%)
+        # Data links (25%)
         if has_data_link:
-            score += 0.2
-        elif "](" in readme or "http" in readme:
-            score += 0.1
+            score += 0.25
+        elif "](" in readme or "http" in readme or "https://" in readme or "www." in readme:
+            score += 0.20
 
-        # Dataset tags (15%)
+        # Dataset tags (10%)
         if has_dataset_tag:
-            score += 0.15
-        elif any(tag in tag_str for tag in ["nlp", "vision", "audio", "text"]):
+            score += 0.10
+        elif any(tag in tag_str for tag in ["nlp", "vision", "audio", "text", "language", "multilingual", "english", "translation"]):
             score += 0.05
 
         # For well-known models, give base score
@@ -83,10 +83,13 @@ class DatasetQualityMetric(Metric):
             elif "whisper-tiny" in readme_lower or "whisper tiny" in readme_lower:
                 model_name = "whisper-tiny"
 
-        # Cap the score to avoid perfect scores unless truly exceptional
-        if score > 0.95:
-            score = 0.95
-            
+        # Give well-known models higher scores based on framework maturity
+        if any(
+            known in readme.lower()
+            for known in ["bert", "transformer", "pytorch", "tensorflow"]
+        ):
+            score = max(score, 0.3)  # Well-known frameworks get base score
+
         return round(max(0.0, min(1.0, score)), 2)
 
 
