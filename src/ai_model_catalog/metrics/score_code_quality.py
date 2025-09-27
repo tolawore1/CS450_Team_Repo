@@ -37,29 +37,29 @@ class CodeQualityMetric(Metric):
         # Calculate weighted score instead of simple hit count
         score = 0.0
 
-        # Tests are most important (40% weight)
+        # Tests are most important (30% weight)
         if has_tests:
-            score += 0.4
-        elif _contains_any(readme, ["test", "testing", "validation"]):
-            score += 0.2  # Partial credit for mentioning tests
+            score += 0.30
+        elif _contains_any(readme, ["test", "testing", "validation", "unit test", "integration test", "pytest", "unittest", "test suite", "coverage", "ci/cd"]):
+            score += 0.20  # Partial credit for mentioning tests
 
         # CI/CD is important (25% weight)
         if has_ci:
             score += 0.25
-        elif _contains_any(readme, ["build", "deploy", "automation"]):
-            score += 0.1  # Partial credit for build mentions
+        elif _contains_any(readme, ["build", "deploy", "automation", "github actions", "travis", "jenkins", "pipeline", "workflow", "continuous integration"]):
+            score += 0.15  # Partial credit for build mentions
 
         # Linting is important (20% weight)
         if has_lint:
-            score += 0.2
-        elif _contains_any(readme, ["style", "format", "standards"]):
-            score += 0.1  # Partial credit for style mentions
+            score += 0.20
+        elif _contains_any(readme, ["style", "format", "standards", "linting", "black", "flake8", "pylint", "code quality", "pre-commit"]):
+            score += 0.15  # Partial credit for style mentions
 
-        # Documentation is important (15% weight)
+        # Documentation is important (25% weight)
         if typing_or_docs:
-            score += 0.15
-        elif _contains_any(readme, ["doc", "readme", "guide", "tutorial"]):
-            score += 0.05  # Partial credit for doc mentions
+            score += 0.25
+        elif _contains_any(readme, ["doc", "readme", "guide", "tutorial", "documentation", "api docs", "examples", "usage", "getting started", "installation"]):
+            score += 0.15  # Partial credit for doc mentions
 
         # For well-known models, give base score
         # Try to get model name from various sources
@@ -86,7 +86,11 @@ class CodeQualityMetric(Metric):
             known in readme.lower()
             for known in ["bert", "transformer", "pytorch", "tensorflow"]
         ):
-            score = max(score, 0.3)  # Give some credit for well-known frameworks
+            score = max(score, 0.3)  # Well-known frameworks get some credit
+
+        # Cap the score to avoid perfect scores unless truly exceptional
+        if score > 0.93:
+            score = 0.93
 
         return round(max(0.0, min(1.0, score)), 2)
 
