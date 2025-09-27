@@ -18,17 +18,7 @@ class BusFactorMetric(Metric):
 
 
 def score_bus_factor(maintainers: list) -> float:
-    # For well-known models, we need to detect them from context
-    # Since we don't have access to model name here, we'll use a different approach
-    # We'll check if this is likely a Reference Model based on the maintainers
-    model_name = ""
-    if maintainers and len(maintainers) == 1 and maintainers[0] == "unknown":
-        # This is likely a Reference Model with API failure
-        # We'll need to detect which one based on other context
-        # For now, we'll use a heuristic based on the fact that these are Reference Models
-        pass
-    
-    return BusFactorMetric().score({"maintainers": maintainers, "name": model_name})
+    return BusFactorMetric().score({"maintainers": maintainers})
 
 def score_bus_factor_with_latency(maintainers: list) -> tuple[float, int]:
     start = time.time()
