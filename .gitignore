@@ -276,3 +276,7 @@ cache/
 # Ignore any temporary directories
 tmp/
 temp/
+
+# Ignore cloned model repositories (temporary analysis data)
+src/cloned_models/
+cloned_models/
