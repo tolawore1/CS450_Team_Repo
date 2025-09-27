@@ -377,6 +377,14 @@ def fetch_model_data(model_id: str) -> Dict[str, Any]:
         response = session.get(model_url, headers=headers, timeout=5)
         response.raise_for_status()
         model_data = response.json()
+        
+        # Handle case where API returns a list instead of dict (e.g., /tree/main URLs)
+        if isinstance(model_data, list) and len(model_data) > 0:
+            model_data = model_data[0]  # Take first item from list
+        elif isinstance(model_data, list):
+            # Empty list, create minimal dict
+            model_data = {}
+            
     except requests.ConnectionError as e:
         log.error("Network connection failed for Hugging Face API: %s", e)
         # Return minimal data instead of raising
@@ -446,6 +454,14 @@ def fetch_hf_model(model_id: str) -> Dict[str, Any]:
         response = session.get(model_url, headers=HF_HEADERS, timeout=5)
         response.raise_for_status()
         model_data = response.json()
+        
+        # Handle case where API returns a list instead of dict (e.g., /tree/main URLs)
+        if isinstance(model_data, list) and len(model_data) > 0:
+            model_data = model_data[0]  # Take first item from list
+        elif isinstance(model_data, list):
+            # Empty list, create minimal dict
+            model_data = {}
+            
     except requests.ConnectionError as e:
         log.error("Network connection failed for Hugging Face API: %s", e)
         raise RepositoryDataError(f"Network connection failed: {e}") from e
@@ -499,6 +515,14 @@ def fetch_dataset_data(dataset_id: str) -> Dict[str, Any]:
         response = requests.get(dataset_url, headers=headers, timeout=15)
         response.raise_for_status()
         ds_data = response.json()
+        
+        # Handle case where API returns a list instead of dict (e.g., /tree/main URLs)
+        if isinstance(ds_data, list) and len(ds_data) > 0:
+            ds_data = ds_data[0]  # Take first item from list
+        elif isinstance(ds_data, list):
+            # Empty list, create minimal dict
+            ds_data = {}
+            
     except requests.RequestException as e:
         log.error(
             "Failed to fetch dataset data from Hugging Face for %s: %s", dataset_id, e
