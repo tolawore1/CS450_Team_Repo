@@ -23,13 +23,6 @@ class LicenseMetric(Metric):
         if model_data is None:
             return 0.0
 
-        # Check for well-known models that should get specific scores
-        model_name = model_data.get("name", "").lower()
-        if "audience_classifier" in model_name:
-            return 0.00  # Audience classifier should get 0.00
-        elif "whisper" in model_name:
-            return 1.00  # Whisper should get 1.00
-
         license_field = model_data.get("license", "")
         if isinstance(license_field, dict):
             license_name = license_field.get("spdx_id", "").lower()
