@@ -2,21 +2,14 @@ import time
 from typing import Tuple
 
 from .base import Metric
+from .constants import LICENSE_KEYWORDS
 
 
 class LicenseMetric(Metric):
     COMPATIBLE_LICENSES = {
-        "mit",
-        "bsd",
-        "bsd-2-clause",
-        "bsd-3-clause",
-        "apache-2.0",
-        "apache 2.0",
-        "lgpl",
-        "lgplv2.1",
-        "lgpl-2.1",
-        "public domain",
-        "cc0",
+        "mit", "bsd", "bsd-2-clause", "bsd-3-clause", "apache-2.0", "apache 2.0",
+        "lgpl", "lgplv2.1", "lgpl-2.1", "public domain", "cc0", "apache",
+        "creative commons", "cc", "open source", "free", "permissive"
     }
 
     def score(self, model_data: dict) -> float:

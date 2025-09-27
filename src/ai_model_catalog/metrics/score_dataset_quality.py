@@ -41,13 +41,13 @@ class DatasetQualityMetric(Metric):
         # Dataset keywords (30%)
         if has_dataset_word:
             score += 0.3
-        elif _contains_any(readme, ["data", "corpus", "collection"]):
+        elif _contains_any(readme, ["data", "corpus", "collection", "training", "evaluation"]):
             score += 0.15
 
         # Known dataset names (35%)
         if has_known_name:
             score += 0.35
-        elif _contains_any(readme, ["imagenet", "coco", "mnist", "squad", "glue"]):
+        elif _contains_any(readme, ["imagenet", "coco", "mnist", "squad", "glue", "bookcorpus", "wikipedia"]):
             score += 0.2
 
         # Data links (20%)
@@ -59,7 +59,7 @@ class DatasetQualityMetric(Metric):
         # Dataset tags (15%)
         if has_dataset_tag:
             score += 0.15
-        elif any(tag in tag_str for tag in ["nlp", "vision", "audio", "text"]):
+        elif any(tag in tag_str for tag in ["nlp", "vision", "audio", "text", "dataset", "corpus"]):
             score += 0.05
 
         # For well-known models, give base score

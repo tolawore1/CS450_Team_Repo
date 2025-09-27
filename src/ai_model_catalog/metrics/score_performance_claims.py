@@ -1,5 +1,6 @@
 import time
 from .base import Metric
+from .constants import PERFORMANCE_KEYWORDS
 
 class PerformanceClaimsMetric(Metric):
     def score(self, model_data: dict) -> float:
@@ -8,13 +9,18 @@ class PerformanceClaimsMetric(Metric):
 
         strong_indicators = [
             "state-of-the-art", "sota", "breakthrough", "record", "champion", "winner",
+            "achieves", "reaches", "obtains", "gets", "scores", "measures",
+            "accuracy", "precision", "recall", "f1", "f1-score", "bleu", "rouge"
         ]
         moderate_indicators = [
             "best performance", "highest accuracy", "top results", "leading",
             "superior", "outperforms", "beats", "exceeds", "achieves",
+            "benchmark", "evaluation", "metric", "performance", "results",
+            "improvement", "better than", "baseline", "comparison"
         ]
         weak_indicators = [
             "good", "better", "improved", "enhanced", "optimized", "efficient",
+            "loss", "perplexity", "score", "measure", "test", "validation"
         ]
 
         score = 0.00
