@@ -17,7 +17,7 @@ class PerformanceClaimsMetric(Metric):
             "good", "better", "improved", "enhanced", "optimized", "efficient",
         ]
 
-        score = 0.0
+        score = 0.00
 
         # Strong indicator: max 0.4
         for keyword in strong_indicators:

@@ -11,8 +11,8 @@ class RampUpMetric(Metric):
     def score(self, model_data: dict) -> float:
         readme = model_data.get("readme", "")
         if not readme or len(readme) < 250:
-            return 0.0
-        return 1.0
+            return 0.00
+        return 1.00
 
 
 class LLMRampUpMetric(LLMEnhancedMetric):
@@ -23,7 +23,7 @@ class LLMRampUpMetric(LLMEnhancedMetric):
         readme_content = extract_readme_content(data)
 
         if not readme_content.strip():
-            return 0.0
+            return 0.00
 
         # Use LLM to analyze README quality
         llm_analysis = self.llm_service.analyze_readme_quality(readme_content)
@@ -46,11 +46,11 @@ class LLMRampUpMetric(LLMEnhancedMetric):
         readme_content = extract_readme_content(data)
 
         if not readme_content.strip():
-            return 0.0
+            return 0.00
 
         # Traditional method: README length-based scoring
         length = len(readme_content)
-        return min(1.0, length / 250.0)
+        return round(min(1.0, length / 250.0), 2)
 
 
 def score_ramp_up_time(model_data_or_readme) -> float:

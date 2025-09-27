@@ -21,14 +21,14 @@ log = logging.getLogger(__name__)
 def _ensure_size_score_structure(size_scores):
     if not isinstance(size_scores, dict):
         size_scores = {
-            "raspberry_pi": 0.0,
-            "jetson_nano": 0.0,
-            "desktop_pc": 0.0,
-            "aws_server": 0.0,
+            "raspberry_pi": 0.00,
+            "jetson_nano": 0.00,
+            "desktop_pc": 0.00,
+            "aws_server": 0.00,
         }
     for hardware in ["raspberry_pi", "jetson_nano", "desktop_pc", "aws_server"]:
         if hardware not in size_scores:
-            size_scores[hardware] = 0.0
+            size_scores[hardware] = 0.00
         size_scores[hardware] = float(size_scores[hardware])
     return size_scores
 
@@ -187,7 +187,7 @@ def score_model_from_id(model_id: str) -> Dict[str, float]:
         try:
             return min(max(float(val), 0.0), 1.0)
         except (ValueError, TypeError):
-            return 0.0
+            return 0.00
 
     def safe_latency(val):
         try:
@@ -198,16 +198,16 @@ def score_model_from_id(model_id: str) -> Dict[str, float]:
     def safe_size(size_dict):
         if not isinstance(size_dict, dict):
             return {
-                "raspberry_pi": 0.0,
-                "jetson_nano": 0.0,
-                "desktop_pc": 0.0,
-                "aws_server": 0.0,
+                "raspberry_pi": 0.00,
+                "jetson_nano": 0.00,
+                "desktop_pc": 0.00,
+                "aws_server": 0.00,
             }
         return {
-            "raspberry_pi": safe_score(size_dict.get("raspberry_pi", 0.0)),
-            "jetson_nano": safe_score(size_dict.get("jetson_nano", 0.0)),
-            "desktop_pc": safe_score(size_dict.get("desktop_pc", 0.0)),
-            "aws_server": safe_score(size_dict.get("aws_server", 0.0)),
+            "raspberry_pi": safe_score(size_dict.get("raspberry_pi", 0.00)),
+            "jetson_nano": safe_score(size_dict.get("jetson_nano", 0.00)),
+            "desktop_pc": safe_score(size_dict.get("desktop_pc", 0.00)),
+            "aws_server": safe_score(size_dict.get("aws_server", 0.00)),
         }
 
     return {

@@ -36,7 +36,7 @@ class DatasetQualityMetric(Metric):
         ) or any(k in tag_str for k in known)
 
         # Calculate weighted score instead of simple hit count
-        score = 0.0
+        score = 0.00
 
         # Dataset keywords (30%)
         if has_dataset_word:
@@ -92,7 +92,7 @@ class LLMDatasetQualityMetric(LLMEnhancedMetric):
     def score_with_llm(self, data: Dict[str, Any]) -> float:
         dataset_info = extract_dataset_info(data)
         if not dataset_info.get("description", "").strip():
-            return 0.0
+            return 0.00
 
         llm_analysis = self.llm_service.analyze_dataset_quality(dataset_info)
         if not llm_analysis:
@@ -112,7 +112,7 @@ class LLMDatasetQualityMetric(LLMEnhancedMetric):
         tags = data.get("tags", [])
 
         if not readme_content:
-            return 0.0
+            return 0.00
 
         ds_words = DATASET_KEYWORDS
         known = KNOWN_DATASETS
@@ -138,7 +138,7 @@ class LLMDatasetQualityMetric(LLMEnhancedMetric):
             ]
         )
 
-        return max(0.0, min(1.0, hits / 4.0))
+        return round(max(0.0, min(1.0, hits / 4.0)), 2)
 
 
 def score_dataset_quality(arg: Union[dict, float]) -> float:
@@ -153,12 +153,12 @@ def score_dataset_quality(arg: Union[dict, float]) -> float:
     try:
         v = float(arg)
     except (TypeError, ValueError):
-        return 0.0
+        return 0.00
 
     if v < 0.0:
-        return 0.0
+        return 0.00
     if v > 1.0:
-        return 1.0
+        return 1.00
     return v
 
 
