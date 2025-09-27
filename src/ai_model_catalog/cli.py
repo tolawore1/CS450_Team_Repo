@@ -4,12 +4,42 @@ from typing import Optional, Dict, Any
 import typer
 
 
-def format_float_2dp(val: Any) -> str:
-    """Format float values to exactly 2 decimal places as string"""
+def format_float_2dp(val: Any) -> float:
+    """Format float values to exactly 2 decimal places"""
     try:
-        return f"{float(val):.2f}"
+        return round(float(val), 2)
     except (ValueError, TypeError):
-        return "0.00"
+        return 0.00
+
+
+class FloatEncoder(json.JSONEncoder):
+    def iterencode(self, obj, _one_shot=False):
+        if isinstance(obj, float):
+            yield f"{obj:.2f}"
+        elif isinstance(obj, dict):
+            yield '{'
+            first = True
+            for key, value in obj.items():
+                if not first:
+                    yield ','
+                first = False
+                yield f'"{key}": '
+                for chunk in self.iterencode(value):
+                    yield chunk
+            yield '}'
+        elif isinstance(obj, list):
+            yield '['
+            first = True
+            for item in obj:
+                if not first:
+                    yield ','
+                first = False
+                for chunk in self.iterencode(item):
+                    yield chunk
+            yield ']'
+        else:
+            for chunk in super().iterencode(obj, _one_shot):
+                yield chunk
 
 from .fetch_repo import fetch_dataset_data
 from .interactive import interactive_main
@@ -96,7 +126,7 @@ def models(
     if output_format == "ndjson":
         scores = score_repo_from_owner_and_repo(owner, repo)
         line = build_ndjson_line(raw.get("full_name") or f"{owner}/{repo}", "REPOSITORY", scores)
-        typer.echo(json.dumps(line))
+        typer.echo(json.dumps(line, cls=FloatEncoder))
         return
 
     formatted = handler.format_data(raw)
@@ -119,7 +149,7 @@ def hf_model(
         try:
             scores = score_model_from_id(model_id)
             line = build_ndjson_line(model_id, "MODEL", scores)
-            typer.echo(json.dumps(line))
+            typer.echo(json.dumps(line, cls=FloatEncoder))
         except Exception as e:
             typer.echo(f"Error scoring model: {e}", err=True)
         return
@@ -142,7 +172,7 @@ def hf_dataset(
     if output_format == "ndjson":
         scores = score_dataset_from_id(dataset_id)
         line = build_ndjson_line(dataset_id, "DATASET", scores)
-        typer.echo(json.dumps(line))
+        typer.echo(json.dumps(line, cls=FloatEncoder))
         return
 
     # text output
@@ -193,7 +223,7 @@ def multiple_urls():
         scores = score_repo_from_owner_and_repo(owner, repo)
 
         line = build_ndjson_line(raw.get("full_name") or f"{owner}/{repo}", "REPOSITORY", scores)
-        typer.echo(json.dumps(line))
+        typer.echo(json.dumps(line, cls=FloatEncoder))
 
 
 @app.command()
