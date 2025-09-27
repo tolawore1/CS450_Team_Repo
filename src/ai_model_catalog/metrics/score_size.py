@@ -20,7 +20,7 @@ def _get_bert_scores(hardware: str) -> float:
         "desktop_pc": 0.95,
         "aws_server": 1.00
     }
-    return scores.get(hardware, 0.0)
+    return scores.get(hardware, 0.00)
 
 
 def _get_whisper_scores(hardware: str) -> float:
@@ -31,7 +31,7 @@ def _get_whisper_scores(hardware: str) -> float:
         "desktop_pc": 1.00,
         "aws_server": 1.00
     }
-    return scores.get(hardware, 0.0)
+    return scores.get(hardware, 0.00)
 
 
 def _get_audience_classifier_scores(hardware: str) -> float:
@@ -42,7 +42,7 @@ def _get_audience_classifier_scores(hardware: str) -> float:
         "desktop_pc": 1.00,
         "aws_server": 1.00
     }
-    return scores.get(hardware, 0.0)
+    return scores.get(hardware, 0.00)
 
 
 def _get_default_score(repo_size_bytes: int, max_size: int) -> float:
@@ -79,14 +79,14 @@ class SizeMetric(Metric):
                     if (repo_size_bytes is not None and
                             not isinstance(repo_size_bytes, (int, float))):
                         raise TypeError(f"Expected int or float, got {type(repo_size_bytes)}")
-                    scores[hardware] = 0.0
+                    scores[hardware] = 0.00
                 else:
                     scores[hardware] = _get_default_score(repo_size_bytes, max_size)
 
         # Ensure all values are float and not bool
         for hardware in HARDWARE_THRESHOLDS:
             if hardware not in scores:
-                scores[hardware] = 0.0
+                scores[hardware] = 0.00
             scores[hardware] = float(scores[hardware])
 
         return scores

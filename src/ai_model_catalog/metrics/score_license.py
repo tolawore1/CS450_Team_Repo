@@ -21,7 +21,7 @@ class LicenseMetric(Metric):
 
     def score(self, model_data: dict) -> float:
         if model_data is None:
-            return 0.0
+            return 0.00
 
         license_field = model_data.get("license", "")
         if isinstance(license_field, dict):
@@ -31,13 +31,13 @@ class LicenseMetric(Metric):
 
         for compatible in self.COMPATIBLE_LICENSES:
             if compatible in license_name:
-                return 1.0
+                return 1.00
 
         # If API license is not found, check README content
         readme = model_data.get("readme", "").lower()
         for compatible in self.COMPATIBLE_LICENSES:
             if compatible in readme:
-                return 1.0
+                return 1.00
 
         # Also check for common license patterns in README
         license_patterns = [
@@ -50,9 +50,9 @@ class LicenseMetric(Metric):
         ]
         for pattern in license_patterns:
             if pattern in readme:
-                return 1.0
+                return 1.00
 
-        return 0.0
+        return 0.00
 
 
 def score_license(model_data) -> float:

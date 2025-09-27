@@ -21,7 +21,7 @@ def safe_float(val: Any) -> float:
     try:
         return float(val)
     except (ValueError, TypeError):
-        return 0.0
+        return 0.00
 
 
 def safe_int(val: Any) -> int:
@@ -57,7 +57,7 @@ def build_ndjson_line(
         "size_score": size_score,
         "size_score_latency": safe_int(scores.get("size_score_latency", scores.get("size_latency", 0))),
         "dataset_and_code_score": safe_float(
-            scores.get("dataset_and_code_score", scores.get("availability", 0.0))
+            scores.get("dataset_and_code_score", scores.get("availability", 0.00))
         ),
         "dataset_and_code_score_latency": safe_int(
             scores.get("dataset_and_code_score_latency", scores.get("availability_latency", 0))

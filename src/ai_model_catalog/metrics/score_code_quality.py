@@ -35,7 +35,7 @@ class CodeQualityMetric(Metric):
         )
 
         # Calculate weighted score instead of simple hit count
-        score = 0.0
+        score = 0.00
 
         # Tests are most important (40% weight)
         if has_tests:
@@ -99,7 +99,7 @@ class LLMCodeQualityMetric(LLMEnhancedMetric):
         readme_content = extract_readme_content(data)
 
         if not readme_content.strip():
-            return 0.0
+            return 0.00
 
         # Use LLM to analyze code quality indicators
         llm_analysis = self.llm_service.analyze_code_quality_indicators(readme_content)
@@ -123,7 +123,7 @@ class LLMCodeQualityMetric(LLMEnhancedMetric):
         readme_content = extract_readme_content(data)
 
         if not readme_content.strip():
-            return 0.0
+            return 0.00
 
         # Traditional keyword-based scoring
         content_lower = readme_content.lower()
@@ -151,7 +151,7 @@ class LLMCodeQualityMetric(LLMEnhancedMetric):
         )
 
         hits = sum([has_tests, has_ci, has_lint, typing_or_docs])
-        return max(0.0, min(1.0, hits / 4.0))
+        return round(max(0.0, min(1.0, hits / 4.0)), 2)
 
 
 def score_code_quality(arg: Union[dict, float]) -> float:
@@ -168,8 +168,8 @@ def score_code_quality(arg: Union[dict, float]) -> float:
     try:
         v = float(arg)
     except (TypeError, ValueError):
-        return 0.0
-    return 0.0 if v < 0.0 else 1.0 if v > 1.0 else v
+        return 0.00
+    return 0.00 if v < 0.0 else 1.00 if v > 1.0 else round(v, 2)
 
 def score_code_quality_with_latency(arg: Union[dict, float]) -> tuple[float, int]:
     start = time.time()
