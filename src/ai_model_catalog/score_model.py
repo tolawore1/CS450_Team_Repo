@@ -13,11 +13,13 @@ from .metrics.score_performance_claims import score_performance_claims_with_late
 from .metrics.score_ramp_up_time import score_ramp_up_time_with_latency
 from .metrics.score_size import score_size_with_latency
 
+# ✅ New import for local repo analysis
+from .analyze_local_repo import analyze_hf_repo
+
 log = logging.getLogger(__name__)
 
 
 def _ensure_size_score_structure(size_scores):
-    """Ensure size_scores is always a dictionary with proper structure."""
     if not isinstance(size_scores, dict):
         size_scores = {
             "raspberry_pi": 0.0,
@@ -25,12 +27,10 @@ def _ensure_size_score_structure(size_scores):
             "desktop_pc": 0.0,
             "aws_server": 0.0,
         }
-
     for hardware in ["raspberry_pi", "jetson_nano", "desktop_pc", "aws_server"]:
         if hardware not in size_scores:
             size_scores[hardware] = 0.0
         size_scores[hardware] = float(size_scores[hardware])
-
     return size_scores
 
 
@@ -63,7 +63,7 @@ def net_score(api_data: Dict) -> Dict[str, float]:
         "has_dataset": api_data.get("has_dataset", True),
     }
 
-    # Call each metric with latency
+    # Score each metric with latency
     size_scores, size_latency = score_size_with_latency(model_data["repo_size_bytes"])
     size_scores = _ensure_size_score_structure(size_scores)
 
@@ -77,7 +77,7 @@ def net_score(api_data: Dict) -> Dict[str, float]:
     code_quality_score, code_quality_latency = score_code_quality_with_latency(api_data)
     performance_claims_score, performance_claims_latency = score_performance_claims_with_latency(model_data)
 
-    # Weighted average size score
+    # Weighted size score
     hardware_weights = {
         "raspberry_pi": 0.1,
         "jetson_nano": 0.2,
@@ -86,7 +86,7 @@ def net_score(api_data: Dict) -> Dict[str, float]:
     }
     size_score_avg = sum(size_scores[hw] * weight for hw, weight in hardware_weights.items())
 
-    # Combine all scores
+    # Final scores
     scores = {
         "size": size_scores,
         "size_score": size_score_avg,
@@ -114,7 +114,7 @@ def net_score(api_data: Dict) -> Dict[str, float]:
         "performance_claims_latency": performance_claims_latency,
     }
 
-    # NetScore weights
+    # NetScore weighting
     weights = {
         "size_score": 0.1,
         "license": 0.15,
@@ -128,8 +128,6 @@ def net_score(api_data: Dict) -> Dict[str, float]:
 
     netscore = sum(scores[k] * weights[k] for k in weights)
     scores["net_score"] = round(netscore, 3)
-
-    # Net latency is sum of all individual latencies
     scores["net_score_latency"] = (
         size_latency + license_latency + ramp_up_latency + bus_factor_latency +
         availability_latency + dataset_quality_latency + code_quality_latency +
@@ -143,6 +141,18 @@ def net_score(api_data: Dict) -> Dict[str, float]:
 
 def score_model_from_id(model_id: str) -> Dict[str, float]:
     api_data = fetch_model_data(model_id)
+    local_data = analyze_hf_repo(model_id)
+
+    # Apply local-only analysis:
+    contributor_count = local_data.get("contributor_count", 1)
+    readme_exists = local_data.get("files_present", {}).get("README.md", True)
+
+    # Patch the API data with local repo insights
+    api_data["readme"] = api_data.get("readme") if readme_exists else ""
+    api_data["cardData"] = api_data.get("cardData") or {}
+    api_data["cardData"]["content"] = api_data["cardData"].get("content") if readme_exists else ""
+    api_data["owner"] = {"login": f"local_user_{i}"} if (i := contributor_count) else {"login": "unknown"}
+
     scores = net_score(api_data)
 
     def safe_score(val):
@@ -203,9 +213,7 @@ def score_repo_from_owner_and_repo(owner: str, repo: str) -> Dict[str, float]:
 
 
 def score_dataset_from_id(dataset_id: str) -> Dict[str, float]:
-    """Score a Hugging Face dataset using available metrics."""
     api_data = fetch_dataset_data(dataset_id)
-
     model_data = {
         "repo_size_bytes": 0,
         "license": api_data.get("license"),
@@ -283,3 +291,7 @@ def score_dataset_from_id(dataset_id: str) -> Dict[str, float]:
     )
 
     return scores
+
+
+
+
