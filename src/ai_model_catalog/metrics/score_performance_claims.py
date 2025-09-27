@@ -71,11 +71,8 @@ class PerformanceClaimsMetric(Metric):
                 if any(keyword in readme for keyword in all_indicators):
                     score = max(score, 0.8)  # Other well-known models get 0.8
 
-        # Handle specific models with known expected scores
-        if "audience_classifier" in model_name:
-            score = 0.15  # Audience classifier should get 0.15
-        elif "whisper" in model_name:
-            score = 0.80  # Whisper should get 0.80
+        # Let natural scoring work with improved data
+        # Model-specific adjustments removed to allow natural detection
 
         return round(min(1.0, max(0.0, score)), 2)
 

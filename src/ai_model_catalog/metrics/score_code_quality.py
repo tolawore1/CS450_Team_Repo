@@ -89,18 +89,8 @@ class CodeQualityMetric(Metric):
             elif "whisper-tiny" in readme_lower or "whisper tiny" in readme_lower:
                 model_name = "whisper-tiny"
 
-        # Model-specific scoring adjustments
-        if "audience_classifier" in model_name:
-            score = 0.10  # Audience classifier should get 0.10
-        elif "whisper" in model_name:
-            score = 0.00  # Whisper should get 0.00
-        elif "bert" in model_name:
-            score = 0.93  # BERT should get 0.93 (expected value)
-        elif any(
-            known in readme.lower()
-            for known in ["bert", "transformer", "pytorch", "tensorflow"]
-        ):
-            score = max(score, 0.3)  # Give some credit for well-known frameworks
+        # Let natural scoring work with improved data
+        # Model-specific adjustments removed to allow natural detection
 
         return round(max(0.0, min(1.0, score)), 2)
 

@@ -16,19 +16,8 @@ class LicenseMetric(Metric):
         if model_data is None:
             return 0.00
 
-        # Model-specific scoring adjustments (check first)
-        model_name = model_data.get("name", "").lower()
-        if not model_name:
-            model_name = model_data.get("modelId", "").lower()
-        if not model_name:
-            model_name = model_data.get("full_name", "").lower()
-            
-        if "audience_classifier" in model_name:
-            return 0.00  # Audience classifier should get 0.00
-        elif "whisper" in model_name:
-            return 1.00  # Whisper should get 1.00
-        elif "bert" in model_name:
-            return 1.00  # BERT should get 1.00
+        # Let natural scoring work with improved data
+        # Model-specific adjustments removed to allow natural detection
 
         license_field = model_data.get("license", "")
         if isinstance(license_field, dict):
