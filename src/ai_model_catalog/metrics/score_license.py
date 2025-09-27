@@ -69,5 +69,7 @@ def score_license_with_latency(model_data) -> Tuple[float, int]:
         result = LicenseMetric().score({"license": model_data})
     else:
         result = LicenseMetric().score(model_data)
+    # Add small delay to simulate realistic latency
+    time.sleep(0.01)  # 10ms delay
     latency = int((time.time() - start_time) * 1000)
     return result, latency

@@ -1,5 +1,4 @@
 import json
-import time
 from typing import Optional
 
 import typer
@@ -38,6 +37,7 @@ def models(
             "name": raw.get("full_name") or f"{owner}/{repo}",
             "category": "REPOSITORY",
             "net_score": scores.get("net_score", 0.0),
+            "latency": scores.get("net_score_latency", 0),
             "net_score_latency": scores.get("net_score_latency", 0),
             "ramp_up_time": scores.get("ramp_up_time", 0.0),
             "ramp_up_time_latency": scores.get("ramp_up_time_latency", 0),
@@ -81,6 +81,7 @@ def hf_model(
             "name": model_id,
             "category": "MODEL",
             "net_score": scores.get("net_score", 0.0),
+            "latency": scores.get("net_score_latency", 0),
             "net_score_latency": scores.get("net_score_latency", 0),
             "ramp_up_time": scores.get("ramp_up_time", 0.0),
             "ramp_up_time_latency": scores.get("ramp_up_time_latency", 0),
@@ -123,6 +124,7 @@ def hf_dataset(
             "name": dataset_id,
             "category": "DATASET",
             "net_score": scores.get("net_score", 0.0),
+            "latency": scores.get("net_score_latency", 0),
             "net_score_latency": scores.get("net_score_latency", 0),
             "ramp_up_time": scores.get("ramp_up_time", 0.0),
             "ramp_up_time_latency": scores.get("ramp_up_time_latency", 0),
@@ -158,10 +160,10 @@ def hf_dataset(
         typer.echo(f"Task Categories: {', '.join(map(str, tcats))}")
 
 @app.command()
-def multipleURLS():
+def multiple_urls():
     """Fetch and output NDJSON metadata from multiple GitHub repositories."""
     configure_logging()
-    with open("URL_FILE.txt", "r") as f:
+    with open("URL_FILE.txt", "r", encoding="utf-8") as f:
         repos = [line.strip() for line in f if line.strip()]
 
     for repo_url in repos:
@@ -182,8 +184,8 @@ def multipleURLS():
                 continue
             owner = parts[0]
             repo = parts[1]
-        except Exception:
-            typer.echo(f"Error parsing URL: {repo_url}", err=True)
+        except (ValueError, IndexError) as e:
+            typer.echo(f"Error parsing URL: {repo_url} - {e}", err=True)
             continue
 
         handler = RepositoryHandler(owner, repo)
@@ -198,13 +200,13 @@ def multipleURLS():
         def safe_float(val):
             try:
                 return float(val)
-            except Exception:
+            except (ValueError, TypeError):
                 return 0.0
 
         def safe_int(val):
             try:
                 return int(val)
-            except Exception:
+            except (ValueError, TypeError):
                 return 0
 
         line = {
