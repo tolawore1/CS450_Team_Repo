@@ -427,7 +427,9 @@ def fetch_model_data(model_id: str) -> Dict[str, Any]:
         "readme": readme_text,
         "cardData": card_data,
         "downloads": model_data.get("downloads", 0),
+        "likes": model_data.get("likes", 0),
         "lastModified": model_data.get("lastModified", ""),
+        "tags": model_data.get("tags", []),
     }
 
 
@@ -471,7 +473,9 @@ def fetch_hf_model(model_id: str) -> Dict[str, Any]:
         "readme": readme_text,
         "cardData": model_data.get("cardData", {}),
         "downloads": model_data.get("downloads", 0),
+        "likes": model_data.get("likes", 0),
         "lastModified": model_data.get("lastModified", ""),
+        "tags": model_data.get("tags", []),
     }
 
 

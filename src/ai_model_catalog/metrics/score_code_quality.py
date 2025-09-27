@@ -86,16 +86,7 @@ class CodeQualityMetric(Metric):
             known in readme.lower()
             for known in ["bert", "transformer", "pytorch", "tensorflow"]
         ):
-            if "bert" in readme.lower():
-                score = max(score, 0.93)  # BERT should get 0.93
-            else:
-                score = max(score, 0.3)  # Other models get 0.3
-
-        # Handle specific models with known expected scores
-        if "audience_classifier" in model_name:
-            score = 0.10  # Audience classifier should get 0.10
-        elif "whisper" in model_name:
-            score = 0.00  # Whisper should get 0.00
+            score = max(score, 0.3)  # Give some credit for well-known frameworks
 
         return round(max(0.0, min(1.0, score)), 2)
 

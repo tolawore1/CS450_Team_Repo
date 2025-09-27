@@ -53,19 +53,25 @@ class LLMRampUpMetric(LLMEnhancedMetric):
         return min(1.0, length / 250.0)
 
 
-def score_ramp_up_time(readme: str) -> float:
+def score_ramp_up_time(model_data_or_readme) -> float:
     """Score ramp-up time with LLM fallback."""
     # Check if LLM key is available
     if os.getenv("GEN_AI_STUDIO_API_KEY"):
         # Use LLM-enhanced version
-        data = {"readme": readme}
-        return LLMRampUpMetric().score(data)
+        if isinstance(model_data_or_readme, dict):
+            return LLMRampUpMetric().score(model_data_or_readme)
+        else:
+            data = {"readme": model_data_or_readme}
+            return LLMRampUpMetric().score(data)
     # Use traditional version
-    return RampUpMetric().score({"readme": readme})
+    if isinstance(model_data_or_readme, dict):
+        return RampUpMetric().score(model_data_or_readme)
+    else:
+        return RampUpMetric().score({"readme": model_data_or_readme})
 
-def score_ramp_up_time_with_latency(readme: str) -> tuple[float, int]:
+def score_ramp_up_time_with_latency(model_data_or_readme) -> tuple[float, int]:
     start = time.time()
-    score = score_ramp_up_time(readme)
+    score = score_ramp_up_time(model_data_or_readme)
     # Add small delay to simulate realistic latency
     time.sleep(0.045)  # 45ms delay
     latency = int((time.time() - start) * 1000)

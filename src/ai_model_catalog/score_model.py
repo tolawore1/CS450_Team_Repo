@@ -12,7 +12,6 @@ from .metrics.score_license import score_license_with_latency
 from .metrics.score_performance_claims import score_performance_claims_with_latency
 from .metrics.score_ramp_up_time import score_ramp_up_time_with_latency
 from .metrics.score_size import score_size_with_latency
-
 # ✅ New import for local repo analysis
 from .analyze_local_repo import analyze_hf_repo
 
@@ -70,17 +69,15 @@ def net_score(api_data: Dict, model_id: str = None) -> Dict[str, float]:
     elif "full_name" in api_data:
         model_data["name"] = api_data["full_name"]
 
-    # Call each metric with latency
-    size_scores, size_latency = score_size_with_latency(model_data)
     # Score each metric with latency
-    size_scores, size_latency = score_size_with_latency(model_data["repo_size_bytes"])
+    size_scores, size_latency = score_size_with_latency(model_data)
     size_scores = _ensure_size_score_structure(size_scores)
 
     license_score, license_latency = score_license_with_latency(model_data)
-    ramp_up_score, ramp_up_latency = score_ramp_up_time_with_latency(model_data["readme"])
-    bus_factor_score, bus_factor_latency = score_bus_factor_with_latency(model_data["maintainers"])
+    ramp_up_score, ramp_up_latency = score_ramp_up_time_with_latency(model_data)
+    bus_factor_score, bus_factor_latency = score_bus_factor_with_latency(model_data)
     availability_score, availability_latency = score_available_dataset_and_code_with_latency(
-        model_data["has_code"], model_data["has_dataset"]
+        model_data
     )
     # Add model name to api_data for dataset quality scoring
     api_data_with_name = api_data.copy()
@@ -109,7 +106,7 @@ def net_score(api_data: Dict, model_id: str = None) -> Dict[str, float]:
     # Final scores
     scores = {
         "size": size_scores,
-        "size_score": size_score_avg,
+        "size_score": size_scores,  # This will be the dictionary for output
         "size_score_latency": size_latency,
 
         "license": license_score,
@@ -148,7 +145,15 @@ def net_score(api_data: Dict, model_id: str = None) -> Dict[str, float]:
         "performance_claims": 0.15,
     }
 
-    netscore = sum(scores[k] * weights[k] for k in weights)
+    # Calculate net score using the average size score
+    netscore = (size_score_avg * weights["size_score"] + 
+                license_score * weights["license"] +
+                ramp_up_score * weights["ramp_up_time"] +
+                bus_factor_score * weights["bus_factor"] +
+                availability_score * weights["dataset_and_code_score"] +
+                dataset_quality_score * weights["dataset_quality"] +
+                code_quality_score * weights["code_quality"] +
+                performance_claims_score * weights["performance_claims"])
     scores["net_score"] = round(netscore, 3)
     scores["net_score_latency"] = (
         size_latency + license_latency + ramp_up_latency + bus_factor_latency +
@@ -163,7 +168,6 @@ def net_score(api_data: Dict, model_id: str = None) -> Dict[str, float]:
 
 def score_model_from_id(model_id: str) -> Dict[str, float]:
     api_data = fetch_model_data(model_id)
-    scores = net_score(api_data, model_id)
     local_data = analyze_hf_repo(model_id)
 
     # Apply local-only analysis:
@@ -176,7 +180,8 @@ def score_model_from_id(model_id: str) -> Dict[str, float]:
     api_data["cardData"]["content"] = api_data["cardData"].get("content") if readme_exists else ""
     api_data["owner"] = {"login": f"local_user_{i}"} if (i := contributor_count) else {"login": "unknown"}
 
-    scores = net_score(api_data)
+    # Calculate all scores
+    scores = net_score(api_data, model_id)
 
     def safe_score(val):
         try:
@@ -221,11 +226,11 @@ def score_model_from_id(model_id: str) -> Dict[str, float]:
         "license": safe_score(scores.get("license")),
         "license_latency": safe_latency(scores.get("license_latency")),
 
-        "size": safe_size(scores.get("size")),
-        "size_latency": safe_latency(scores.get("size_score_latency")),
+        "size_score": safe_size(scores.get("size")),
+        "size_score_latency": safe_latency(scores.get("size_score_latency")),
 
-        "availability": safe_score(scores.get("dataset_and_code_score")),
-        "availability_latency": safe_latency(scores.get("dataset_and_code_score_latency")),
+        "dataset_and_code_score": safe_score(scores.get("dataset_and_code_score")),
+        "dataset_and_code_score_latency": safe_latency(scores.get("dataset_and_code_score_latency")),
 
         "dataset_quality": safe_score(scores.get("dataset_quality")),
         "dataset_quality_latency": safe_latency(scores.get("dataset_quality_latency")),

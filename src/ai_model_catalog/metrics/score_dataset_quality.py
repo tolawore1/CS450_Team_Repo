@@ -83,13 +83,6 @@ class DatasetQualityMetric(Metric):
             elif "whisper-tiny" in readme_lower or "whisper tiny" in readme_lower:
                 model_name = "whisper-tiny"
 
-            if "bert" in model_name:
-                return 0.95  # BERT should get 0.95
-            if "audience_classifier" in model_name:
-                return 0.00  # Audience classifier should get 0.00
-            if "whisper" in model_name:
-                return 0.00  # Whisper should get 0.00
-
         return round(max(0.0, min(1.0, score)), 2)
 
 

@@ -105,9 +105,12 @@ def hf_model(
     raw = handler.fetch_data()
 
     if output_format == "ndjson":
-        scores = score_model_from_id(model_id)
-        line = build_ndjson_line(model_id, "MODEL", scores)
-        typer.echo(json.dumps(line))
+        try:
+            scores = score_model_from_id(model_id)
+            line = build_ndjson_line(model_id, "MODEL", scores)
+            typer.echo(json.dumps(line))
+        except Exception as e:
+            typer.echo(f"Error scoring model: {e}", err=True)
         return
 
     formatted = handler.format_data(raw)
