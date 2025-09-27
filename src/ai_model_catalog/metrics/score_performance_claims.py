@@ -8,17 +8,13 @@ class PerformanceClaimsMetric(Metric):
 
         strong_indicators = [
             "state-of-the-art", "sota", "breakthrough", "record", "champion", "winner",
-            "benchmark", "leaderboard", "competition", "contest", "award"
         ]
         moderate_indicators = [
             "best performance", "highest accuracy", "top results", "leading",
             "superior", "outperforms", "beats", "exceeds", "achieves",
-            "performance", "accuracy", "f1", "bleu", "rouge", "precision", "recall",
-            "evaluation", "metrics", "results", "scores", "improvement"
         ]
         weak_indicators = [
             "good", "better", "improved", "enhanced", "optimized", "efficient",
-            "fast", "quick", "reliable", "robust", "stable", "consistent"
         ]
 
         score = 0.0
