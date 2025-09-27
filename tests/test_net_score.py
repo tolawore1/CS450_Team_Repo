@@ -37,7 +37,7 @@ def test_net_score_github_like_payload():
     assert scores["performance_claims"] == 0.4  # strong indicator = 0.4
 
     # NetScore should be high due to good scores (adjusted for LLM-enhanced scoring)
-    assert scores["NetScore"] >= 0.7
+    assert scores["net_score"] >= 0.7
 
 
 def test_net_score_hf_like_payload_minimal_signals():
@@ -68,4 +68,4 @@ def test_net_score_hf_like_payload_minimal_signals():
     assert scores["performance_claims"] == 0.0
 
     # NetScore should be moderate due to mixed scores (adjusted for LLM-enhanced scoring)
-    assert 0.25 <= scores["NetScore"] <= 0.75
+    assert 0.25 <= scores["net_score"] <= 0.75
