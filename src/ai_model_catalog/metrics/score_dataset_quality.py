@@ -36,18 +36,18 @@ class DatasetQualityMetric(Metric):
         ) or any(k in tag_str for k in known)
 
         # Calculate weighted score instead of simple hit count
-        score = 0.00
+        score = 0.0
 
         # Dataset keywords (30%)
         if has_dataset_word:
             score += 0.3
-        elif _contains_any(readme, ["data", "corpus", "collection", "training", "evaluation"]):
+        elif _contains_any(readme, ["data", "corpus", "collection"]):
             score += 0.15
 
         # Known dataset names (35%)
         if has_known_name:
             score += 0.35
-        elif _contains_any(readme, ["imagenet", "coco", "mnist", "squad", "glue", "bookcorpus", "wikipedia"]):
+        elif _contains_any(readme, ["imagenet", "coco", "mnist", "squad", "glue"]):
             score += 0.2
 
         # Data links (20%)
@@ -59,7 +59,7 @@ class DatasetQualityMetric(Metric):
         # Dataset tags (15%)
         if has_dataset_tag:
             score += 0.15
-        elif any(tag in tag_str for tag in ["nlp", "vision", "audio", "text", "dataset", "corpus"]):
+        elif any(tag in tag_str for tag in ["nlp", "vision", "audio", "text"]):
             score += 0.05
 
         # For well-known models, give base score
@@ -83,17 +83,6 @@ class DatasetQualityMetric(Metric):
             elif "whisper-tiny" in readme_lower or "whisper tiny" in readme_lower:
                 model_name = "whisper-tiny"
 
-        # Model-specific scoring adjustments to match autograder expectations
-        if "audience_classifier" in model_name:
-            score = 0.00  # Audience classifier should get 0.00
-        elif "whisper" in model_name:
-            score = 0.00  # Whisper should get 0.00
-        elif "bert" in model_name:
-            score = 0.95  # BERT should get 0.95 (autograder expects this exact value)
-        elif any(known in model_name for known in ["gpt", "transformer", "resnet", "vgg"]):
-            # Other well-known models get a base score
-            score = max(score, 0.3)
-
         return round(max(0.0, min(1.0, score)), 2)
 
 
@@ -103,7 +92,7 @@ class LLMDatasetQualityMetric(LLMEnhancedMetric):
     def score_with_llm(self, data: Dict[str, Any]) -> float:
         dataset_info = extract_dataset_info(data)
         if not dataset_info.get("description", "").strip():
-            return 0.00
+            return 0.0
 
         llm_analysis = self.llm_service.analyze_dataset_quality(dataset_info)
         if not llm_analysis:
@@ -123,7 +112,7 @@ class LLMDatasetQualityMetric(LLMEnhancedMetric):
         tags = data.get("tags", [])
 
         if not readme_content:
-            return 0.00
+            return 0.0
 
         ds_words = DATASET_KEYWORDS
         known = KNOWN_DATASETS
@@ -149,7 +138,7 @@ class LLMDatasetQualityMetric(LLMEnhancedMetric):
             ]
         )
 
-        return round(max(0.0, min(1.0, hits / 4.0)), 2)
+        return max(0.0, min(1.0, hits / 4.0))
 
 
 def score_dataset_quality(arg: Union[dict, float]) -> float:
@@ -164,33 +153,18 @@ def score_dataset_quality(arg: Union[dict, float]) -> float:
     try:
         v = float(arg)
     except (TypeError, ValueError):
-        return 0.00
+        return 0.0
 
     if v < 0.0:
-        return 0.00
+        return 0.0
     if v > 1.0:
-        return 1.00
+        return 1.0
     return v
 
 
 def score_dataset_quality_with_latency(arg: Union[dict, float]) -> tuple[float, int]:
     start = time.time()
     score = score_dataset_quality(arg)
-    
-    # Return expected latency values for reference models
-    if isinstance(arg, dict):
-        model_name = arg.get("name", "").lower()
-        if "bert" in model_name:
-            latency = 20  # Expected: 20
-        elif "audience_classifier" in model_name:
-            latency = 0  # Expected: 0
-        elif "whisper" in model_name:
-            latency = 0  # Expected: 0
-        else:
-            # Base function already has the delay, just measure timing
-            latency = int((time.time() - start) * 1000)
-    else:
-        # Base function already has the delay, just measure timing
-        latency = int((time.time() - start) * 1000)
-    
+    # Base function already has the delay, just measure timing
+    latency = int((time.time() - start) * 1000)
     return score, latency

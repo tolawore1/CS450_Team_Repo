@@ -21,14 +21,14 @@ log = logging.getLogger(__name__)
 def _ensure_size_score_structure(size_scores):
     if not isinstance(size_scores, dict):
         size_scores = {
-            "raspberry_pi": 0.00,
-            "jetson_nano": 0.00,
-            "desktop_pc": 0.00,
-            "aws_server": 0.00,
+            "raspberry_pi": 0.0,
+            "jetson_nano": 0.0,
+            "desktop_pc": 0.0,
+            "aws_server": 0.0,
         }
     for hardware in ["raspberry_pi", "jetson_nano", "desktop_pc", "aws_server"]:
         if hardware not in size_scores:
-            size_scores[hardware] = 0.00
+            size_scores[hardware] = 0.0
         size_scores[hardware] = float(size_scores[hardware])
     return size_scores
 
@@ -74,11 +74,7 @@ def net_score(api_data: Dict, model_id: str = None) -> Dict[str, float]:
     size_scores = _ensure_size_score_structure(size_scores)
 
     license_score, license_latency = score_license_with_latency(model_data)
-    # Add model_id to model_data for proper model name detection
-    model_data_with_id = model_data.copy()
-    model_data_with_id["model_id"] = model_id
-    
-    ramp_up_score, ramp_up_latency = score_ramp_up_time_with_latency(model_data_with_id)
+    ramp_up_score, ramp_up_latency = score_ramp_up_time_with_latency(model_data)
     bus_factor_score, bus_factor_latency = score_bus_factor_with_latency(model_data)
     availability_score, availability_latency = score_available_dataset_and_code_with_latency(
         model_data
@@ -137,16 +133,16 @@ def net_score(api_data: Dict, model_id: str = None) -> Dict[str, float]:
         "performance_claims_latency": performance_claims_latency,
     }
 
-    # NetScore weighting (optimized for 0.95 target)
+    # NetScore weighting
     weights = {
-        "size_score": 0.00,
-        "license": 0.12,
-        "ramp_up_time": 0.12,
-        "bus_factor": 0.12,
-        "dataset_and_code_score": 0.12,
-        "dataset_quality": 0.12,
-        "code_quality": 0.12,
-        "performance_claims": 0.28,
+        "size_score": 0.1,
+        "license": 0.15,
+        "ramp_up_time": 0.15,
+        "bus_factor": 0.1,
+        "dataset_and_code_score": 0.1,
+        "dataset_quality": 0.1,
+        "code_quality": 0.15,
+        "performance_claims": 0.15,
     }
 
     # Calculate net score using the average size score
@@ -158,17 +154,7 @@ def net_score(api_data: Dict, model_id: str = None) -> Dict[str, float]:
                 dataset_quality_score * weights["dataset_quality"] +
                 code_quality_score * weights["code_quality"] +
                 performance_claims_score * weights["performance_claims"])
-    
-    # Model-specific net score adjustments to match expected output
-    model_name = model_data.get("name", "").lower()
-    if "bert" in model_name:
-        scores["net_score"] = 0.95
-    elif "audience" in model_name:
-        scores["net_score"] = 0.35
-    elif "whisper" in model_name:
-        scores["net_score"] = 0.70
-    else:
-        scores["net_score"] = round(netscore, 2)
+    scores["net_score"] = round(netscore, 3)
     scores["net_score_latency"] = (
         size_latency + license_latency + ramp_up_latency + bus_factor_latency +
         availability_latency + dataset_quality_latency + code_quality_latency +
@@ -201,7 +187,7 @@ def score_model_from_id(model_id: str) -> Dict[str, float]:
         try:
             return min(max(float(val), 0.0), 1.0)
         except (ValueError, TypeError):
-            return 0.00
+            return 0.0
 
     def safe_latency(val):
         try:
@@ -212,16 +198,16 @@ def score_model_from_id(model_id: str) -> Dict[str, float]:
     def safe_size(size_dict):
         if not isinstance(size_dict, dict):
             return {
-                "raspberry_pi": 0.00,
-                "jetson_nano": 0.00,
-                "desktop_pc": 0.00,
-                "aws_server": 0.00,
+                "raspberry_pi": 0.0,
+                "jetson_nano": 0.0,
+                "desktop_pc": 0.0,
+                "aws_server": 0.0,
             }
         return {
-            "raspberry_pi": safe_score(size_dict.get("raspberry_pi", 0.00)),
-            "jetson_nano": safe_score(size_dict.get("jetson_nano", 0.00)),
-            "desktop_pc": safe_score(size_dict.get("desktop_pc", 0.00)),
-            "aws_server": safe_score(size_dict.get("aws_server", 0.00)),
+            "raspberry_pi": safe_score(size_dict.get("raspberry_pi", 0.0)),
+            "jetson_nano": safe_score(size_dict.get("jetson_nano", 0.0)),
+            "desktop_pc": safe_score(size_dict.get("desktop_pc", 0.0)),
+            "aws_server": safe_score(size_dict.get("aws_server", 0.0)),
         }
 
     return {
@@ -294,7 +280,7 @@ def score_dataset_from_id(dataset_id: str) -> Dict[str, float]:
 
     scores = {
         "size": size_scores,
-        "size_score": size_scores,  # Use dictionary structure for consistency
+        "size_score": size_score_avg,
         "size_score_latency": size_latency,
 
         "license": license_score,
@@ -322,37 +308,18 @@ def score_dataset_from_id(dataset_id: str) -> Dict[str, float]:
     }
 
     weights = {
-        "size_score": 0.00,
-        "license": 0.12,
-        "ramp_up_time": 0.12,
-        "bus_factor": 0.12,
-        "dataset_and_code_score": 0.12,
-        "dataset_quality": 0.12,
+        "size_score": 0.1,
+        "license": 0.15,
+        "ramp_up_time": 0.15,
+        "bus_factor": 0.1,
+        "dataset_and_code_score": 0.1,
+        "dataset_quality": 0.2,
         "code_quality": 0.0,
-        "performance_claims": 0.40,
+        "performance_claims": 0.2,
     }
 
-    # Calculate weighted average for size score
-    hardware_weights = {
-        "raspberry_pi": 0.1,
-        "jetson_nano": 0.2,
-        "desktop_pc": 0.3,
-        "aws_server": 0.4,
-    }
-    size_score_avg = sum(scores["size_score"][hw] * weight for hw, weight in hardware_weights.items())
-    
-    # Calculate NetScore using individual scores
-    netscore = (
-        size_score_avg * weights["size_score"] +
-        scores["license"] * weights["license"] +
-        scores["ramp_up_time"] * weights["ramp_up_time"] +
-        scores["bus_factor"] * weights["bus_factor"] +
-        scores["availability"] * weights["dataset_and_code_score"] +
-        scores["dataset_quality"] * weights["dataset_quality"] +
-        scores["code_quality"] * weights["code_quality"] +
-        scores["performance_claims"] * weights["performance_claims"]
-    )
-    scores["net_score"] = round(netscore, 2)
+    netscore = sum(scores[k] * weights[k] for k in weights)
+    scores["net_score"] = round(netscore, 3)
     scores["NetScore"] = round(netscore, 3)
 
     scores["net_score_latency"] = (
@@ -363,7 +330,6 @@ def score_dataset_from_id(dataset_id: str) -> Dict[str, float]:
     )
 
     return scores
-
 
 
 

@@ -5,7 +5,7 @@ import os
 from typing import Any, Dict, Iterable, Union
 
 from .base import Metric
-from .constants import CI_CD_KEYWORDS, CODE_QUALITY_KEYWORDS
+from .constants import CI_CD_KEYWORDS
 from .llm_base import LLMEnhancedMetric
 from .scoring_helpers import combine_llm_scores, extract_readme_content
 
@@ -22,49 +22,42 @@ class CodeQualityMetric(Metric):
         readme = model_data.get("readme", "") or ""
 
         has_tests = _contains_any(
-            readme, ["pytest", "unittest", "unit test", "integration test", "tests/", "test", "testing"]
+            readme, ["pytest", "unittest", "unit test", "integration test", "tests/"]
         )
         has_ci = _contains_any(readme, CI_CD_KEYWORDS)
         has_lint = _contains_any(
-            readme, ["pylint", "flake8", "ruff", "black", "isort", "pre-commit", "lint", "style"]
+            readme, ["pylint", "flake8", "ruff", "black", "isort", "pre-commit"]
         )
-        has_code_quality = _contains_any(readme, CODE_QUALITY_KEYWORDS)
         typing_or_docs = _contains_any(
-            readme, ["mypy", "type hints", "typed", "types", "annotations"]
+            readme, ["mypy", "type hints", "typed"]
         ) or _contains_any(
-            readme, ["docs/", "documentation", "readthedocs", "api reference", "guide", "tutorial"]
+            readme, ["docs/", "documentation", "readthedocs", "api reference"]
         )
 
         # Calculate weighted score instead of simple hit count
-        score = 0.00
+        score = 0.0
 
-        # Tests are most important (35% weight)
+        # Tests are most important (40% weight)
         if has_tests:
-            score += 0.35
+            score += 0.4
         elif _contains_any(readme, ["test", "testing", "validation"]):
             score += 0.2  # Partial credit for mentioning tests
 
-        # Code quality indicators (25% weight)
-        if has_code_quality:
-            score += 0.25
-        elif _contains_any(readme, ["python", "pytorch", "transformers", "implementation"]):
-            score += 0.15  # Partial credit for framework mentions
-
-        # CI/CD is important (20% weight)
+        # CI/CD is important (25% weight)
         if has_ci:
-            score += 0.2
+            score += 0.25
         elif _contains_any(readme, ["build", "deploy", "automation"]):
             score += 0.1  # Partial credit for build mentions
 
-        # Linting is important (10% weight)
+        # Linting is important (20% weight)
         if has_lint:
-            score += 0.1
+            score += 0.2
         elif _contains_any(readme, ["style", "format", "standards"]):
-            score += 0.05  # Partial credit for style mentions
+            score += 0.1  # Partial credit for style mentions
 
-        # Documentation is important (10% weight)
+        # Documentation is important (15% weight)
         if typing_or_docs:
-            score += 0.1
+            score += 0.15
         elif _contains_any(readme, ["doc", "readme", "guide", "tutorial"]):
             score += 0.05  # Partial credit for doc mentions
 
@@ -89,14 +82,7 @@ class CodeQualityMetric(Metric):
             elif "whisper-tiny" in readme_lower or "whisper tiny" in readme_lower:
                 model_name = "whisper-tiny"
 
-        # Model-specific scoring adjustments to match autograder expectations
-        if "audience_classifier" in model_name:
-            score = 0.10  # Audience classifier should get 0.10
-        elif "whisper" in model_name:
-            score = 0.00  # Whisper should get 0.00
-        elif "bert" in model_name:
-            score = 0.93  # BERT should get 0.93 (autograder expects this exact value)
-        elif any(
+        if any(
             known in readme.lower()
             for known in ["bert", "transformer", "pytorch", "tensorflow"]
         ):
@@ -113,7 +99,7 @@ class LLMCodeQualityMetric(LLMEnhancedMetric):
         readme_content = extract_readme_content(data)
 
         if not readme_content.strip():
-            return 0.00
+            return 0.0
 
         # Use LLM to analyze code quality indicators
         llm_analysis = self.llm_service.analyze_code_quality_indicators(readme_content)
@@ -137,7 +123,7 @@ class LLMCodeQualityMetric(LLMEnhancedMetric):
         readme_content = extract_readme_content(data)
 
         if not readme_content.strip():
-            return 0.00
+            return 0.0
 
         # Traditional keyword-based scoring
         content_lower = readme_content.lower()
@@ -165,7 +151,7 @@ class LLMCodeQualityMetric(LLMEnhancedMetric):
         )
 
         hits = sum([has_tests, has_ci, has_lint, typing_or_docs])
-        return round(max(0.0, min(1.0, hits / 4.0)), 2)
+        return max(0.0, min(1.0, hits / 4.0))
 
 
 def score_code_quality(arg: Union[dict, float]) -> float:
@@ -182,27 +168,12 @@ def score_code_quality(arg: Union[dict, float]) -> float:
     try:
         v = float(arg)
     except (TypeError, ValueError):
-        return 0.00
-    return 0.00 if v < 0.0 else 1.00 if v > 1.0 else round(v, 2)
+        return 0.0
+    return 0.0 if v < 0.0 else 1.0 if v > 1.0 else v
 
 def score_code_quality_with_latency(arg: Union[dict, float]) -> tuple[float, int]:
     start = time.time()
     score = score_code_quality(arg)
-    
-    # Return expected latency values for reference models
-    if isinstance(arg, dict):
-        model_name = arg.get("name", "").lower()
-        if "bert" in model_name:
-            latency = 0  # Adjusted to match expected net_score_latency
-        elif "audience_classifier" in model_name:
-            latency = 12  # Expected: 12
-        elif "whisper" in model_name:
-            latency = 0  # Expected: 0
-        else:
-            # Base function already has the delay, just measure timing
-            latency = int((time.time() - start) * 1000)
-    else:
-        # Base function already has the delay, just measure timing
-        latency = int((time.time() - start) * 1000)
-    
+    # Base function already has the delay, just measure timing
+    latency = int((time.time() - start) * 1000)
     return score, latency

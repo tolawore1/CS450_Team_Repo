@@ -5,35 +5,14 @@ from typing import Any, Dict
 from .base import Metric
 from .llm_base import LLMEnhancedMetric
 from .scoring_helpers import combine_llm_scores, extract_readme_content
-from .constants import RAMP_UP_KEYWORDS
 
 
 class RampUpMetric(Metric):
     def score(self, model_data: dict) -> float:
         readme = model_data.get("readme", "")
-        
-        # Get model name for specific adjustments
-        model_name = model_data.get("name", "").lower()
-        if not model_name:
-            model_name = model_data.get("modelId", "").lower()
-        if not model_name:
-            model_name = model_data.get("full_name", "").lower()
-        # Also check if the model_id was passed as a parameter
-        if not model_name and "model_id" in model_data:
-            model_name = model_data["model_id"].lower()
-        
-        # Model-specific scoring adjustments (check first, before README length check)
-        if "audience_classifier" in model_name or model_name == "audience_classifier_model":
-            return 0.25  # Audience classifier should get 0.25
-        elif "whisper" in model_name:
-            return 0.85  # Whisper should get 0.85
-        elif "bert" in model_name:
-            return 0.90  # BERT should get 0.90
-        
         if not readme or len(readme) < 250:
-            return 0.00
-        
-        return 1.00
+            return 0.0
+        return 1.0
 
 
 class LLMRampUpMetric(LLMEnhancedMetric):
@@ -44,7 +23,7 @@ class LLMRampUpMetric(LLMEnhancedMetric):
         readme_content = extract_readme_content(data)
 
         if not readme_content.strip():
-            return 0.00
+            return 0.0
 
         # Use LLM to analyze README quality
         llm_analysis = self.llm_service.analyze_readme_quality(readme_content)
@@ -67,27 +46,11 @@ class LLMRampUpMetric(LLMEnhancedMetric):
         readme_content = extract_readme_content(data)
 
         if not readme_content.strip():
-            return 0.00
+            return 0.0
 
         # Traditional method: README length-based scoring
         length = len(readme_content)
-        
-        # Get model name for specific adjustments
-        model_name = data.get("name", "").lower()
-        if not model_name:
-            model_name = data.get("modelId", "").lower()
-        if not model_name:
-            model_name = data.get("full_name", "").lower()
-        
-        # Model-specific scoring adjustments
-        if "audience_classifier" in model_name or model_name == "audience_classifier_model":
-            return 0.25  # Audience classifier should get 0.25
-        elif "whisper" in model_name:
-            return 0.85  # Whisper should get 0.85
-        elif "bert" in model_name:
-            return 0.90  # BERT should get 0.90
-        
-        return round(min(1.0, length / 250.0), 2)
+        return min(1.0, length / 250.0)
 
 
 def score_ramp_up_time(model_data_or_readme) -> float:
@@ -109,23 +72,7 @@ def score_ramp_up_time(model_data_or_readme) -> float:
 def score_ramp_up_time_with_latency(model_data_or_readme) -> tuple[float, int]:
     start = time.time()
     score = score_ramp_up_time(model_data_or_readme)
-    
-    # Return expected latency values for reference models
-    if isinstance(model_data_or_readme, dict):
-        model_name = model_data_or_readme.get("name", "").lower()
-        if "bert" in model_name:
-            latency = 45  # Expected: 45
-        elif "audience_classifier" in model_name:
-            latency = 42  # Expected: 42
-        elif "whisper" in model_name:
-            latency = 30  # Expected: 30
-        else:
-            # Add small delay to simulate realistic latency
-            time.sleep(0.045)  # 45ms delay
-            latency = int((time.time() - start) * 1000)
-    else:
-        # Add small delay to simulate realistic latency
-        time.sleep(0.045)  # 45ms delay
-        latency = int((time.time() - start) * 1000)
-    
+    # Add small delay to simulate realistic latency
+    time.sleep(0.045)  # 45ms delay
+    latency = int((time.time() - start) * 1000)
     return score, latency

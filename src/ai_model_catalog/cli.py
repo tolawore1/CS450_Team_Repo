@@ -3,44 +3,6 @@ from typing import Optional, Dict, Any
 
 import typer
 
-
-def format_float_2dp(val: Any) -> float:
-    """Format float values to exactly 2 decimal places"""
-    try:
-        return round(float(val), 2)
-    except (ValueError, TypeError):
-        return 0.00
-
-
-class FloatEncoder(json.JSONEncoder):
-    def iterencode(self, obj, _one_shot=False):
-        if isinstance(obj, float):
-            yield f"{obj:.2f}"
-        elif isinstance(obj, dict):
-            yield '{'
-            first = True
-            for key, value in obj.items():
-                if not first:
-                    yield ','
-                first = False
-                yield f'"{key}": '
-                for chunk in self.iterencode(value):
-                    yield chunk
-            yield '}'
-        elif isinstance(obj, list):
-            yield '['
-            first = True
-            for item in obj:
-                if not first:
-                    yield ','
-                first = False
-                for chunk in self.iterencode(item):
-                    yield chunk
-            yield ']'
-        else:
-            for chunk in super().iterencode(obj, _one_shot):
-                yield chunk
-
 from .fetch_repo import fetch_dataset_data
 from .interactive import interactive_main
 from .logging_config import configure_logging
@@ -57,9 +19,9 @@ app = typer.Typer()
 
 def safe_float(val: Any) -> float:
     try:
-        return round(float(val), 2)
+        return float(val)
     except (ValueError, TypeError):
-        return 0.00
+        return 0.0
 
 
 def safe_int(val: Any) -> int:
@@ -78,34 +40,31 @@ def build_ndjson_line(
     size_score = scores.get(size_score_key, scores.get("size", {}))
     if not isinstance(size_score, dict):
         size_score = {}
-    else:
-        # Format all size score values to 2 decimal places
-        size_score = {k: format_float_2dp(v) for k, v in size_score.items()}
 
     return {
         "name": name,
         "category": category,
-        "net_score": format_float_2dp(scores.get("net_score")),
+        "net_score": safe_float(scores.get("net_score")),
         "net_score_latency": safe_int(scores.get("net_score_latency")),
-        "ramp_up_time": format_float_2dp(scores.get("ramp_up_time")),
+        "ramp_up_time": safe_float(scores.get("ramp_up_time")),
         "ramp_up_time_latency": safe_int(scores.get("ramp_up_time_latency")),
-        "bus_factor": format_float_2dp(scores.get("bus_factor")),
+        "bus_factor": safe_float(scores.get("bus_factor")),
         "bus_factor_latency": safe_int(scores.get("bus_factor_latency")),
-        "performance_claims": format_float_2dp(scores.get("performance_claims")),
+        "performance_claims": safe_float(scores.get("performance_claims")),
         "performance_claims_latency": safe_int(scores.get("performance_claims_latency")),
-        "license": format_float_2dp(scores.get("license")),
+        "license": safe_float(scores.get("license")),
         "license_latency": safe_int(scores.get("license_latency")),
         "size_score": size_score,
         "size_score_latency": safe_int(scores.get("size_score_latency", scores.get("size_latency", 0))),
-        "dataset_and_code_score": format_float_2dp(
-            scores.get("dataset_and_code_score", scores.get("availability", 0.00))
+        "dataset_and_code_score": safe_float(
+            scores.get("dataset_and_code_score", scores.get("availability", 0.0))
         ),
         "dataset_and_code_score_latency": safe_int(
             scores.get("dataset_and_code_score_latency", scores.get("availability_latency", 0))
         ),
-        "dataset_quality": format_float_2dp(scores.get("dataset_quality")),
+        "dataset_quality": safe_float(scores.get("dataset_quality")),
         "dataset_quality_latency": safe_int(scores.get("dataset_quality_latency")),
-        "code_quality": format_float_2dp(scores.get("code_quality")),
+        "code_quality": safe_float(scores.get("code_quality")),
         "code_quality_latency": safe_int(scores.get("code_quality_latency")),
     }
 
@@ -126,7 +85,7 @@ def models(
     if output_format == "ndjson":
         scores = score_repo_from_owner_and_repo(owner, repo)
         line = build_ndjson_line(raw.get("full_name") or f"{owner}/{repo}", "REPOSITORY", scores)
-        typer.echo(json.dumps(line, cls=FloatEncoder))
+        typer.echo(json.dumps(line))
         return
 
     formatted = handler.format_data(raw)
@@ -149,7 +108,7 @@ def hf_model(
         try:
             scores = score_model_from_id(model_id)
             line = build_ndjson_line(model_id, "MODEL", scores)
-            typer.echo(json.dumps(line, cls=FloatEncoder))
+            typer.echo(json.dumps(line))
         except Exception as e:
             typer.echo(f"Error scoring model: {e}", err=True)
         return
@@ -172,7 +131,7 @@ def hf_dataset(
     if output_format == "ndjson":
         scores = score_dataset_from_id(dataset_id)
         line = build_ndjson_line(dataset_id, "DATASET", scores)
-        typer.echo(json.dumps(line, cls=FloatEncoder))
+        typer.echo(json.dumps(line))
         return
 
     # text output
@@ -223,7 +182,7 @@ def multiple_urls():
         scores = score_repo_from_owner_and_repo(owner, repo)
 
         line = build_ndjson_line(raw.get("full_name") or f"{owner}/{repo}", "REPOSITORY", scores)
-        typer.echo(json.dumps(line, cls=FloatEncoder))
+        typer.echo(json.dumps(line))
 
 
 @app.command()

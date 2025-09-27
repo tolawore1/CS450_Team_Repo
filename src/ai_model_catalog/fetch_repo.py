@@ -360,322 +360,6 @@ def _fetch_hf_readme(model_id: str) -> str:
         ) from e
 
 
-def _get_rich_fallback_data(model_id: str) -> Dict[str, Any]:
-    """Get rich fallback data with same structure as successful API calls"""
-    # Ensure model_id is not None or empty
-    if not model_id:
-        model_id = "unknown-model"
-    
-    # Generate realistic fallback data based on model type
-    model_lower = model_id.lower()
-    
-    if "audience_classifier" in model_lower:
-        return {
-            "name": model_id,
-            "modelSize": 50 * 1024 * 1024,  # 50MB
-            "license": "apache-2.0",  # Use Apache license like Whisper
-            "author": "huggingface",
-            "readme": f"""# {model_id}
-
-This is a state-of-the-art audience classifier model for text classification tasks, designed for high-performance audience targeting and content categorization.
-
-## Quick Start
-
-```python
-from transformers import pipeline
-
-classifier = pipeline("text-classification", model="{model_id}")
-result = classifier("Your text here")
-print(result)
-```
-
-## Model Details
-
-- **Task**: Text Classification
-- **Framework**: Transformers, PyTorch
-- **Language**: English
-- **Model Type**: Audience Classification
-- **Architecture**: BERT-based
-- **Input**: Text sequences up to 512 tokens
-- **Output**: Classification probabilities for multiple audience categories
-
-## Performance Metrics
-
-This model achieves excellent performance on audience classification benchmarks:
-
-- **Accuracy**: 92.5% on validation set
-- **F1-Score**: 0.91 across all categories
-- **Precision**: 0.89 average
-- **Recall**: 0.93 average
-
-The model outperforms baseline approaches and provides robust classification capabilities for audience targeting and content categorization across diverse domains.
-
-## Training Data
-
-The model was trained on a comprehensive dataset of text samples with audience labels, including:
-
-- **Dataset**: Custom audience classification corpus
-- **Size**: 100,000+ labeled examples
-- **Domains**: News, social media, marketing content, user-generated content
-- **Categories**: Demographics, interests, behavior patterns, content preferences
-
-This diverse training data enables the model to generalize across different content types and domains effectively.
-
-## Installation
-
-```bash
-pip install transformers torch
-pip install datasets accelerate
-```
-
-## Usage Examples
-
-### Basic Classification
-
-```python
-from transformers import AutoTokenizer, AutoModelForSequenceClassification
-
-tokenizer = AutoTokenizer.from_pretrained("{model_id}")
-model = AutoModelForSequenceClassification.from_pretrained("{model_id}")
-
-# Example text
-text = "This is a sample text for audience classification"
-inputs = tokenizer(text, return_tensors="pt", truncation=True, padding=True)
-
-# Get predictions
-outputs = model(**inputs)
-predictions = outputs.logits.softmax(dim=-1)
-print(f"Predictions: {{predictions}}")
-```
-
-### Batch Processing
-
-```python
-from transformers import pipeline
-
-classifier = pipeline("text-classification", model="{model_id}")
-
-texts = [
-    "Technology news and updates",
-    "Sports and fitness content",
-    "Entertainment and lifestyle"
-]
-
-results = classifier(texts)
-for text, result in zip(texts, results):
-    print(f"Text: {{text}}")
-    print(f"Classification: {{result}}")
-```
-
-## Model Architecture
-
-- **Base Model**: BERT-base-uncased
-- **Fine-tuning**: Custom audience classification head
-- **Parameters**: 110M parameters
-- **Max Sequence Length**: 512 tokens
-- **Vocabulary Size**: 30,522 tokens
-
-## Evaluation
-
-The model has been evaluated on multiple benchmarks:
-
-- **In-domain accuracy**: 94.2%
-- **Cross-domain generalization**: 87.8%
-- **Robustness**: Maintains performance across different text styles
-
-## License
-
-This model is released under the Apache 2.0 License. See LICENSE file for details.
-
-## Citation
-
-If you use this model in your research, please cite:
-
-```bibtex
-@misc{{audience_classifier_model,
-  title={{Audience Classification Model}},
-  author={{Hugging Face}},
-  year={{2024}},
-  url={{https://huggingface.co/{model_id}}}
-}}
-```
-
-## Contributing
-
-Contributions are welcome! Please see our contributing guidelines for more information.
-
-## Support
-
-For questions and support, please open an issue on the model repository.
-""",
-            "cardData": {"content": ""},
-            "downloads": 25000,  # Higher downloads like real models
-            "likes": 45,  # More likes
-            "lastModified": "2024-01-15T00:00:00Z",
-            "tags": [
-                "text-classification", "nlp", "audience-classifier", "classification", "pytorch",
-                "transformers", "bert", "english", "huggingface", "fine-tuned", "apache-2.0",
-                "audience-targeting", "content-categorization", "demographics", "behavior-analysis",
-                "marketing", "social-media", "news", "user-generated-content", "machine-learning",
-                "deep-learning", "natural-language-processing", "text-analysis", "sentiment-analysis"
-            ],
-            "pipeline_tag": "text-classification",
-            "library_name": "transformers",
-            "task_categories": ["text-classification"],
-        }
-    elif "whisper" in model_lower:
-        return {
-            "name": "whisper-tiny",  # Use expected name format
-            "modelSize": 75 * 1024 * 1024,  # 75MB
-            "license": "apache-2.0",
-            "author": "openai",
-            "readme": f"""# {model_id}
-
-This is a Whisper automatic speech recognition (ASR) model.
-
-## Usage
-
-```python
-import whisper
-
-model = whisper.load_model("{model_id}")
-result = model.transcribe("audio_file.wav")
-print(result["text"])
-```
-
-## Model Details
-
-- **Task**: Automatic Speech Recognition
-- **Framework**: PyTorch
-- **Languages**: Multiple languages supported
-- **Input**: Audio files (WAV, MP3, etc.)
-- **Output**: Transcribed text
-
-## Performance
-
-This model provides high-quality speech recognition across multiple languages with robust performance on various accents and speaking styles.
-""",
-            "cardData": {"content": ""},
-            "downloads": 5000,
-            "likes": 25,
-            "lastModified": "2024-01-01T00:00:00Z",
-            "tags": ["automatic-speech-recognition", "asr", "audio", "whisper", "speech"],
-            "pipeline_tag": "automatic-speech-recognition",
-            "library_name": "transformers",
-            "task_categories": ["automatic-speech-recognition"],
-        }
-    elif "bert" in model_lower:
-        return {
-            "name": model_id,
-            "modelSize": 400 * 1024 * 1024,  # 400MB
-            "license": "apache-2.0",
-            "author": "google",
-            "readme": f"""# {model_id}
-
-This is a BERT (Bidirectional Encoder Representations from Transformers) model.
-
-## Usage
-
-```python
-from transformers import AutoTokenizer, AutoModel
-
-tokenizer = AutoTokenizer.from_pretrained("{model_id}")
-model = AutoModel.from_pretrained("{model_id}")
-
-inputs = tokenizer("Hello world", return_tensors="pt")
-outputs = model(**inputs)
-```
-
-## Model Details
-
-- **Task**: Fill-mask, Question Answering, etc.
-- **Framework**: PyTorch/TensorFlow
-- **Language**: English
-- **Architecture**: Transformer-based
-- **Parameters**: ~110M
-
-## Performance
-
-BERT achieves state-of-the-art results on various NLP tasks including question answering, named entity recognition, and text classification.
-""",
-            "cardData": {"content": ""},
-            "downloads": 10000,
-            "likes": 50,
-            "lastModified": "2024-01-01T00:00:00Z",
-            "tags": ["bert", "transformers", "nlp", "fill-mask", "pytorch"],
-            "pipeline_tag": "fill-mask",
-            "library_name": "transformers",
-            "task_categories": ["fill-mask"],
-        }
-    else:
-        # Generic fallback for other models - ensure NDJSON compatibility
-        return {
-            "name": model_id,
-            "modelSize": 100 * 1024 * 1024,  # 100MB
-            "license": "unknown",
-            "author": "unknown",
-            "readme": f"""# {model_id}
-
-This is a machine learning model.
-
-## Usage
-
-```python
-# Model usage example
-from transformers import AutoModel, AutoTokenizer
-
-tokenizer = AutoTokenizer.from_pretrained("{model_id}")
-model = AutoModel.from_pretrained("{model_id}")
-
-# Process your data
-inputs = tokenizer("Your input text", return_tensors="pt")
-outputs = model(**inputs)
-```
-
-## Model Details
-
-- **Framework**: Various
-- **Language**: Multiple
-- **Task**: General purpose
-- **Input**: Text/Data
-- **Output**: Predictions
-
-## Performance
-
-This model provides various machine learning capabilities for different tasks and domains.
-
-## Installation
-
-```bash
-pip install transformers torch
-```
-
-## Example
-
-```python
-# Basic usage example
-import torch
-from transformers import pipeline
-
-# Create pipeline
-pipe = pipeline("text-classification", model="{model_id}")
-
-# Make prediction
-result = pipe("Sample text")
-print(result)
-```
-""",
-            "cardData": {"content": ""},
-            "downloads": 500,
-            "likes": 2,
-            "lastModified": "2024-01-01T00:00:00Z",
-            "tags": ["machine-learning", "model", "nlp"],
-            "pipeline_tag": "",
-            "library_name": "transformers",
-            "task_categories": [],
-        }
-
-
 def fetch_model_data(model_id: str) -> Dict[str, Any]:
     """
     Fetch Hugging Face Hub model metadata and shape it for ModelHandler usage.
@@ -684,7 +368,7 @@ def fetch_model_data(model_id: str) -> Dict[str, Any]:
 
     # Add authentication header if token is available
     headers = HF_HEADERS.copy()
-    hf_token = os.getenv("HF_API_TOKEN") or os.getenv("HUGGINGFACE_HUB_TOKEN") or os.getenv("HF_TOKEN")
+    hf_token = os.getenv("HUGGINGFACE_HUB_TOKEN") or os.getenv("HF_TOKEN")
     if hf_token:
         headers["Authorization"] = f"Bearer {hf_token}"
 
@@ -693,24 +377,32 @@ def fetch_model_data(model_id: str) -> Dict[str, Any]:
         response = session.get(model_url, headers=headers, timeout=5)
         response.raise_for_status()
         model_data = response.json()
-        
-        # Handle case where API returns a list instead of dict (e.g., /tree/main URLs)
-        if isinstance(model_data, list) and len(model_data) > 0:
-            model_data = model_data[0]  # Take first item from list
-        elif isinstance(model_data, list):
-            # Empty list, create minimal dict
-            model_data = {}
-            
     except requests.ConnectionError as e:
         log.error("Network connection failed for Hugging Face API: %s", e)
-        # Return rich fallback data with same structure as successful API calls
-        return _get_rich_fallback_data(model_id)
+        # Return minimal data instead of raising
+        return {
+            "modelSize": 0,
+            "license": "unknown",
+            "author": "unknown",
+            "readme": f"# {model_id}\n\nNetwork unavailable - could not fetch model data.",
+            "cardData": {},
+            "downloads": 0,
+            "lastModified": "",
+        }
     except requests.RequestException as e:
         log.error(
             "Failed to fetch model data from Hugging Face for %s: %s", model_id, e
         )
-        # Return rich fallback data with same structure as successful API calls
-        return _get_rich_fallback_data(model_id)
+        # Return minimal data instead of raising
+        return {
+            "modelSize": 0,
+            "license": "unknown",
+            "author": "unknown",
+            "readme": f"# {model_id}\n\nAPI request failed - could not fetch model data.",
+            "cardData": {},
+            "downloads": 0,
+            "lastModified": "",
+        }
 
     license_type = model_data.get("license", "unknown")
 
@@ -729,7 +421,6 @@ def fetch_model_data(model_id: str) -> Dict[str, Any]:
     model_size = _calculate_model_size(model_data)
 
     return {
-        "name": model_id,  # Add the missing name field
         "modelSize": model_size,
         "license": license_type,
         "author": model_data.get("author"),
@@ -739,9 +430,6 @@ def fetch_model_data(model_id: str) -> Dict[str, Any]:
         "likes": model_data.get("likes", 0),
         "lastModified": model_data.get("lastModified", ""),
         "tags": model_data.get("tags", []),
-        "pipeline_tag": model_data.get("pipeline_tag", ""),
-        "library_name": model_data.get("library_name", ""),
-        "task_categories": model_data.get("task_categories", []),
     }
 
 
@@ -754,14 +442,6 @@ def fetch_hf_model(model_id: str) -> Dict[str, Any]:
         response = session.get(model_url, headers=HF_HEADERS, timeout=5)
         response.raise_for_status()
         model_data = response.json()
-        
-        # Handle case where API returns a list instead of dict (e.g., /tree/main URLs)
-        if isinstance(model_data, list) and len(model_data) > 0:
-            model_data = model_data[0]  # Take first item from list
-        elif isinstance(model_data, list):
-            # Empty list, create minimal dict
-            model_data = {}
-            
     except requests.ConnectionError as e:
         log.error("Network connection failed for Hugging Face API: %s", e)
         raise RepositoryDataError(f"Network connection failed: {e}") from e
@@ -807,7 +487,7 @@ def fetch_dataset_data(dataset_id: str) -> Dict[str, Any]:
 
     # Add authentication header if token is available
     headers = {}
-    hf_token = os.getenv("HF_API_TOKEN") or os.getenv("HUGGINGFACE_HUB_TOKEN") or os.getenv("HF_TOKEN")
+    hf_token = os.getenv("HUGGINGFACE_HUB_TOKEN") or os.getenv("HF_TOKEN")
     if hf_token:
         headers["Authorization"] = f"Bearer {hf_token}"
 
@@ -815,14 +495,6 @@ def fetch_dataset_data(dataset_id: str) -> Dict[str, Any]:
         response = requests.get(dataset_url, headers=headers, timeout=15)
         response.raise_for_status()
         ds_data = response.json()
-        
-        # Handle case where API returns a list instead of dict (e.g., /tree/main URLs)
-        if isinstance(ds_data, list) and len(ds_data) > 0:
-            ds_data = ds_data[0]  # Take first item from list
-        elif isinstance(ds_data, list):
-            # Empty list, create minimal dict
-            ds_data = {}
-            
     except requests.RequestException as e:
         log.error(
             "Failed to fetch dataset data from Hugging Face for %s: %s", dataset_id, e
@@ -846,7 +518,6 @@ def fetch_dataset_data(dataset_id: str) -> Dict[str, Any]:
             )
 
     return {
-        "name": dataset_id,  # Add the missing name field
         "license": license_type,
         "author": ds_data.get("author"),
         "readme": readme_text,

@@ -1,0 +1,3 @@
+[console_scripts]
+catalog = ai_model_catalog.cli:app
+catalog-interactive = ai_model_catalog.cli:interactive_main

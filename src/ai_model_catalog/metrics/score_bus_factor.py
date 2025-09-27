@@ -5,17 +5,7 @@ from .base import Metric
 class BusFactorMetric(Metric):
     def score(self, model_data: dict) -> float:
         maintainers = model_data.get("maintainers", [])
-        
-        # Model-specific scoring adjustments
-        model_name = model_data.get("name", "").lower()
-        if "audience_classifier" in model_name:
-            return 0.33  # Audience classifier should get 0.33
-        elif "whisper" in model_name:
-            return 0.90  # Whisper should get 0.90
-        elif "bert" in model_name:
-            return 0.95  # BERT should get 0.95
-        
-        return 1.00 if len(maintainers) >= 1 else 0.00
+        return 1.0 if len(maintainers) >= 1 else 0.0
 
 
 def score_bus_factor(model_data_or_maintainers) -> float:
@@ -28,23 +18,7 @@ def score_bus_factor(model_data_or_maintainers) -> float:
 def score_bus_factor_with_latency(model_data_or_maintainers) -> tuple[float, int]:
     start = time.time()
     score = score_bus_factor(model_data_or_maintainers)
-    
-    # Return expected latency values for reference models
-    if isinstance(model_data_or_maintainers, dict):
-        model_name = model_data_or_maintainers.get("name", "").lower()
-        if "bert" in model_name:
-            latency = 25  # Expected: 25
-        elif "audience_classifier" in model_name:
-            latency = 0  # Adjusted to match expected net_score_latency
-        elif "whisper" in model_name:
-            latency = 20  # Expected: 20
-        else:
-            # Add small delay to simulate realistic latency
-            time.sleep(0.025)  # 25ms delay
-            latency = int((time.time() - start) * 1000)
-    else:
-        # Add small delay to simulate realistic latency
-        time.sleep(0.025)  # 25ms delay
-        latency = int((time.time() - start) * 1000)
-    
+    # Add small delay to simulate realistic latency
+    time.sleep(0.025)  # 25ms delay
+    latency = int((time.time() - start) * 1000)
     return score, latency
