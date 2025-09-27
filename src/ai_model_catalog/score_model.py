@@ -74,7 +74,11 @@ def net_score(api_data: Dict, model_id: str = None) -> Dict[str, float]:
     size_scores = _ensure_size_score_structure(size_scores)
 
     license_score, license_latency = score_license_with_latency(model_data)
-    ramp_up_score, ramp_up_latency = score_ramp_up_time_with_latency(model_data)
+    # Add model_id to model_data for proper model name detection
+    model_data_with_id = model_data.copy()
+    model_data_with_id["model_id"] = model_id
+    
+    ramp_up_score, ramp_up_latency = score_ramp_up_time_with_latency(model_data_with_id)
     bus_factor_score, bus_factor_latency = score_bus_factor_with_latency(model_data)
     availability_score, availability_latency = score_available_dataset_and_code_with_latency(
         model_data
