@@ -90,10 +90,6 @@ class DatasetQualityMetric(Metric):
         ):
             score = max(score, 0.3)  # Well-known frameworks get base score
 
-        # Cap the score to avoid perfect scores unless truly exceptional
-        if score > 0.95:
-            score = 0.95
-
         return round(max(0.0, min(1.0, score)), 2)
 
 
