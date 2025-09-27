@@ -41,7 +41,7 @@ def test_models_command_ndjson_format():
             assert "name" in output_data
             assert "category" in output_data
             assert "net_score" in output_data
-            assert "latency" in output_data
+            assert "net_score_latency" in output_data
 
 
 def test_hf_model_command_ndjson_format():
@@ -75,7 +75,7 @@ def test_hf_model_command_ndjson_format():
             assert "name" in output_data
             assert "category" in output_data
             assert "net_score" in output_data
-            assert "latency" in output_data
+            assert "net_score_latency" in output_data
 
 
 def test_hf_dataset_command_ndjson_format():
@@ -108,7 +108,7 @@ def test_hf_dataset_command_ndjson_format():
             assert "name" in output_data
             assert "category" in output_data
             assert "net_score" in output_data
-            assert "latency" in output_data
+            assert "net_score_latency" in output_data
 
 
 def test_hf_dataset_command_with_tags():
