@@ -5,6 +5,7 @@ from typing import Any, Dict
 from .base import Metric
 from .llm_base import LLMEnhancedMetric
 from .scoring_helpers import combine_llm_scores, extract_readme_content
+from .constants import RAMP_UP_KEYWORDS
 
 
 class RampUpMetric(Metric):

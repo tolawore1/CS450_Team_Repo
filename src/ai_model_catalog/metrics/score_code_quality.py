@@ -5,7 +5,7 @@ import os
 from typing import Any, Dict, Iterable, Union
 
 from .base import Metric
-from .constants import CI_CD_KEYWORDS
+from .constants import CI_CD_KEYWORDS, CODE_QUALITY_KEYWORDS
 from .llm_base import LLMEnhancedMetric
 from .scoring_helpers import combine_llm_scores, extract_readme_content
 
@@ -22,42 +22,49 @@ class CodeQualityMetric(Metric):
         readme = model_data.get("readme", "") or ""
 
         has_tests = _contains_any(
-            readme, ["pytest", "unittest", "unit test", "integration test", "tests/"]
+            readme, ["pytest", "unittest", "unit test", "integration test", "tests/", "test", "testing"]
         )
         has_ci = _contains_any(readme, CI_CD_KEYWORDS)
         has_lint = _contains_any(
-            readme, ["pylint", "flake8", "ruff", "black", "isort", "pre-commit"]
+            readme, ["pylint", "flake8", "ruff", "black", "isort", "pre-commit", "lint", "style"]
         )
+        has_code_quality = _contains_any(readme, CODE_QUALITY_KEYWORDS)
         typing_or_docs = _contains_any(
-            readme, ["mypy", "type hints", "typed"]
+            readme, ["mypy", "type hints", "typed", "types", "annotations"]
         ) or _contains_any(
-            readme, ["docs/", "documentation", "readthedocs", "api reference"]
+            readme, ["docs/", "documentation", "readthedocs", "api reference", "guide", "tutorial"]
         )
 
         # Calculate weighted score instead of simple hit count
         score = 0.00
 
-        # Tests are most important (40% weight)
+        # Tests are most important (35% weight)
         if has_tests:
-            score += 0.4
+            score += 0.35
         elif _contains_any(readme, ["test", "testing", "validation"]):
             score += 0.2  # Partial credit for mentioning tests
 
-        # CI/CD is important (25% weight)
-        if has_ci:
+        # Code quality indicators (25% weight)
+        if has_code_quality:
             score += 0.25
+        elif _contains_any(readme, ["python", "pytorch", "transformers", "implementation"]):
+            score += 0.15  # Partial credit for framework mentions
+
+        # CI/CD is important (20% weight)
+        if has_ci:
+            score += 0.2
         elif _contains_any(readme, ["build", "deploy", "automation"]):
             score += 0.1  # Partial credit for build mentions
 
-        # Linting is important (20% weight)
+        # Linting is important (10% weight)
         if has_lint:
-            score += 0.2
+            score += 0.1
         elif _contains_any(readme, ["style", "format", "standards"]):
-            score += 0.1  # Partial credit for style mentions
+            score += 0.05  # Partial credit for style mentions
 
-        # Documentation is important (15% weight)
+        # Documentation is important (10% weight)
         if typing_or_docs:
-            score += 0.15
+            score += 0.1
         elif _contains_any(readme, ["doc", "readme", "guide", "tutorial"]):
             score += 0.05  # Partial credit for doc mentions
 
