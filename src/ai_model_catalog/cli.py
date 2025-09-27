@@ -1,5 +1,5 @@
 import json
-from typing import Optional
+from typing import Optional, Dict, Any
 
 import typer
 
@@ -17,6 +17,58 @@ from .score_model import (
 app = typer.Typer()
 
 
+def safe_float(val: Any) -> float:
+    try:
+        return float(val)
+    except (ValueError, TypeError):
+        return 0.0
+
+
+def safe_int(val: Any) -> int:
+    try:
+        return int(val)
+    except (ValueError, TypeError):
+        return 0
+
+
+def build_ndjson_line(
+    name: str,
+    category: str,
+    scores: Dict[str, Any],
+    size_score_key: str = "size_score",
+) -> Dict[str, Any]:
+    size_score = scores.get(size_score_key, scores.get("size", {}))
+    if not isinstance(size_score, dict):
+        size_score = {}
+
+    return {
+        "name": name,
+        "category": category,
+        "net_score": safe_float(scores.get("net_score")),
+        "net_score_latency": safe_int(scores.get("net_score_latency")),
+        "ramp_up_time": safe_float(scores.get("ramp_up_time")),
+        "ramp_up_time_latency": safe_int(scores.get("ramp_up_time_latency")),
+        "bus_factor": safe_float(scores.get("bus_factor")),
+        "bus_factor_latency": safe_int(scores.get("bus_factor_latency")),
+        "performance_claims": safe_float(scores.get("performance_claims")),
+        "performance_claims_latency": safe_int(scores.get("performance_claims_latency")),
+        "license": safe_float(scores.get("license")),
+        "license_latency": safe_int(scores.get("license_latency")),
+        "size_score": size_score,
+        "size_score_latency": safe_int(scores.get("size_score_latency", scores.get("size_latency", 0))),
+        "dataset_and_code_score": safe_float(
+            scores.get("dataset_and_code_score", scores.get("availability", 0.0))
+        ),
+        "dataset_and_code_score_latency": safe_int(
+            scores.get("dataset_and_code_score_latency", scores.get("availability_latency", 0))
+        ),
+        "dataset_quality": safe_float(scores.get("dataset_quality")),
+        "dataset_quality_latency": safe_int(scores.get("dataset_quality_latency")),
+        "code_quality": safe_float(scores.get("code_quality")),
+        "code_quality_latency": safe_int(scores.get("code_quality_latency")),
+    }
+
+
 @app.command()
 def models(
     owner: str = "huggingface",
@@ -32,33 +84,7 @@ def models(
 
     if output_format == "ndjson":
         scores = score_repo_from_owner_and_repo(owner, repo)
-        # Defensive get for size_score dict
-        size_score = scores.get("size_score", scores.get("size", {}))
-        if not isinstance(size_score, dict):
-            size_score = {}
-
-        line = {
-            "name": raw.get("full_name") or f"{owner}/{repo}",
-            "category": "REPOSITORY",
-            "net_score": scores.get("net_score", 0.0),
-            "net_score_latency": scores.get("net_score_latency", 0),
-            "ramp_up_time": scores.get("ramp_up_time", 0.0),
-            "ramp_up_time_latency": scores.get("ramp_up_time_latency", 0),
-            "bus_factor": scores.get("bus_factor", 0.0),
-            "bus_factor_latency": scores.get("bus_factor_latency", 0),
-            "performance_claims": scores.get("performance_claims", 0.0),
-            "performance_claims_latency": scores.get("performance_claims_latency", 0),
-            "license": scores.get("license", 0.0),
-            "license_latency": scores.get("license_latency", 0),
-            "size_score": size_score,
-            "size_score_latency": scores.get("size_score_latency", scores.get("size_latency", 0)),
-            "dataset_and_code_score": scores.get("dataset_and_code_score", scores.get("availability", 0.0)),
-            "dataset_and_code_score_latency": scores.get("dataset_and_code_score_latency", scores.get("availability_latency", 0)),
-            "dataset_quality": scores.get("dataset_quality", 0.0),
-            "dataset_quality_latency": scores.get("dataset_quality_latency", 0),
-            "code_quality": scores.get("code_quality", 0.0),
-            "code_quality_latency": scores.get("code_quality_latency", 0),
-        }
+        line = build_ndjson_line(raw.get("full_name") or f"{owner}/{repo}", "REPOSITORY", scores)
         typer.echo(json.dumps(line))
         return
 
@@ -80,32 +106,7 @@ def hf_model(
 
     if output_format == "ndjson":
         scores = score_model_from_id(model_id)
-        size_score = scores.get("size_score", scores.get("size", {}))
-        if not isinstance(size_score, dict):
-            size_score = {}
-
-        line = {
-            "name": model_id,
-            "category": "MODEL",
-            "net_score": scores.get("net_score", 0.0),
-            "net_score_latency": scores.get("net_score_latency", 0),
-            "ramp_up_time": scores.get("ramp_up_time", 0.0),
-            "ramp_up_time_latency": scores.get("ramp_up_time_latency", 0),
-            "bus_factor": scores.get("bus_factor", 0.0),
-            "bus_factor_latency": scores.get("bus_factor_latency", 0),
-            "performance_claims": scores.get("performance_claims", 0.0),
-            "performance_claims_latency": scores.get("performance_claims_latency", 0),
-            "license": scores.get("license", 0.0),
-            "license_latency": scores.get("license_latency", 0),
-            "size_score": size_score,
-            "size_score_latency": scores.get("size_score_latency", scores.get("size_latency", 0)),
-            "dataset_and_code_score": scores.get("dataset_and_code_score", scores.get("availability", 0.0)),
-            "dataset_and_code_score_latency": scores.get("dataset_and_code_score_latency", scores.get("availability_latency", 0)),
-            "dataset_quality": scores.get("dataset_quality", 0.0),
-            "dataset_quality_latency": scores.get("dataset_quality_latency", 0),
-            "code_quality": scores.get("code_quality", 0.0),
-            "code_quality_latency": scores.get("code_quality_latency", 0),
-        }
+        line = build_ndjson_line(model_id, "MODEL", scores)
         typer.echo(json.dumps(line))
         return
 
@@ -126,32 +127,7 @@ def hf_dataset(
 
     if output_format == "ndjson":
         scores = score_dataset_from_id(dataset_id)
-        size_score = scores.get("size_score", scores.get("size", {}))
-        if not isinstance(size_score, dict):
-            size_score = {}
-
-        line = {
-            "name": dataset_id,
-            "category": "DATASET",
-            "net_score": scores.get("net_score", 0.0),
-            "net_score_latency": scores.get("net_score_latency", 0),
-            "ramp_up_time": scores.get("ramp_up_time", 0.0),
-            "ramp_up_time_latency": scores.get("ramp_up_time_latency", 0),
-            "bus_factor": scores.get("bus_factor", 0.0),
-            "bus_factor_latency": scores.get("bus_factor_latency", 0),
-            "performance_claims": scores.get("performance_claims", 0.0),
-            "performance_claims_latency": scores.get("performance_claims_latency", 0),
-            "license": scores.get("license", 0.0),
-            "license_latency": scores.get("license_latency", 0),
-            "size_score": size_score,
-            "size_score_latency": scores.get("size_score_latency", scores.get("size_latency", 0)),
-            "dataset_and_code_score": scores.get("dataset_and_code_score", scores.get("availability", 0.0)),
-            "dataset_and_code_score_latency": scores.get("dataset_and_code_score_latency", scores.get("availability_latency", 0)),
-            "dataset_quality": scores.get("dataset_quality", 0.0),
-            "dataset_quality_latency": scores.get("dataset_quality_latency", 0),
-            "code_quality": scores.get("code_quality", 0.0),
-            "code_quality_latency": scores.get("code_quality_latency", 0),
-        }
+        line = build_ndjson_line(dataset_id, "DATASET", scores)
         typer.echo(json.dumps(line))
         return
 
@@ -202,51 +178,12 @@ def multiple_urls():
         raw = handler.fetch_data()
         scores = score_repo_from_owner_and_repo(owner, repo)
 
-        size_score = scores.get("size_score", scores.get("size", {}))
-        if not isinstance(size_score, dict):
-            size_score = {}
-
-        def safe_float(val):
-            try:
-                return float(val)
-            except (ValueError, TypeError):
-                return 0.0
-
-        def safe_int(val):
-            try:
-                return int(val)
-            except (ValueError, TypeError):
-                return 0
-
-        line = {
-            "name": raw.get("full_name") or f"{owner}/{repo}",
-            "category": "REPOSITORY",
-            "net_score": safe_float(scores.get("net_score")),
-            "net_score_latency": safe_int(scores.get("net_score_latency")),
-            "ramp_up_time": safe_float(scores.get("ramp_up_time")),
-            "ramp_up_time_latency": safe_int(scores.get("ramp_up_time_latency")),
-            "bus_factor": safe_float(scores.get("bus_factor")),
-            "bus_factor_latency": safe_int(scores.get("bus_factor_latency")),
-            "performance_claims": safe_float(scores.get("performance_claims")),
-            "performance_claims_latency": safe_int(scores.get("performance_claims_latency")),
-            "license": safe_float(scores.get("license")),
-            "license_latency": safe_int(scores.get("license_latency")),
-            "size_score": size_score,
-            "size_score_latency": safe_int(scores.get("size_score_latency", scores.get("size_latency", 0))),
-            "dataset_and_code_score": safe_float(scores.get("dataset_and_code_score", scores.get("availability", 0.0))),
-            "dataset_and_code_score_latency": safe_int(scores.get("dataset_and_code_score_latency", scores.get("availability_latency", 0))),
-            "dataset_quality": safe_float(scores.get("dataset_quality")),
-            "dataset_quality_latency": safe_int(scores.get("dataset_quality_latency")),
-            "code_quality": safe_float(scores.get("code_quality")),
-            "code_quality_latency": safe_int(scores.get("code_quality_latency")),
-        }
-
+        line = build_ndjson_line(raw.get("full_name") or f"{owner}/{repo}", "REPOSITORY", scores)
         typer.echo(json.dumps(line))
 
 
 @app.command()
 def interactive():
-    """Start interactive mode for browsing AI models."""
     interactive_main()
 
 
