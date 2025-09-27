@@ -17,7 +17,7 @@ def combine_llm_scores(
                 total_weight += weight
 
     if total_weight == 0:
-        return 0.00
+        return 0.0
 
     return total_score / total_weight
 
