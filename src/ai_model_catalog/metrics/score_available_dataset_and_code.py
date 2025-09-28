@@ -14,69 +14,65 @@ class AvailableDatasetAndCodeMetric(Metric):
         has_dataset_mentions = any(word in readme for word in ["dataset", "training data", "corpus", "benchmark"])
         has_code_mentions = any(word in readme for word in ["github", "repository", "source code", "implementation"])
         
-        # Calculate base score from availability evidence - maximum strictness
+        # Calculate base score from availability evidence - conservative approach
         base_score = 0.0
         if has_code and has_dataset and has_dataset_mentions and has_code_mentions:
-            base_score = 1.0  # Clear evidence of both with explicit mentions
-        elif has_code and has_dataset and has_dataset_mentions and has_code_mentions:
-            base_score = 0.8  # Both available with explicit evidence
-        elif has_code and has_dataset and has_dataset_mentions and has_code_mentions:
-            base_score = 0.3  # Both available with explicit evidence
+            base_score = 0.9  # Clear evidence of both with explicit mentions
         elif has_code and has_dataset and (has_dataset_mentions or has_code_mentions):
-            base_score = 0.1  # Both available with minimal evidence
+            base_score = 0.7  # Both available with some evidence
         elif has_code and has_dataset:
-            base_score = 0.05  # Both available but no clear evidence
+            base_score = 0.5  # Both available but no clear evidence
         elif has_code or has_dataset:
-            base_score = 0.01  # Only one available
+            base_score = 0.3  # Only one available
         else:
-            base_score = 0.0  # Neither available
+            base_score = 0.1  # Neither available
         
-        # Sophisticated maturity analysis
+        # Very conservative maturity analysis - minimal multipliers
         maturity_factor = 1.0
         
-        # Organization reputation boost - minimal for prestigious orgs
+        # Organization reputation boost - very minimal
         prestigious_orgs = ["google", "openai", "microsoft", "facebook", "meta", "huggingface", "nvidia", "anthropic"]
         if any(org in author for org in prestigious_orgs):
-            maturity_factor *= 1.1  # Minimal boost for prestigious organizations
+            maturity_factor *= 1.05  # Very minimal boost for prestigious organizations
         
-        # Model size indicates dataset/code availability needs
+        # Model size indicates dataset/code availability needs - minimal impact
         if model_size > 1000000000:  # >1GB
-            maturity_factor *= 1.3  # Large models need clear dataset/code availability
+            maturity_factor *= 1.05  # Minimal boost for large models
         elif model_size > 100000000:  # >100MB
-            maturity_factor *= 1.2
+            maturity_factor *= 1.02
         elif model_size < 10000000:  # <10MB
-            maturity_factor *= 0.8  # Small models may have simpler availability
+            maturity_factor *= 0.98  # Minimal reduction for small models
         
-        # Download-based maturity tiers - reasonable boost for popular models
+        # Download-based maturity tiers - very conservative
         if downloads > 10000000:  # 10M+ downloads
-            maturity_factor *= 1.3  # Reasonable boost for very popular models
+            maturity_factor *= 1.08  # Very minimal boost for very popular models
         elif downloads > 1000000:  # 1M+ downloads
-            maturity_factor *= 1.25  # Reasonable boost for popular models
+            maturity_factor *= 1.06  # Very minimal boost for popular models
         elif downloads > 100000:  # 100K+ downloads
-            maturity_factor *= 1.2  # Reasonable boost for moderately popular models
+            maturity_factor *= 1.04  # Very minimal boost for moderately popular models
         elif downloads > 10000:   # 10K+ downloads
-            maturity_factor *= 1.15  # Moderate boost
+            maturity_factor *= 1.02  # Very minimal boost
         elif downloads > 1000:    # 1K+ downloads
-            maturity_factor *= 1.1  # Small boost
+            maturity_factor *= 1.01  # Tiny boost
         else:                     # <1K downloads
             maturity_factor *= 1.0  # No boost
         
-        # Check for experimental/early-stage indicators - reasonable reduction
+        # Check for experimental/early-stage indicators - minimal reduction
         experimental_keywords = ["experimental", "beta", "alpha", "preview", "demo", "toy", "simple", "test"]
         if any(keyword in readme for keyword in experimental_keywords):
             # Only reduce if not from prestigious org
             if not any(org in author for org in prestigious_orgs):
-                maturity_factor *= 0.7  # Reasonable reduction for experimental models
+                maturity_factor *= 0.95  # Minimal reduction for experimental models
         
-        # Check for well-established model indicators
+        # Check for well-established model indicators - minimal boost
         established_keywords = ["production", "stable", "release", "v1", "v2", "enterprise", "bert", "transformer", "gpt"]
         if any(keyword in readme for keyword in established_keywords):
-            maturity_factor *= 1.2  # Reasonable boost for established models
+            maturity_factor *= 1.03  # Minimal boost for established models
         
-        # Check for academic/research indicators
+        # Check for academic/research indicators - minimal boost
         academic_keywords = ["paper", "research", "arxiv", "conference", "journal", "study"]
         if any(keyword in readme for keyword in academic_keywords):
-            maturity_factor *= 1.1  # Slight boost for research models
+            maturity_factor *= 1.01  # Tiny boost for research models
         
         
         final_score = base_score * maturity_factor

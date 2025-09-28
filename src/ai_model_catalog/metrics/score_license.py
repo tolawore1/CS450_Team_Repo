@@ -65,56 +65,56 @@ class LicenseMetric(Metric):
         if has_explicit_license and has_readme_license:
             base_score = 1.0  # Clear compatible license
         elif has_explicit_license or has_readme_license:
-            base_score = 0.9  # Some license information
+            base_score = 0.8  # Some license information
         else:
-            base_score = 0.7  # No clear license but still some base score
+            base_score = 0.5  # No clear license but still some base score
         
-        # Sophisticated maturity analysis
+        # Very conservative maturity analysis - minimal multipliers
         maturity_factor = 1.0
         
-        # Organization reputation boost - reasonable for prestigious orgs
+        # Organization reputation boost - very minimal
         prestigious_orgs = ["google", "openai", "microsoft", "facebook", "meta", "huggingface", "nvidia", "anthropic"]
         if any(org in author for org in prestigious_orgs):
-            maturity_factor *= 1.2  # Reasonable boost for prestigious organizations
+            maturity_factor *= 1.05  # Very minimal boost for prestigious organizations
         
-        # Model size indicates licensing complexity needs
+        # Model size indicates licensing complexity needs - minimal impact
         if model_size > 1000000000:  # >1GB
-            maturity_factor *= 1.3  # Large models need clear licensing
+            maturity_factor *= 1.05  # Minimal boost for large models
         elif model_size > 100000000:  # >100MB
-            maturity_factor *= 1.2
+            maturity_factor *= 1.02
         elif model_size < 10000000:  # <10MB
-            maturity_factor *= 0.9  # Small models may have simpler licensing
+            maturity_factor *= 0.98  # Minimal reduction for small models
         
-        # Download-based maturity tiers - reasonable boost for popular models
+        # Download-based maturity tiers - very conservative
         if downloads > 10000000:  # 10M+ downloads
-            maturity_factor *= 1.3  # Reasonable boost for very popular models
+            maturity_factor *= 1.08  # Very minimal boost for very popular models
         elif downloads > 1000000:  # 1M+ downloads
-            maturity_factor *= 1.25  # Reasonable boost for popular models
+            maturity_factor *= 1.06  # Very minimal boost for popular models
         elif downloads > 100000:  # 100K+ downloads
-            maturity_factor *= 1.2  # Reasonable boost for moderately popular models
+            maturity_factor *= 1.04  # Very minimal boost for moderately popular models
         elif downloads > 10000:   # 10K+ downloads
-            maturity_factor *= 1.15  # Moderate boost
+            maturity_factor *= 1.02  # Very minimal boost
         elif downloads > 1000:    # 1K+ downloads
-            maturity_factor *= 1.1  # Small boost
+            maturity_factor *= 1.01  # Tiny boost
         else:                     # <1K downloads
             maturity_factor *= 1.0  # No boost
         
-        # Check for experimental/early-stage indicators - reasonable reduction
+        # Check for experimental/early-stage indicators - minimal reduction
         experimental_keywords = ["experimental", "beta", "alpha", "preview", "demo", "toy", "simple", "test"]
         if any(keyword in readme for keyword in experimental_keywords):
             # Only reduce if not from prestigious org
             if not any(org in author for org in prestigious_orgs):
-                maturity_factor *= 0.7  # Reasonable reduction for experimental models
+                maturity_factor *= 0.95  # Minimal reduction for experimental models
         
-        # Check for well-established model indicators
+        # Check for well-established model indicators - minimal boost
         established_keywords = ["production", "stable", "release", "v1", "v2", "enterprise", "bert", "transformer", "gpt"]
         if any(keyword in readme for keyword in established_keywords):
-            maturity_factor *= 1.2  # Reasonable boost for established models
+            maturity_factor *= 1.03  # Minimal boost for established models
         
-        # Check for academic/research indicators
+        # Check for academic/research indicators - minimal boost
         academic_keywords = ["paper", "research", "arxiv", "conference", "journal", "study"]
         if any(keyword in readme for keyword in academic_keywords):
-            maturity_factor *= 1.1  # Slight boost for research models
+            maturity_factor *= 1.01  # Tiny boost for research models
         
         final_score = base_score * maturity_factor
         return round(max(0.0, min(1.0, final_score)), 2)
