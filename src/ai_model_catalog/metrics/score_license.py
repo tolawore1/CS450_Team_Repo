@@ -33,22 +33,24 @@ class LicenseMetric(Metric):
             if compatible in license_name:
                 return 1.0
 
-        # If API license is not found, check README content
+        # If API license is not found or is "unknown", check README content for
+        # explicit license documentation
+        # Only give credit for clear, explicit license statements, not just keyword mentions
         readme = model_data.get("readme", "").lower()
-        for compatible in self.COMPATIBLE_LICENSES:
-            if compatible in readme:
-                return 1.0
 
-        # Also check for common license patterns in README
-        license_patterns = [
+        # Look for explicit license statements in README
+        explicit_license_patterns = [
             "license: apache-2.0",
             "license: mit",
             "license: bsd",
-            "apache 2.0",
-            "mit license",
-            "bsd license",
+            "license: apache 2.0",
+            "license: mit license",
+            "license: bsd license",
+            "licensed under apache",
+            "licensed under mit",
+            "licensed under bsd",
         ]
-        for pattern in license_patterns:
+        for pattern in explicit_license_patterns:
             if pattern in readme:
                 return 1.0
 

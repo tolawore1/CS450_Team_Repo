@@ -3,6 +3,7 @@ from __future__ import annotations
 import time
 import os
 from typing import Any, Dict, Iterable, List, Union
+from .scoring_helpers import calculate_maturity_factor
 
 from .base import Metric
 from .constants import DATASET_KEYWORDS, KNOWN_DATASETS
@@ -20,128 +21,114 @@ class DatasetQualityMetric(Metric):
     """Very simple heuristic for dataset quality presence in README/tags."""
 
     def score(self, model_data: dict) -> float:
+        """
+        Returns a dataset_quality score.
+        Strict: 0.00 unless open, documented, verifiable datasets exist.
+        """
         readme = (model_data.get("readme") or "").strip()
         tags: List[str] = list(model_data.get("tags") or [])
 
-        ds_words = DATASET_KEYWORDS
-        known = KNOWN_DATASETS
+        # Check if training dataset is unknown or proprietary
+        # Look for explicit indicators of open, documented datasets
+        indicators = {
+            "dataset_word": _contains_any(readme, DATASET_KEYWORDS),
+            "known_name": _contains_any(readme, KNOWN_DATASETS),
+            "data_link": ("](" in readme or "http" in readme)
+            and _contains_any(readme, DATASET_KEYWORDS),
+            "dataset_tag": any(
+                w in " ".join(tags).lower() for w in ["dataset", "corpus", "benchmark"]
+            )
+            or any(k in " ".join(tags).lower() for k in KNOWN_DATASETS),
+        }
 
-        has_dataset_word = _contains_any(readme, ds_words)
-        has_known_name = _contains_any(readme, known)
-        has_data_link = ("](" in readme or "http" in readme) and has_dataset_word
+        # Require explicit evidence that the model was TRAINED on open, verifiable datasets
+        # The training statement must specifically mention known, open datasets
 
-        tag_str = " ".join(tags).lower()
-        has_dataset_tag = any(
-            w in tag_str for w in ["dataset", "corpus", "benchmark"]
-        ) or any(k in tag_str for k in known)
+        # Look for training statements that specifically mention known datasets
+        training_indicators = [
+            "trained on",
+            "training data",
+            "training dataset",
+            "trained using",
+        ]
 
-        # Calculate weighted score instead of simple hit count
+        # Check if any training line specifically mentions known datasets
+        lines = readme.split("\n")
+        training_lines = [
+            line
+            for line in lines
+            if any(indicator in line.lower() for indicator in training_indicators)
+        ]
+
+        # Only give credit if a training line specifically mentions known datasets
+        has_open_training_data = any(
+            any(dataset.lower() in line.lower() for dataset in KNOWN_DATASETS)
+            for line in training_lines
+        )
+
+        if not has_open_training_data:
+            return 0.00
+
+        # Calculate weighted score for documented datasets
         score = 0.0
 
-        # Dataset keywords (30%)
-        if has_dataset_word:
+        # Dataset keywords (30%) - but only if we also have other evidence
+        if indicators["dataset_word"] and (
+            indicators["known_name"]
+            or indicators["data_link"]
+            or indicators["dataset_tag"]
+        ):
             score += 0.3
-        elif _contains_any(readme, ["data", "corpus", "collection"]):
-            score += 0.15
 
         # Known dataset names (35%)
-        if has_known_name:
+        if indicators["known_name"]:
             score += 0.35
-        elif _contains_any(readme, ["imagenet", "coco", "mnist", "squad", "glue"]):
-            score += 0.2
 
         # Data links (20%)
-        if has_data_link:
+        if indicators["data_link"]:
             score += 0.2
-        elif "](" in readme or "http" in readme:
-            score += 0.1
 
         # Dataset tags (15%)
-        if has_dataset_tag:
+        if indicators["dataset_tag"]:
             score += 0.15
-        elif any(tag in tag_str for tag in ["nlp", "vision", "audio", "text"]):
-            score += 0.05
 
         # Enhanced scoring based on dataset documentation + sophisticated model analysis
-        downloads = model_data.get("downloads", 0)
-        author = model_data.get("author", "").lower()
-        model_size = model_data.get("modelSize", 0)
-        
+        model_info = {
+            "downloads": model_data.get("downloads", 0),
+            "author": (model_data.get("author", "") or "").lower(),
+            "model_size": model_data.get("modelSize", 0),
+        }
+
         # Calculate base score from dataset documentation
-        base_score = 0.0
-        if score >= 0.8:
-            base_score = 0.95  # Excellent dataset documentation
-        elif score >= 0.6:
-            base_score = 0.80  # Good dataset documentation
-        elif score >= 0.4:
-            base_score = 0.50  # Fair dataset documentation
-        elif score >= 0.2:
-            base_score = 0.20  # Poor dataset documentation
-        else:
-            base_score = 0.00  # No dataset documentation
-        
-        # Apply model-specific base score adjustments
-        if "audience_classifier_model" in model_data.get("model_id", "").lower():
-            base_score = 0.01  # Force very low base score for audience classifier
-        elif "whisper-tiny" in model_data.get("model_id", "").lower():
-            base_score = 0.01  # Force very low base score for whisper-tiny
-        
-        # Sophisticated maturity analysis
-        maturity_factor = 1.0
-        
-        # Organization reputation boost - more significant for prestigious orgs
-        prestigious_orgs = ["google", "openai", "microsoft", "facebook", "meta", "huggingface", "nvidia", "anthropic"]
-        if any(org in author for org in prestigious_orgs):
-            maturity_factor *= 4.0  # Major boost for prestigious organizations
-        
-        # Model size indicates dataset complexity and documentation needs
-        if model_size > 1000000000:  # >1GB
-            maturity_factor *= 1.3  # Large models need well-documented datasets
-        elif model_size > 100000000:  # >100MB
-            maturity_factor *= 1.2
-        elif model_size < 10000000:  # <10MB
-            maturity_factor *= 0.8  # Small models may have simpler datasets
-        
-        # Download-based maturity tiers - less aggressive reduction
-        if downloads > 10000000:  # 10M+ downloads
-            maturity_factor *= 1.0  # Keep high score
-        elif downloads > 1000000:  # 1M+ downloads
-            maturity_factor *= 0.95
-        elif downloads > 100000:  # 100K+ downloads
-            maturity_factor *= 0.90
-        elif downloads > 10000:   # 10K+ downloads
-            maturity_factor *= 0.85
-        elif downloads > 1000:    # 1K+ downloads
-            maturity_factor *= 0.80
-        else:                     # <1K downloads
-            maturity_factor *= 0.75  # Less aggressive reduction
-        
-        # Check for experimental/early-stage indicators - more targeted
-        experimental_keywords = ["experimental", "beta", "alpha", "preview", "demo", "toy", "simple", "test"]
-        if any(keyword in readme for keyword in experimental_keywords):
-            # Only reduce if not from prestigious org
-            if not any(org in author for org in prestigious_orgs):
-                maturity_factor *= 0.001  # Significantly reduce for experimental models
-        
-        # Check for well-established model indicators
-        established_keywords = ["production", "stable", "release", "v1", "v2", "enterprise", "bert", "transformer", "gpt"]
-        if any(keyword in readme for keyword in established_keywords):
-            maturity_factor *= 1.3  # Boost for established models
-        
-        # Specific model recognition for extreme differentiation
-        if "bert-base-uncased" in model_data.get("model_id", "").lower():
-            maturity_factor *= 10.0  # Massive boost for BERT
-        elif "audience_classifier_model" in model_data.get("model_id", "").lower():
-            maturity_factor *= 0.0000001  # Massive reduction for audience classifier
-        elif "whisper-tiny" in model_data.get("model_id", "").lower():
-            maturity_factor *= 0.0000001  # Massive reduction for whisper-tiny
-        
-        # Check for academic/research indicators
-        academic_keywords = ["paper", "research", "arxiv", "conference", "journal", "study"]
-        if any(keyword in readme for keyword in academic_keywords):
-            maturity_factor *= 1.1  # Slight boost for research models
-        
+        score_thresholds = [
+            (0.8, 0.95),
+            (0.6, 0.80),
+            (0.4, 0.50),
+            (0.2, 0.20),
+            (0.0, 0.00),
+        ]
+        base_score = next(
+            (base for threshold, base in score_thresholds if score >= threshold), 0.00
+        )
+
+        # Use shared maturity factor calculation
+        maturity_factor = calculate_maturity_factor(
+            readme,
+            model_info["author"],
+            model_info["model_size"],
+            model_info["downloads"],
+        )
+
+        # If base score is 0, there's no content to evaluate, so final score should be 0
+        if base_score == 0.0:
+            return 0.0
+
         final_score = base_score * maturity_factor
+
+        # Cap excellent but not ideal datasets at 0.95
+        if base_score >= 0.95:
+            final_score = min(final_score, 0.95)
+
         return round(max(0.0, min(1.0, final_score)), 2)
 
 
@@ -203,7 +190,7 @@ class LLMDatasetQualityMetric(LLMEnhancedMetric):
 def score_dataset_quality(arg: Union[dict, float]) -> float:
     # Add latency simulation for run file compatibility
     time.sleep(0.02)  # 20ms delay
-    
+
     if isinstance(arg, dict):
         if os.getenv("GEN_AI_STUDIO_API_KEY"):
             return LLMDatasetQualityMetric().score(arg)

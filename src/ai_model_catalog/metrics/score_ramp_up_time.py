@@ -9,89 +9,30 @@ from .scoring_helpers import combine_llm_scores, extract_readme_content
 
 class RampUpMetric(Metric):
     def score(self, model_data: dict) -> float:
-        readme = model_data.get("readme", "")
-        
-        # Enhanced scoring based on README length + sophisticated model analysis
-        if not readme:
+        readme = model_data.get("readme", "") or ""
+        if not isinstance(readme, str):
             return 0.0
-        
-        readme_length = len(readme)
-        downloads = model_data.get("downloads", 0)
-        author = model_data.get("author", "").lower()
-        model_size = model_data.get("modelSize", 0)
-        
-        # Calculate base score from README length
-        base_score = 0.0
-        if readme_length >= 2000:
-            base_score = 0.95  # Very comprehensive README
-        elif readme_length >= 1000:
-            base_score = 0.90  # Comprehensive README
-        elif readme_length >= 500:
-            base_score = 0.80  # Good README
-        elif readme_length >= 250:
-            base_score = 0.50  # Basic README
-        elif readme_length >= 100:
-            base_score = 0.25  # Minimal README
+        if not readme.strip():
+            return 0.0
+
+        length = len(readme)
+
+        # Simple buckets instead of log or linear scaling
+        if length < 500:
+            base_score = 0.3  # very short readme → hard to ramp up
+        elif length < 1500:
+            base_score = 0.6  # moderate length
+        elif length < 3000:
+            base_score = 0.8  # solid documentation
         else:
-            base_score = 0.10  # Very minimal README
-        
-        # Sophisticated maturity analysis
-        maturity_factor = 1.0
-        
-        # Organization reputation boost - more significant for prestigious orgs
-        prestigious_orgs = ["google", "openai", "microsoft", "facebook", "meta", "huggingface", "nvidia", "anthropic"]
-        if any(org in author for org in prestigious_orgs):
-            maturity_factor *= 15.0  # Major boost for prestigious organizations
-        
-        # Model size indicates complexity and documentation needs
-        if model_size > 1000000000:  # >1GB
-            maturity_factor *= 1.3  # Large models need comprehensive documentation
-        elif model_size > 100000000:  # >100MB
-            maturity_factor *= 1.2
-        elif model_size < 10000000:  # <10MB
-            maturity_factor *= 0.9  # Small models can have simpler docs
-        
-        # Download-based maturity tiers - less aggressive reduction
-        if downloads > 10000000:  # 10M+ downloads
-            maturity_factor *= 1.0  # Keep high score
-        elif downloads > 1000000:  # 1M+ downloads
-            maturity_factor *= 0.95
-        elif downloads > 100000:  # 100K+ downloads
-            maturity_factor *= 0.90
-        elif downloads > 10000:   # 10K+ downloads
-            maturity_factor *= 0.85
-        elif downloads > 1000:    # 1K+ downloads
-            maturity_factor *= 0.80
-        else:                     # <1K downloads
-            maturity_factor *= 0.75  # Less aggressive reduction
-        
-        # Check for experimental/early-stage indicators - more targeted
-        experimental_keywords = ["experimental", "beta", "alpha", "preview", "demo", "toy", "simple", "test"]
-        if any(keyword in readme for keyword in experimental_keywords):
-            # Only reduce if not from prestigious org
-            if not any(org in author for org in prestigious_orgs):
-                maturity_factor *= 0.4  # Significantly reduce for experimental models
-        
-        # Check for well-established model indicators
-        established_keywords = ["production", "stable", "release", "v1", "v2", "enterprise", "bert", "transformer", "gpt"]
-        if any(keyword in readme for keyword in established_keywords):
-            maturity_factor *= 1.3  # Boost for established models
-        
-        # Specific model recognition for extreme differentiation
-        if "bert-base-uncased" in model_data.get("model_id", "").lower():
-            maturity_factor *= 10.0  # Massive boost for BERT
-        elif "audience_classifier_model" in model_data.get("model_id", "").lower():
-            maturity_factor *= 0.3  # Moderate reduction for audience classifier
-        elif "whisper-tiny" in model_data.get("model_id", "").lower():
-            maturity_factor *= 2.0  # Major boost for whisper-tiny
-        
-        # Check for academic/research indicators
-        academic_keywords = ["paper", "research", "arxiv", "conference", "journal", "study"]
-        if any(keyword in readme for keyword in academic_keywords):
-            maturity_factor *= 1.1  # Slight boost for research models
-        
-        final_score = base_score * maturity_factor
-        return round(max(0.0, min(1.0, final_score)), 2)
+            base_score = 0.9  # very long, detailed readme
+
+        # Small bump if there are clear onboarding keywords
+        keywords = ["install", "usage", "example", "quickstart", "tutorial"]
+        if any(word in readme.lower() for word in keywords):
+            base_score += 0.05
+
+        return round(min(1.0, base_score), 2)
 
 
 class LLMRampUpMetric(LLMEnhancedMetric):
@@ -123,36 +64,29 @@ class LLMRampUpMetric(LLMEnhancedMetric):
     def score_without_llm(self, data: Dict[str, Any]) -> float:
         """Score using traditional README length method."""
         readme_content = extract_readme_content(data)
-
         if not readme_content.strip():
             return 0.0
 
-        # Traditional method: README length-based scoring
         length = len(readme_content)
-        return min(1.0, length / 250.0)
+        base_score = min(1.0, length / 2000.0)
+
+        return round(base_score, 2)
 
 
 def score_ramp_up_time(model_data_or_readme) -> float:
-    """Score ramp-up time with LLM fallback."""
-    # Check if LLM key is available
     if os.getenv("GEN_AI_STUDIO_API_KEY"):
-        # Use LLM-enhanced version
         if isinstance(model_data_or_readme, dict):
             return LLMRampUpMetric().score(model_data_or_readme)
-        else:
-            data = {"readme": model_data_or_readme}
-            return LLMRampUpMetric().score(data)
-    # Use traditional version
+        return LLMRampUpMetric().score({"readme": model_data_or_readme})
+
     if isinstance(model_data_or_readme, dict):
         return RampUpMetric().score(model_data_or_readme)
-    else:
-        return RampUpMetric().score({"readme": model_data_or_readme})
+    return RampUpMetric().score({"readme": model_data_or_readme})
+
 
 def score_ramp_up_time_with_latency(model_data_or_readme) -> tuple[float, int]:
     start = time.time()
     score = score_ramp_up_time(model_data_or_readme)
-    # Add small delay to simulate realistic latency
-    time.sleep(0.045)  # 45ms delay
+    time.sleep(0.045)
     latency = int((time.time() - start) * 1000)
     return score, latency
-    

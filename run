@@ -185,6 +185,7 @@ from ai_model_catalog.metrics.score_performance_claims import score_performance_
 
 # Get data once and time each metric independently
 api_data = fetch_model_data("${model_id}")
+api_data["name"] = "${name}"  # Add model name to api_data for metrics that need it
 readme = api_data.get("readme", "") or api_data.get("cardData", {}).get("content", "")
 maintainers = [api_data.get("author")]
 model_data = {
@@ -192,8 +193,9 @@ model_data = {
     "license": api_data.get("license"),
     "readme": readme,
     "maintainers": maintainers,
-    "has_code": True,
-    "has_dataset": True,
+    "has_code": api_data.get("has_code", False),
+    "has_dataset": api_data.get("has_dataset", False),
+    "name": "${name}",
 }
 
 # Time each metric independently to get real latencies
@@ -209,7 +211,7 @@ def time_metric(func, *args, **kwargs):
 
 ramp_result, ramp_latency = time_metric(score_ramp_up_time, model_data["readme"])
 bus_result, bus_latency = time_metric(score_bus_factor, model_data["maintainers"])
-avail_result, avail_latency = time_metric(score_availability, model_data["has_code"], model_data["has_dataset"])
+avail_result, avail_latency = time_metric(score_availability, model_data)
 dsq_result, dataset_quality_latency = time_metric(score_dataset_quality, api_data)
 cq_result, code_quality_latency = time_metric(score_code_quality, api_data)
 perf_result, perf_latency = time_metric(score_performance_claims, model_data)

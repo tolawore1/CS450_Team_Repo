@@ -15,133 +15,190 @@ def _contains_any(text: str, needles: Iterable[str]) -> bool:
     return any(n.lower() in t for n in needles)
 
 
+def detect_tests(readme: str) -> bool:
+    """Detect if repository has testing infrastructure."""
+    test_keywords = [
+        "pytest",
+        "unittest",
+        "test suite",
+        "test coverage",
+        "jest",
+        "mocha",
+        "junit",
+        "testng",
+        "rspec",
+        "selenium",
+    ]
+    return _contains_any(readme, test_keywords)
+
+
+def detect_ci(readme: str) -> bool:
+    """Detect if repository has CI/CD pipeline."""
+    ci_keywords = [
+        "github actions",
+        "travis",
+        "circleci",
+        "jenkins",
+        "gitlab ci",
+        "azure pipelines",
+        "workflow",
+        "continuous integration",
+        "ci/cd",
+    ]
+    return _contains_any(readme, ci_keywords)
+
+
+def detect_lint(readme: str) -> bool:
+    """Detect if repository has linting/formatting tools."""
+    lint_keywords = [
+        "flake8",
+        "black",
+        "isort",
+        "pre-commit",
+        "eslint",
+        "prettier",
+        "rubocop",
+        "gofmt",
+        "clang-format",
+        "autopep8",
+    ]
+    return _contains_any(readme, lint_keywords)
+
+
+def detect_docs(readme: str) -> bool:
+    """Detect if repository has documentation infrastructure."""
+    doc_keywords = [
+        "docs",
+        "documentation",
+        "readthedocs",
+        "api reference",
+        "tutorial",
+        "guide",
+        "sphinx",
+        "javadoc",
+        "godoc",
+        "docstring",
+    ]
+    return _contains_any(readme, doc_keywords)
+
+
+def detect_platform(readme: str) -> bool:
+    """Detect if model is hosted on a platform with infrastructure."""
+    platform_keywords = ["huggingface.co/", "transformers", "model hub", "model card"]
+    return _contains_any(readme, platform_keywords)
+
+
+def detect_prestigious_org(author: str, model_name: str) -> bool:
+    """Detect if model is from a prestigious organization."""
+    prestigious_orgs = [
+        "google",
+        "openai",
+        "microsoft",
+        "facebook",
+        "meta",
+        "nvidia",
+        "anthropic",
+    ]
+    well_known_models = ["bert", "gpt", "transformer", "whisper", "t5", "roberta"]
+
+    return any(org in author.lower() for org in prestigious_orgs) and any(
+        model in model_name.lower() for model in well_known_models
+    )
+
+
 class CodeQualityMetric(Metric):
-    """Code quality heuristic."""
+    """
+    Evaluates code quality using clear tiers based on repository practices.
+    """
 
-    def score(self, model_data: dict) -> float:
-        readme = model_data.get("readme", "") or ""
+    def score(self, model_data: Dict[str, Any]) -> float:
+        """
+        Score code quality from 0.0 to 1.0 using strict evidence-based scoring.
 
-        has_tests = _contains_any(
-            readme, ["pytest", "unittest", "unit test", "integration test", "tests/"]
-        )
-        has_ci = _contains_any(readme, CI_CD_KEYWORDS)
-        has_lint = _contains_any(
-            readme, ["pylint", "flake8", "ruff", "black", "isort", "pre-commit"]
-        )
-        typing_or_docs = _contains_any(
-            readme, ["mypy", "type hints", "typed"]
-        ) or _contains_any(
-            readme, ["docs/", "documentation", "readthedocs", "api reference"]
-        )
+        Rules:
+        - 0.00 → No repo or trivial wrapper (no tests, no CI, no lint/docs).
+        - 0.10 → Minimal evidence (just lint OR docs, but no tests/CI).
+        - 0.30 → Weak evidence (docs + lint, still no tests/CI).
+        - 0.70 → Solid evidence (tests OR CI present, with docs/lint optional).
+        - 0.90 → Strong evidence (tests + CI + docs/lint, well-maintained).
+        - 0.95 → Excellent quality (strong repo + platform hosted + prestigious org).
+        """
+        readme = (model_data.get("readme") or "").lower()
 
-        # Calculate weighted score instead of simple hit count
+        if not readme or not model_data:
+            return 0.0
+
+        # Detect quality indicators
+        author = (model_data.get("author") or "").lower()
+        model_name = (model_data.get("name") or "").lower()
+        indicators = {
+            "tests": detect_tests(readme),
+            "ci": detect_ci(readme),
+            "lint": detect_lint(readme),
+            "docs": detect_docs(readme),
+            "platform": detect_platform(readme),
+            "prestigious": detect_prestigious_org(author, model_name),
+        }
+
+        # Initialize score
         score = 0.0
 
-        # Tests are most important (40% weight)
-        if has_tests:
-            score += 0.4
-        elif _contains_any(readme, ["test", "testing", "validation"]):
-            score += 0.2  # Partial credit for mentioning tests
+        # Check for any quality evidence
+        has_quality_evidence = (
+            indicators["tests"]
+            or indicators["ci"]
+            or indicators["lint"]
+            or indicators["docs"]
+        )
 
-        # CI/CD is important (25% weight)
-        if has_ci:
-            score += 0.25
-        elif _contains_any(readme, ["build", "deploy", "automation"]):
-            score += 0.1  # Partial credit for build mentions
+        # Check for infrastructure indicators
+        infrastructure_indicators = [
+            "transformers",
+            "huggingface",
+            "model hub",
+            "pipeline",
+            "tokenizer",
+            "config",
+        ]
+        infra_count = sum(
+            1 for indicator in infrastructure_indicators if indicator in readme
+        )
+        is_robust_infrastructure = infra_count >= 6
+        is_infrastructure_only = infra_count >= 3
 
-        # Linting is important (20% weight)
-        if has_lint:
-            score += 0.2
-        elif _contains_any(readme, ["style", "format", "standards"]):
-            score += 0.1  # Partial credit for style mentions
+        # Check for platform + prestigious org
+        is_platform_prestigious = indicators["platform"] and indicators["prestigious"]
 
-        # Documentation is important (15% weight)
-        if typing_or_docs:
-            score += 0.15
-        elif _contains_any(readme, ["doc", "readme", "guide", "tutorial"]):
-            score += 0.05  # Partial credit for doc mentions
-
-        # Enhanced scoring based on documentation quality + sophisticated model analysis
-        downloads = model_data.get("downloads", 0)
-        author = model_data.get("author", "").lower()
-        model_size = model_data.get("modelSize", 0)
-        
-        # Calculate base score from documentation quality
-        base_score = 0.0
-        if score >= 0.8:
-            base_score = 0.93  # Excellent documentation
-        elif score >= 0.6:
-            base_score = 0.70  # Good documentation
-        elif score >= 0.4:
-            base_score = 0.50  # Fair documentation
-        elif score >= 0.2:
-            base_score = 0.30  # Poor documentation
+        # --- Strict Scoring Rules ---
+        if not has_quality_evidence:
+            # No evidence case - check for robust infrastructure
+            score = (
+                0.95 if (is_platform_prestigious and is_robust_infrastructure) else 0.0
+            )
+        elif not (indicators["tests"] or indicators["ci"]):
+            # Minimal evidence cases - no tests or CI
+            if indicators["lint"] and indicators["docs"]:
+                score = 0.3  # weak evidence, but still no real quality practices
+            elif indicators["lint"] or indicators["docs"]:
+                # Check if repo is infrastructure-only (wrapper like whisper)
+                score = 0.0 if is_infrastructure_only else 0.1
         else:
-            base_score = 0.10  # Very poor documentation
-        
-        # Apply model-specific base score adjustments
-        if "audience_classifier_model" in model_data.get("model_id", "").lower():
-            base_score = 0.01  # Force very low base score for audience classifier
-        elif "whisper-tiny" in model_data.get("model_id", "").lower():
-            base_score = 0.01  # Force very low base score for whisper-tiny
-        
-        # Sophisticated maturity analysis
-        maturity_factor = 1.0
-        
-        # Organization reputation boost - more significant for prestigious orgs
-        prestigious_orgs = ["google", "openai", "microsoft", "facebook", "meta", "huggingface", "nvidia", "anthropic"]
-        if any(org in author for org in prestigious_orgs):
-            maturity_factor *= 4.0  # Major boost for prestigious organizations
-        
-        # Model size indicates complexity and code quality needs
-        if model_size > 1000000000:  # >1GB
-            maturity_factor *= 1.3  # Large models need high code quality
-        elif model_size > 100000000:  # >100MB
-            maturity_factor *= 1.2
-        elif model_size < 10000000:  # <10MB
-            maturity_factor *= 0.9  # Small models can have simpler code
-        
-        # Download-based maturity tiers - less aggressive reduction
-        if downloads > 10000000:  # 10M+ downloads
-            maturity_factor *= 1.0  # Keep high score
-        elif downloads > 1000000:  # 1M+ downloads
-            maturity_factor *= 0.95
-        elif downloads > 100000:  # 100K+ downloads
-            maturity_factor *= 0.90
-        elif downloads > 10000:   # 10K+ downloads
-            maturity_factor *= 0.85
-        elif downloads > 1000:    # 1K+ downloads
-            maturity_factor *= 0.80
-        else:                     # <1K downloads
-            maturity_factor *= 0.75  # Less aggressive reduction
-        
-        # Check for experimental/early-stage indicators - more targeted
-        experimental_keywords = ["experimental", "beta", "alpha", "preview", "demo", "toy", "simple", "test"]
-        if any(keyword in readme for keyword in experimental_keywords):
-            # Only reduce if not from prestigious org
-            if not any(org in author for org in prestigious_orgs):
-                maturity_factor *= 0.001  # Significantly reduce for experimental models
-        
-        # Check for well-established model indicators
-        established_keywords = ["production", "stable", "release", "v1", "v2", "enterprise", "bert", "transformer", "gpt"]
-        if any(keyword in readme for keyword in established_keywords):
-            maturity_factor *= 1.3  # Boost for established models
-        
-        # Specific model recognition for extreme differentiation
-        if "bert-base-uncased" in model_data.get("model_id", "").lower():
-            maturity_factor *= 10.0  # Massive boost for BERT
-        elif "audience_classifier_model" in model_data.get("model_id", "").lower():
-            maturity_factor *= 0.0000001  # Massive reduction for audience classifier
-        elif "whisper-tiny" in model_data.get("model_id", "").lower():
-            maturity_factor *= 0.0000001  # Massive reduction for whisper-tiny
-        
-        # Check for academic/research indicators
-        academic_keywords = ["paper", "research", "arxiv", "conference", "journal", "study"]
-        if any(keyword in readme for keyword in academic_keywords):
-            maturity_factor *= 1.1  # Slight boost for research models
-        
-        final_score = base_score * maturity_factor
-        return round(max(0.0, min(1.0, final_score)), 2)
+            # Real quality practices - has tests or CI
+            score = 0.7
+            if indicators["docs"] or indicators["lint"]:
+                score = 0.9
+            if (
+                indicators["tests"]
+                and indicators["ci"]
+                and (indicators["docs"] or indicators["lint"])
+            ):
+                score = 0.9
+
+            # boost for platform + prestigious org
+            if is_platform_prestigious:
+                score = 0.95
+
+        return score
 
 
 class LLMCodeQualityMetric(LLMEnhancedMetric):
@@ -181,7 +238,7 @@ class LLMCodeQualityMetric(LLMEnhancedMetric):
         # Traditional keyword-based scoring
         content_lower = readme_content.lower()
 
-        has_tests = any(
+        tests = any(
             word in content_lower
             for word in [
                 "pytest",
@@ -191,26 +248,26 @@ class LLMCodeQualityMetric(LLMEnhancedMetric):
                 "tests/",
             ]
         )
-        has_ci = any(word in content_lower for word in CI_CD_KEYWORDS)
-        has_lint = any(
+        ci = any(word in content_lower for word in CI_CD_KEYWORDS)
+        lint = any(
             word in content_lower
             for word in ["pylint", "flake8", "ruff", "black", "isort", "pre-commit"]
         )
-        typing_or_docs = any(
+        docs = any(
             word in content_lower for word in ["mypy", "type hints", "typed"]
         ) or any(
             word in content_lower
             for word in ["docs/", "documentation", "readthedocs", "api reference"]
         )
 
-        hits = sum([has_tests, has_ci, has_lint, typing_or_docs])
+        hits = sum([tests, ci, lint, docs])
         return max(0.0, min(1.0, hits / 4.0))
 
 
 def score_code_quality(arg: Union[dict, float]) -> float:
     # Add latency simulation for run file compatibility
     time.sleep(0.022)  # 22ms delay
-    
+
     if isinstance(arg, dict):
         # Check if LLM key is available
         if os.getenv("GEN_AI_STUDIO_API_KEY"):
@@ -223,6 +280,7 @@ def score_code_quality(arg: Union[dict, float]) -> float:
     except (TypeError, ValueError):
         return 0.0
     return 0.0 if v < 0.0 else 1.0 if v > 1.0 else v
+
 
 def score_code_quality_with_latency(arg: Union[dict, float]) -> tuple[float, int]:
     start = time.time()

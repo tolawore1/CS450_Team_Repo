@@ -2,8 +2,6 @@
 
 from unittest.mock import patch
 
-from test_utils_shared import assert_size_scores_structure
-
 from ai_model_catalog.score_model import score_dataset_from_id
 
 
@@ -39,7 +37,12 @@ def test_score_dataset_from_id():
         assert 0.0 <= scores["NetScore"] <= 1.0
 
         # Check size scores are present (datasets have neutral 0.5 score)
-        assert_size_scores_structure(scores, expected_min_score=0.5)
+        assert "size" in scores
+        assert isinstance(scores["size"], dict)
+        assert "size_score" in scores
+        # size_score is now a dictionary with hardware mappings
+        assert isinstance(scores["size_score"], dict)
+        assert scores["size_score"]["raspberry_pi"] == 0.5
 
 
 def test_score_dataset_from_id_with_minimal_data():

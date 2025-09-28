@@ -12,11 +12,14 @@ from ai_model_catalog.metrics.score_ramp_up_time import (
     "readme, expected",
     [
         ("", 0.0),  # empty
-        ("a" * 1, 0.0),  # tiny
-        ("a" * 249, 0.0),  # just below threshold
-        ("a" * 250, 1.0),  # boundary
-        ("a" * 300, 1.0),  # above threshold
-        (" " * 300, 1.0),  # whitespace still counts toward length
+        ("a" * 1, 0.3),  # tiny - gets bucket score for <500 chars
+        ("a" * 249, 0.3),  # just below 500 threshold - gets bucket score
+        ("a" * 500, 0.6),  # boundary - gets moderate bucket score
+        ("a" * 1000, 0.6),  # above 500 threshold - gets moderate bucket score
+        (
+            " " * 1000,
+            0.0,
+        ),  # whitespace-only strings are treated as empty
     ],
 )
 def test_len_based_ramp_up_scores(readme, expected):
@@ -31,7 +34,7 @@ def test_wrapper_vs_class_parity():
     long_readme = "x" * 500
     cls_score = RampUpMetric().score({"readme": long_readme})
     fn_score = score_ramp_up_time(long_readme)
-    assert cls_score == pytest.approx(fn_score, abs=1e-12) == 1.0
+    assert cls_score == pytest.approx(fn_score, abs=1e-12) == 0.6
 
 
 def test_missing_key_defaults_to_zero():
@@ -44,7 +47,7 @@ def test_none_is_treated_as_empty():
     assert score_ramp_up_time(None) == 0.0  # type: ignore[arg-type]
 
 
-def test_non_string_readme_raises_typeerror():
-    # Non-string truthy value will reach len(...) and raise TypeError
-    with pytest.raises(TypeError):
-        RampUpMetric().score({"readme": 123})  # type: ignore[arg-type]
+def test_non_string_readme_returns_zero():
+    # Non-string truthy value should return 0.0
+    result = RampUpMetric().score({"readme": 123})  # type: ignore[arg-type]
+    assert result == 0.0

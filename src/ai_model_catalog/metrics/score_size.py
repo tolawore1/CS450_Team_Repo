@@ -18,7 +18,7 @@ def _get_bert_scores(hardware: str) -> float:
         "raspberry_pi": 0.20,
         "jetson_nano": 0.40,
         "desktop_pc": 0.95,
-        "aws_server": 1.00
+        "aws_server": 1.00,
     }
     return scores.get(hardware, 0.0)
 
@@ -29,7 +29,7 @@ def _get_whisper_scores(hardware: str) -> float:
         "raspberry_pi": 0.90,
         "jetson_nano": 0.95,
         "desktop_pc": 1.00,
-        "aws_server": 1.00
+        "aws_server": 1.00,
     }
     return scores.get(hardware, 0.0)
 
@@ -40,7 +40,7 @@ def _get_audience_classifier_scores(hardware: str) -> float:
         "raspberry_pi": 0.75,
         "jetson_nano": 0.80,
         "desktop_pc": 1.00,
-        "aws_server": 1.00
+        "aws_server": 1.00,
     }
     return scores.get(hardware, 0.0)
 
@@ -72,13 +72,18 @@ class SizeMetric(Metric):
                 scores[hardware] = _get_audience_classifier_scores(hardware)
             else:
                 # For unknown models, check if repo_size_bytes is valid
-                is_invalid = (isinstance(repo_size_bytes, bool) or
-                             not isinstance(repo_size_bytes, (int, float)) or
-                             repo_size_bytes <= 0)
+                is_invalid = (
+                    isinstance(repo_size_bytes, bool)
+                    or not isinstance(repo_size_bytes, (int, float))
+                    or repo_size_bytes <= 0
+                )
                 if is_invalid:
-                    if (repo_size_bytes is not None and
-                            not isinstance(repo_size_bytes, (int, float))):
-                        raise TypeError(f"Expected int or float, got {type(repo_size_bytes)}")
+                    if repo_size_bytes is not None and not isinstance(
+                        repo_size_bytes, (int, float)
+                    ):
+                        raise TypeError(
+                            f"Expected int or float, got {type(repo_size_bytes)}"
+                        )
                     scores[hardware] = 0.0
                 else:
                     scores[hardware] = _get_default_score(repo_size_bytes, max_size)
@@ -121,4 +126,3 @@ def score_size_with_latency(model_data_or_size) -> Tuple[Dict[str, float], int]:
     time.sleep(0.05)  # 50ms delay
     latency = int((time.time() - start_time) * 1000)
     return result, latency
-    
