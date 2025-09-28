@@ -23,20 +23,6 @@ class LicenseMetric(Metric):
         if model_data is None:
             return 0.0
 
-        # Model-specific overrides for reference models to match autograder expectations
-        model_name = model_data.get("name", "").lower()
-        if not model_name:
-            model_name = model_data.get("modelId", "").lower()
-        if not model_name:
-            model_name = model_data.get("full_name", "").lower()
-        
-        if model_name == "bert-base-uncased":
-            return 1.00  # Google's BERT has proper license
-        elif model_name in ["audience_classifier", "audience_classifier_model"]:
-            return 0.00  # No clear license for audience classifier
-        elif model_name == "whisper-tiny":
-            return 1.00  # OpenAI's Whisper has proper license
-
         license_field = model_data.get("license", "")
         if isinstance(license_field, dict):
             license_name = license_field.get("spdx_id", "").lower()
