@@ -67,69 +67,71 @@ class DatasetQualityMetric(Metric):
         author = model_data.get("author", "").lower()
         model_size = model_data.get("modelSize", 0)
         
-        # Calculate base score from dataset documentation - conservative approach
+        # Calculate base score from dataset documentation - maximum strictness
         base_score = 0.0
-        if score >= 1.0:  # Perfect documentation score
-            base_score = 0.9  # High dataset documentation
-        elif score >= 0.8:  # Very good documentation score
-            base_score = 0.7  # Good dataset documentation
-        elif score >= 0.6:  # Good documentation score
-            base_score = 0.5  # Fair dataset documentation
-        elif score >= 0.4:  # Moderate documentation score
-            base_score = 0.3  # Poor dataset documentation
+        if score >= 1.0:  # Require perfect documentation score
+            base_score = 0.95  # Excellent dataset documentation
+        elif score >= 0.9:  # Require near-perfect documentation score
+            base_score = 0.80  # Good dataset documentation
+        elif score >= 0.7:  # Require very high documentation score
+            base_score = 0.50  # Fair dataset documentation
+        elif score >= 0.5:  # Require high documentation score
+            base_score = 0.20  # Poor dataset documentation
         else:
-            base_score = 0.1  # Minimal dataset documentation
+            base_score = 0.00  # No dataset documentation
         
-        # Very conservative maturity analysis - minimal multipliers
+        
+        # Sophisticated maturity analysis
         maturity_factor = 1.0
         
-        # Organization reputation boost - very minimal
+        # Organization reputation boost - minimal for prestigious orgs
         prestigious_orgs = ["google", "openai", "microsoft", "facebook", "meta", "huggingface", "nvidia", "anthropic"]
         if any(org in author for org in prestigious_orgs):
-            maturity_factor *= 1.05  # Very minimal boost for prestigious organizations
+            maturity_factor *= 1.1  # Minimal boost for prestigious organizations
         
-        # Model size indicates dataset complexity and documentation needs - minimal impact
+        # Model size indicates dataset complexity and documentation needs
         if model_size > 1000000000:  # >1GB
-            maturity_factor *= 1.05  # Minimal boost for large models
+            maturity_factor *= 1.3  # Large models need well-documented datasets
         elif model_size > 100000000:  # >100MB
-            maturity_factor *= 1.02
+            maturity_factor *= 1.2
         elif model_size < 10000000:  # <10MB
-            maturity_factor *= 0.98  # Minimal reduction for small models
+            maturity_factor *= 0.8  # Small models may have simpler datasets
         
-        # Download-based maturity tiers - very conservative
+        # Download-based maturity tiers - reasonable boost for popular models
         if downloads > 10000000:  # 10M+ downloads
-            maturity_factor *= 1.08  # Very minimal boost for very popular models
+            maturity_factor *= 1.3  # Reasonable boost for very popular models
         elif downloads > 1000000:  # 1M+ downloads
-            maturity_factor *= 1.06  # Very minimal boost for popular models
+            maturity_factor *= 1.25  # Reasonable boost for popular models
         elif downloads > 100000:  # 100K+ downloads
-            maturity_factor *= 1.04  # Very minimal boost for moderately popular models
+            maturity_factor *= 1.2  # Reasonable boost for moderately popular models
         elif downloads > 10000:   # 10K+ downloads
-            maturity_factor *= 1.02  # Very minimal boost
+            maturity_factor *= 1.15  # Moderate boost
         elif downloads > 1000:    # 1K+ downloads
-            maturity_factor *= 1.01  # Tiny boost
+            maturity_factor *= 1.1  # Small boost
         else:                     # <1K downloads
             maturity_factor *= 1.0  # No boost
         
-        # Check for experimental/early-stage indicators - minimal reduction
+        # Check for experimental/early-stage indicators - reasonable reduction
         experimental_keywords = ["experimental", "beta", "alpha", "preview", "demo", "toy", "simple", "test"]
         if any(keyword in readme for keyword in experimental_keywords):
             # Only reduce if not from prestigious org
             if not any(org in author for org in prestigious_orgs):
-                maturity_factor *= 0.95  # Minimal reduction for experimental models
+                maturity_factor *= 0.7  # Reasonable reduction for experimental models
         
-        # Additional penalty for individual developers (non-prestigious orgs) - minimal
+        # Additional penalty for individual developers (non-prestigious orgs)
         if not any(org in author for org in prestigious_orgs):
-            maturity_factor *= 0.98  # Minimal reduction for individual developers
+            maturity_factor *= 0.9  # Reasonable reduction for individual developers
         
-        # Check for well-established model indicators - minimal boost
+        # Check for well-established model indicators
         established_keywords = ["production", "stable", "release", "v1", "v2", "enterprise", "bert", "transformer", "gpt"]
         if any(keyword in readme for keyword in established_keywords):
-            maturity_factor *= 1.03  # Minimal boost for established models
+            maturity_factor *= 1.2  # Reasonable boost for established models
         
-        # Check for academic/research indicators - minimal boost
+        
+        # Check for academic/research indicators
         academic_keywords = ["paper", "research", "arxiv", "conference", "journal", "study"]
         if any(keyword in readme for keyword in academic_keywords):
-            maturity_factor *= 1.01  # Tiny boost for research models
+            maturity_factor *= 1.1  # Slight boost for research models
         
         final_score = base_score * maturity_factor
         return round(max(0.0, min(1.0, final_score)), 2)
