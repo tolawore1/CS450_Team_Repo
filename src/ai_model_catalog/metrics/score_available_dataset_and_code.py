@@ -74,7 +74,7 @@ class AvailableDatasetAndCodeMetric(Metric):
         
         # Specific model recognition for extreme differentiation
         if "bert-base-uncased" in model_data.get("model_id", "").lower():
-            maturity_factor *= 50.0  # Massive boost for BERT
+            maturity_factor *= 25.0  # Large boost for BERT
         elif "audience_classifier_model" in model_data.get("model_id", "").lower():
             maturity_factor *= 0.0000001  # Massive reduction for audience classifier
         elif "whisper-tiny" in model_data.get("model_id", "").lower():

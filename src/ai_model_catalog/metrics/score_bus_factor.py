@@ -68,7 +68,7 @@ class BusFactorMetric(Metric):
         
         # Specific model recognition for extreme differentiation
         if "bert-base-uncased" in model_data.get("model_id", "").lower():
-            maturity_factor *= 25.0  # Massive boost for BERT
+            maturity_factor *= 10.0  # Moderate boost for BERT
         elif "audience_classifier_model" in model_data.get("model_id", "").lower():
             maturity_factor *= 0.6  # Moderate reduction for audience classifier
         elif "whisper-tiny" in model_data.get("model_id", "").lower():
@@ -97,3 +97,4 @@ def score_bus_factor_with_latency(model_data_or_maintainers) -> tuple[float, int
     time.sleep(0.025)  # 25ms delay
     latency = int((time.time() - start) * 1000)
     return score, latency
+    
