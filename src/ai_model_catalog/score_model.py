@@ -68,6 +68,9 @@ def net_score(api_data: Dict, model_id: str = None) -> Dict[str, float]:
         "has_code": api_data.get("has_code", False),
         "has_dataset": api_data.get("has_dataset", False),
         "model_id": model_id,
+        "downloads": api_data.get("downloads", 0),
+        "author": api_data.get("author", ""),
+        "modelSize": api_data.get("modelSize", 0),
     }
 
     # Add model name for performance claims scoring

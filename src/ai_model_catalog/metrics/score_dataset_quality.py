@@ -52,6 +52,7 @@ class DatasetQualityMetric(Metric):
             "trained using",
         ]
 
+<<<<<<< HEAD
         # Check if any training line specifically mentions known datasets
         lines = readme.split("\n")
         training_lines = [
@@ -123,6 +124,106 @@ class DatasetQualityMetric(Metric):
         if base_score == 0.0:
             return 0.0
 
+=======
+        # Calculate weighted score instead of simple hit count - more strict
+        score = 0.0
+
+        # Dataset keywords (30%) - require explicit dataset mentions
+        if has_dataset_word:
+            score += 0.3
+        elif _contains_any(readme, ["data", "corpus", "collection"]):
+            score += 0.1  # Reduced score for generic terms
+
+        # Known dataset names (35%) - require specific dataset names
+        if has_known_name:
+            score += 0.35
+        elif _contains_any(readme, ["imagenet", "coco", "mnist", "squad", "glue"]):
+            score += 0.15  # Reduced score for generic datasets
+
+        # Data links (20%) - require explicit dataset links
+        if has_data_link:
+            score += 0.2
+        elif "](" in readme or "http" in readme:
+            score += 0.05  # Minimal score for generic links
+
+        # Dataset tags (15%) - require explicit dataset tags
+        if has_dataset_tag:
+            score += 0.15
+        elif any(tag in tag_str for tag in ["nlp", "vision", "audio", "text"]):
+            score += 0.02  # Minimal score for generic tags
+
+        # Enhanced scoring based on dataset documentation + sophisticated model analysis
+        downloads = model_data.get("downloads", 0)
+        author = model_data.get("author", "").lower()
+        model_size = model_data.get("modelSize", 0)
+        
+        # Calculate base score from dataset documentation - maximum strictness
+        base_score = 0.0
+        if score >= 1.0:  # Require perfect documentation score
+            base_score = 0.95  # Excellent dataset documentation
+        elif score >= 0.9:  # Require near-perfect documentation score
+            base_score = 0.80  # Good dataset documentation
+        elif score >= 0.7:  # Require very high documentation score
+            base_score = 0.50  # Fair dataset documentation
+        elif score >= 0.5:  # Require high documentation score
+            base_score = 0.20  # Poor dataset documentation
+        else:
+            base_score = 0.00  # No dataset documentation
+        
+        
+        # Sophisticated maturity analysis
+        maturity_factor = 1.0
+        
+        # Organization reputation boost - minimal for prestigious orgs
+        prestigious_orgs = ["google", "openai", "microsoft", "facebook", "meta", "huggingface", "nvidia", "anthropic"]
+        if any(org in author for org in prestigious_orgs):
+            maturity_factor *= 1.1  # Minimal boost for prestigious organizations
+        
+        # Model size indicates dataset complexity and documentation needs
+        if model_size > 1000000000:  # >1GB
+            maturity_factor *= 1.3  # Large models need well-documented datasets
+        elif model_size > 100000000:  # >100MB
+            maturity_factor *= 1.2
+        elif model_size < 10000000:  # <10MB
+            maturity_factor *= 0.8  # Small models may have simpler datasets
+        
+        # Download-based maturity tiers - more aggressive boost for popular models
+        if downloads > 10000000:  # 10M+ downloads
+            maturity_factor *= 3.0  # Major boost for very popular models
+        elif downloads > 1000000:  # 1M+ downloads
+            maturity_factor *= 2.5  # Large boost for popular models
+        elif downloads > 100000:  # 100K+ downloads
+            maturity_factor *= 2.0  # Boost for moderately popular models
+        elif downloads > 10000:   # 10K+ downloads
+            maturity_factor *= 1.5  # Moderate boost
+        elif downloads > 1000:    # 1K+ downloads
+            maturity_factor *= 1.2  # Small boost
+        else:                     # <1K downloads
+            maturity_factor *= 1.0  # No boost
+        
+        # Check for experimental/early-stage indicators - extremely aggressive
+        experimental_keywords = ["experimental", "beta", "alpha", "preview", "demo", "toy", "simple", "test"]
+        if any(keyword in readme for keyword in experimental_keywords):
+            # Only reduce if not from prestigious org
+            if not any(org in author for org in prestigious_orgs):
+                maturity_factor *= 0.001  # Extremely reduce for experimental models
+        
+        # Additional penalty for individual developers (non-prestigious orgs)
+        if not any(org in author for org in prestigious_orgs):
+            maturity_factor *= 0.1  # Reduce for individual developers
+        
+        # Check for well-established model indicators
+        established_keywords = ["production", "stable", "release", "v1", "v2", "enterprise", "bert", "transformer", "gpt"]
+        if any(keyword in readme for keyword in established_keywords):
+            maturity_factor *= 2.0  # Boost for established models
+        
+        
+        # Check for academic/research indicators
+        academic_keywords = ["paper", "research", "arxiv", "conference", "journal", "study"]
+        if any(keyword in readme for keyword in academic_keywords):
+            maturity_factor *= 1.1  # Slight boost for research models
+        
+>>>>>>> cc9dc9d8d68bfb26b4b74ada651954f1afe337e9
         final_score = base_score * maturity_factor
 
         # Cap excellent but not ideal datasets at 0.95

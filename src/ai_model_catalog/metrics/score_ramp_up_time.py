@@ -90,3 +90,4 @@ def score_ramp_up_time_with_latency(model_data_or_readme) -> tuple[float, int]:
     time.sleep(0.045)
     latency = int((time.time() - start) * 1000)
     return score, latency
+
