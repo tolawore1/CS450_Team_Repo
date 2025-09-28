@@ -23,109 +23,36 @@ class LicenseMetric(Metric):
         if model_data is None:
             return 0.0
 
-        # More realistic license detection logic
         license_field = model_data.get("license", "")
-        readme = model_data.get("readme", "").lower()
-        
-        # Check for explicit license information
-        has_explicit_license = False
         if isinstance(license_field, dict):
             license_name = license_field.get("spdx_id", "").lower()
-            if license_name:
-                has_explicit_license = True
         else:
             license_name = str(license_field).lower()
-            if license_name and license_name != "none" and license_name != "null":
-                has_explicit_license = True
 
-        # Check README for license information
-        has_readme_license = False
         for compatible in self.COMPATIBLE_LICENSES:
-            if compatible in license_name or compatible in readme:
-                has_readme_license = True
-                break
+            if compatible in license_name:
+                return 1.0
 
-        # Check for common license patterns in README
+        # If API license is not found, check README content
+        readme = model_data.get("readme", "").lower()
+        for compatible in self.COMPATIBLE_LICENSES:
+            if compatible in readme:
+                return 1.0
+
+        # Also check for common license patterns in README
         license_patterns = [
-            "license: apache-2.0", "license: mit", "license: bsd",
-            "apache 2.0", "mit license", "bsd license"
+            "license: apache-2.0",
+            "license: mit",
+            "license: bsd",
+            "apache 2.0",
+            "mit license",
+            "bsd license",
         ]
         for pattern in license_patterns:
             if pattern in readme:
-                has_readme_license = True
-                break
+                return 1.0
 
-        # Enhanced scoring based on license clarity + sophisticated model analysis
-        downloads = model_data.get("downloads", 0)
-        author = model_data.get("author", "").lower()
-        model_size = model_data.get("modelSize", 0)
-        
-        # Calculate base score from license clarity
-        base_score = 0.0
-        if has_explicit_license and has_readme_license:
-            base_score = 1.0  # Clear compatible license
-        elif has_explicit_license or has_readme_license:
-            base_score = 0.5  # Some license information
-        else:
-            base_score = 0.0  # No clear license
-        
-        # Sophisticated maturity analysis
-        maturity_factor = 1.0
-        
-        # Organization reputation boost - more significant for prestigious orgs
-        prestigious_orgs = ["google", "openai", "microsoft", "facebook", "meta", "huggingface", "nvidia", "anthropic"]
-        if any(org in author for org in prestigious_orgs):
-            maturity_factor *= 4.0  # Major boost for prestigious organizations
-        
-        # Model size indicates licensing complexity needs
-        if model_size > 1000000000:  # >1GB
-            maturity_factor *= 1.3  # Large models need clear licensing
-        elif model_size > 100000000:  # >100MB
-            maturity_factor *= 1.2
-        elif model_size < 10000000:  # <10MB
-            maturity_factor *= 0.9  # Small models may have simpler licensing
-        
-        # Download-based maturity tiers - less aggressive reduction
-        if downloads > 10000000:  # 10M+ downloads
-            maturity_factor *= 1.0  # Keep high score
-        elif downloads > 1000000:  # 1M+ downloads
-            maturity_factor *= 0.95
-        elif downloads > 100000:  # 100K+ downloads
-            maturity_factor *= 0.90
-        elif downloads > 10000:   # 10K+ downloads
-            maturity_factor *= 0.85
-        elif downloads > 1000:    # 1K+ downloads
-            maturity_factor *= 0.80
-        else:                     # <1K downloads
-            maturity_factor *= 0.75  # Less aggressive reduction
-        
-        # Check for experimental/early-stage indicators - more targeted
-        experimental_keywords = ["experimental", "beta", "alpha", "preview", "demo", "toy", "simple", "test"]
-        if any(keyword in readme for keyword in experimental_keywords):
-            # Only reduce if not from prestigious org
-            if not any(org in author for org in prestigious_orgs):
-                maturity_factor *= 0.1  # Significantly reduce for experimental models
-        
-        # Check for well-established model indicators
-        established_keywords = ["production", "stable", "release", "v1", "v2", "enterprise", "bert", "transformer", "gpt"]
-        if any(keyword in readme for keyword in established_keywords):
-            maturity_factor *= 1.3  # Boost for established models
-        
-        # Check for academic/research indicators
-        academic_keywords = ["paper", "research", "arxiv", "conference", "journal", "study"]
-        if any(keyword in readme for keyword in academic_keywords):
-            maturity_factor *= 1.1  # Slight boost for research models
-        
-        # Specific model recognition for extreme differentiation
-        if "bert-base-uncased" in model_data.get("model_id", "").lower():
-            maturity_factor *= 50.0  # Massive boost for BERT
-        elif "audience_classifier_model" in model_data.get("model_id", "").lower():
-            maturity_factor *= 0.0000001  # Massive reduction for audience classifier
-        elif "whisper-tiny" in model_data.get("model_id", "").lower():
-            maturity_factor *= 50.0  # Massive boost for whisper-tiny
-        
-        final_score = base_score * maturity_factor
-        return round(max(0.0, min(1.0, final_score)), 2)
+        return 0.0
 
 
 def score_license(model_data) -> float:
