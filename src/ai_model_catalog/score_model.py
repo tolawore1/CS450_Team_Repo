@@ -30,8 +30,8 @@ def _ensure_size_score_structure(size_scores):
     for hardware in ["raspberry_pi", "jetson_nano", "desktop_pc", "aws_server"]:
         if hardware not in size_scores:
             size_scores[hardware] = 0.0
-        # Ensure the value is a float, not boolean
-        size_scores[hardware] = float(size_scores[hardware])
+        # Ensure the value is a float, not boolean, and round to 2 decimal places
+        size_scores[hardware] = round(float(size_scores[hardware]), 2)
 
     return size_scores
 
@@ -87,20 +87,35 @@ def net_score(api_data: Dict) -> Dict[str, float]:
 
     scores = {
         "size": size_scores,  # Keep the full object for NDJSON output
-        "size_score": size_score_avg,  # Single float for net score calculation
-        "license": max(0.0, min(1.0, score_license(model_data))),
-        "ramp_up_time": max(0.0, min(1.0, score_ramp_up_time(model_data["readme"]))),
-        "bus_factor": max(0.0, min(1.0, score_bus_factor(model_data["maintainers"]))),
-        "availability": max(
-            0.0,
-            min(
-                1.0,
-                score_availability(model_data["has_code"], model_data["has_dataset"]),
-            ),
+        "size_score": round(
+            size_score_avg, 2
+        ),  # Single float for net score calculation
+        "license": round(max(0.0, min(1.0, score_license(model_data))), 2),
+        "ramp_up_time": round(
+            max(0.0, min(1.0, score_ramp_up_time(model_data["readme"]))), 2
         ),
-        "dataset_quality": max(0.0, min(1.0, score_dataset_quality(api_data))),
-        "code_quality": max(0.0, min(1.0, score_code_quality(api_data))),
-        "performance_claims": max(0.0, min(1.0, score_performance_claims(model_data))),
+        "bus_factor": round(
+            max(0.0, min(1.0, score_bus_factor(model_data["maintainers"]))), 2
+        ),
+        "availability": round(
+            max(
+                0.0,
+                min(
+                    1.0,
+                    score_availability(
+                        model_data["has_code"], model_data["has_dataset"]
+                    ),
+                ),
+            ),
+            2,
+        ),
+        "dataset_quality": round(
+            max(0.0, min(1.0, score_dataset_quality(api_data))), 2
+        ),
+        "code_quality": round(max(0.0, min(1.0, score_code_quality(api_data))), 2),
+        "performance_claims": round(
+            max(0.0, min(1.0, score_performance_claims(model_data))), 2
+        ),
     }
 
     weights = {
@@ -115,7 +130,7 @@ def net_score(api_data: Dict) -> Dict[str, float]:
     }
 
     netscore = sum(scores[k] * weights[k] for k in weights)
-    scores["NetScore"] = round(netscore, 3)
+    scores["NetScore"] = round(netscore, 2)
     log.debug("component scores=%s", scores)
     log.info("NetScore=%s", scores["NetScore"])
     return scores
@@ -148,28 +163,41 @@ def score_dataset_from_id(dataset_id: str) -> Dict[str, float]:
 
     # Get size scores (minimal for datasets)
     size_scores = {
-        "raspberry_pi": 0.5,
-        "jetson_nano": 0.5,
-        "desktop_pc": 0.5,
-        "aws_server": 0.5,
+        "raspberry_pi": 0.50,
+        "jetson_nano": 0.50,
+        "desktop_pc": 0.50,
+        "aws_server": 0.50,
     }
 
     scores = {
         "size": size_scores,
-        "size_score": 0.5,  # Neutral score for datasets
-        "license": max(0.0, min(1.0, score_license(model_data))),
-        "ramp_up_time": max(0.0, min(1.0, score_ramp_up_time(model_data["readme"]))),
-        "bus_factor": max(0.0, min(1.0, score_bus_factor(model_data["maintainers"]))),
-        "availability": max(
-            0.0,
-            min(
-                1.0,
-                score_availability(model_data["has_code"], model_data["has_dataset"]),
-            ),
+        "size_score": 0.50,  # Neutral score for datasets
+        "license": round(max(0.0, min(1.0, score_license(model_data))), 2),
+        "ramp_up_time": round(
+            max(0.0, min(1.0, score_ramp_up_time(model_data["readme"]))), 2
         ),
-        "dataset_quality": max(0.0, min(1.0, score_dataset_quality(api_data))),
-        "code_quality": 0.0,  # Datasets don't have code quality
-        "performance_claims": max(0.0, min(1.0, score_performance_claims(model_data))),
+        "bus_factor": round(
+            max(0.0, min(1.0, score_bus_factor(model_data["maintainers"]))), 2
+        ),
+        "availability": round(
+            max(
+                0.0,
+                min(
+                    1.0,
+                    score_availability(
+                        model_data["has_code"], model_data["has_dataset"]
+                    ),
+                ),
+            ),
+            2,
+        ),
+        "dataset_quality": round(
+            max(0.0, min(1.0, score_dataset_quality(api_data))), 2
+        ),
+        "code_quality": 0.00,  # Datasets don't have code quality
+        "performance_claims": round(
+            max(0.0, min(1.0, score_performance_claims(model_data))), 2
+        ),
     }
 
     # Calculate NetScore
@@ -185,6 +213,6 @@ def score_dataset_from_id(dataset_id: str) -> Dict[str, float]:
     }
 
     netscore = sum(scores[k] * weights[k] for k in weights if weights[k] > 0)
-    scores["NetScore"] = round(netscore, 3)
+    scores["NetScore"] = round(netscore, 2)
 
     return scores

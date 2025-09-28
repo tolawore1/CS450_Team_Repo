@@ -199,6 +199,6 @@ def _display_scores(data: Dict[str, Any]) -> None:
             # Display size scores as hardware mappings
             typer.echo(f"{key}:")
             for hardware, score in value.items():
-                typer.echo(f"  {hardware}: {score:.3f}")
+                typer.echo(f"  {hardware}: {score:.2f}")
         else:
-            typer.echo(f"{key}: {value:.3f}")
+            typer.echo(f"{key}: {value:.2f}")
