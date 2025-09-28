@@ -27,10 +27,10 @@ class BusFactorMetric(Metric):
         # Sophisticated maturity analysis
         maturity_factor = 1.0
         
-        # Organization reputation boost - reasonable for prestigious orgs
+        # Organization reputation boost - very minimal for prestigious orgs
         prestigious_orgs = ["google", "openai", "microsoft", "facebook", "meta", "huggingface", "nvidia", "anthropic"]
         if any(org in author for org in prestigious_orgs):
-            maturity_factor *= 1.1  # Reasonable boost for prestigious organizations
+            maturity_factor *= 1.01  # Very minimal boost for prestigious organizations
         
         # Model size indicates complexity and maintenance needs
         if model_size > 1000000000:  # >1GB
@@ -40,17 +40,17 @@ class BusFactorMetric(Metric):
         elif model_size < 10000000:  # <10MB
             maturity_factor *= 0.9  # Small models are easier to maintain
         
-        # Download-based maturity tiers - reasonable boost for popular models
+        # Download-based maturity tiers - very conservative boost for popular models
         if downloads > 10000000:  # 10M+ downloads
-            maturity_factor *= 1.2  # Reasonable boost for very popular models
+            maturity_factor *= 1.05  # Very minimal boost for very popular models
         elif downloads > 1000000:  # 1M+ downloads
-            maturity_factor *= 1.15  # Reasonable boost for popular models
+            maturity_factor *= 1.03  # Very minimal boost for popular models
         elif downloads > 100000:  # 100K+ downloads
-            maturity_factor *= 1.1  # Reasonable boost for moderately popular models
+            maturity_factor *= 1.02  # Very minimal boost for moderately popular models
         elif downloads > 10000:   # 10K+ downloads
-            maturity_factor *= 1.05  # Moderate boost
+            maturity_factor *= 1.01  # Tiny boost
         elif downloads > 1000:    # 1K+ downloads
-            maturity_factor *= 1.02  # Small boost
+            maturity_factor *= 1.005  # Tiny boost
         else:                     # <1K downloads
             maturity_factor *= 1.0  # No boost
         
