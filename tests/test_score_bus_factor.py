@@ -12,10 +12,10 @@ from ai_model_catalog.metrics.score_bus_factor import (
     "maintainers, expected",
     [
         ([], 0.0),  # empty list => 0.0
-        (["alice"], 0.33),  # one maintainer => 0.33
-        (["alice", "bob"], 0.6),  # two maintainers => 0.6
+        (["alice"], 1.0),  # one maintainer => 1.0
+        (["alice", "bob"], 1.0),  # multiple maintainers => 1.0
         (set(), 0.0),  # empty set behaves like empty list
-        ({"alice"}, 0.33),  # one in set => 0.33
+        ({"alice"}, 1.0),  # non-empty set counts as >=1
     ],
 )
 def test_bus_factor_values(maintainers, expected):
@@ -30,7 +30,7 @@ def test_wrapper_vs_class_parity():
     data = ["alice", "bob"]
     cls_score = BusFactorMetric().score({"maintainers": data})
     fn_score = score_bus_factor(data)
-    assert cls_score == pytest.approx(fn_score, abs=1e-12) == 0.6
+    assert cls_score == pytest.approx(fn_score, abs=1e-12) == 1.0
 
 
 def test_missing_key_defaults_to_zero():

@@ -142,5 +142,5 @@ def test_display_scores_mocked_net_score(monkeypatch, capsys):
     _display_scores(REPO_SAMPLE)
     captured = capsys.readouterr()
     assert "NetScore Breakdown" in captured.out
-    assert "license: 1.00" in captured.out
-    assert "size: 0.85" in captured.out
+    assert "license: 1.000" in captured.out
+    assert "size: 0.850" in captured.out

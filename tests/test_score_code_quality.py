@@ -10,16 +10,16 @@ from ai_model_catalog.metrics.score_code_quality import (
     "readme, expected",
     [
         ("", 0.0),  # no signals
-        ("This project uses pytest.", 0.7),  # tests only - solid evidence
-        ("pytest + GitHub Actions workflow.", 0.7),  # tests + CI - solid evidence
+        ("This project uses pytest.", 0.4),  # tests only (40% weight)
+        ("pytest + GitHub Actions workflow.", 0.65),  # tests (40%) + CI (25%)
         (
             "pytest + workflow + black formatter.",
-            0.9,
-        ),  # tests + CI + lint - strong evidence
+            0.85,
+        ),  # tests (40%) + CI (25%) + lint (20%)
         (
             "pytest + workflow + black + mypy",
-            0.9,
-        ),  # all four buckets - strong evidence
+            1.0,
+        ),  # all four buckets (40% + 25% + 20% + 15%)
     ],
 )
 def test_bucket_counts(readme, expected):
@@ -37,7 +37,7 @@ def test_case_insensitive_and_synonyms():
     Pre-Commit runs Ruff and Black.
     API Reference on ReadTheDocs."""
     s = CodeQualityMetric().score({"readme": readme})
-    assert s == pytest.approx(0.9, abs=1e-12)
+    assert s == pytest.approx(1.0, abs=1e-12)
 
 
 def test_missing_readme_defaults_to_zero():

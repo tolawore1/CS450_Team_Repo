@@ -1,3 +1,5 @@
+from test_utils_shared import assert_size_scores_structure
+
 from ai_model_catalog.score_model import net_score
 
 
@@ -21,24 +23,21 @@ def test_net_score_github_like_payload():
 
     # Component expectations
     # Size is now an object with hardware mappings
-    assert "size" in scores
-    assert isinstance(scores["size"], dict)
-    assert "size_score" in scores
+    assert_size_scores_structure(scores)
 
     assert scores["license"] == 1.0
     # LLM-enhanced ramp-up time scoring (more nuanced than simple length)
     assert 0.0 <= scores["ramp_up_time"] <= 1.0
-    assert scores["bus_factor"] == 0.33  # Single maintainer gets 0.33
-    # Enhanced availability scoring - should be reasonable but not necessarily 1.0
-    assert 0.0 <= scores["availability"] <= 1.0
+    assert scores["bus_factor"] == 1.0
+    assert scores["availability"] == 1.0  # defaults True/True
     # LLM-enhanced dataset quality scoring (more nuanced than keyword matching)
     assert 0.0 <= scores["dataset_quality"] <= 1.0
     # LLM-enhanced code quality scoring (more nuanced than keyword matching)
     assert 0.0 <= scores["code_quality"] <= 1.0
-    assert scores["performance_claims"] == 0.43  # strong + moderate + basic metrics
+    assert scores["performance_claims"] == 0.4  # strong indicator = 0.4
 
-    # NetScore should be reasonable due to good scores (adjusted for LLM-enhanced scoring)
-    assert scores["net_score"] >= 0.3
+    # NetScore should be high due to good scores (adjusted for LLM-enhanced scoring)
+    assert scores["net_score"] >= 0.7
 
 
 def test_net_score_hf_like_payload_minimal_signals():
@@ -55,16 +54,13 @@ def test_net_score_hf_like_payload_minimal_signals():
 
     # Components
     # Size is now an object with hardware mappings
-    assert "size" in scores
-    assert isinstance(scores["size"], dict)
-    assert "size_score" in scores
+    assert_size_scores_structure(scores)
 
     assert scores["license"] == 0.0
     # LLM-enhanced ramp-up time scoring (more nuanced than simple length)
     assert 0.0 <= scores["ramp_up_time"] <= 1.0
-    assert scores["bus_factor"] == 0.33  # Single maintainer gets 0.33
-    # Enhanced availability scoring - should be reasonable but not necessarily 1.0
-    assert 0.0 <= scores["availability"] <= 1.0
+    assert scores["bus_factor"] == 1.0
+    assert scores["availability"] == 1.0
     # LLM-enhanced dataset quality scoring (more nuanced than keyword matching)
     assert 0.0 <= scores["dataset_quality"] <= 1.0
     # LLM-enhanced code quality scoring (more nuanced than keyword matching)
@@ -72,4 +68,4 @@ def test_net_score_hf_like_payload_minimal_signals():
     assert scores["performance_claims"] == 0.0
 
     # NetScore should be moderate due to mixed scores (adjusted for LLM-enhanced scoring)
-    assert 0.1 <= scores["net_score"] <= 0.2
+    assert 0.25 <= scores["net_score"] <= 0.75

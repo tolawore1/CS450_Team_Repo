@@ -1,8 +1,8 @@
 import json
 
-from unittest.mock import mock_open
 import pytest
 from typer.testing import CliRunner
+from unittest.mock import mock_open
 
 from ai_model_catalog.cli import app
 
@@ -63,12 +63,7 @@ def test_multiple_urls_command_smoke(monkeypatch):
             "performance_claims_latency": 35,
             "license": 1.0,
             "license_latency": 10,
-            "size_score": {
-                "raspberry_pi": 0.2,
-                "jetson_nano": 0.4,
-                "desktop_pc": 0.95,
-                "aws_server": 1.0,
-            },
+            "size_score": {"raspberry_pi": 0.2, "jetson_nano": 0.4, "desktop_pc": 0.95, "aws_server": 1.0},
             "size_score_latency": 50,
             "dataset_and_code_score": 0.9,
             "dataset_and_code_score_latency": 15,
@@ -81,21 +76,10 @@ def test_multiple_urls_command_smoke(monkeypatch):
     )
 
     # Mock the URL_FILE.txt content
-    monkeypatch.setattr(
-        "builtins.open",
-        mock_open(
-            read_data=(
-                "https://github.com/google-research/bert, "
-                "https://huggingface.co/datasets/bookcorpus/bookcorpus, "
-                "https://huggingface.co/google-bert/bert-base-uncased\n"
-                ",,https://huggingface.co/parvk11/audience_classifier_model\n"
-                ",,https://huggingface.co/openai/whisper-tiny/tree/main"
-            )
-        ),
-    )
+    monkeypatch.setattr("builtins.open", mock_open(read_data="https://github.com/google-research/bert, https://huggingface.co/datasets/bookcorpus/bookcorpus, https://huggingface.co/google-bert/bert-base-uncased\n,,https://huggingface.co/parvk11/audience_classifier_model\n,,https://huggingface.co/openai/whisper-tiny/tree/main"))
 
     # Test the multiple-urls command
-    result = runner.invoke(app, ["multiple-urls"])
+    result = runner.invoke(app, [])
     assert result.exit_code == 0
     assert "bert-base-uncased" in result.output
 
@@ -103,9 +87,7 @@ def test_multiple_urls_command_smoke(monkeypatch):
 def test_invalid_command():
     result = runner.invoke(app, ["invalid_command"])
     assert result.exit_code != 0
-
-
-# Removed problematic CLI tests that were causing failures
+    assert "Usage:" in result.output
 
 
 def test_ndjson_output_structure():

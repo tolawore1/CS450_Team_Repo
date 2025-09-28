@@ -1,5 +1,4 @@
 import json
-import re
 from typing import Optional, Dict, Any
 
 import typer
@@ -52,22 +51,16 @@ def build_ndjson_line(
         "bus_factor": safe_float(scores.get("bus_factor")),
         "bus_factor_latency": safe_int(scores.get("bus_factor_latency")),
         "performance_claims": safe_float(scores.get("performance_claims")),
-        "performance_claims_latency": safe_int(
-            scores.get("performance_claims_latency")
-        ),
+        "performance_claims_latency": safe_int(scores.get("performance_claims_latency")),
         "license": safe_float(scores.get("license")),
         "license_latency": safe_int(scores.get("license_latency")),
         "size_score": size_score,
-        "size_score_latency": safe_int(
-            scores.get("size_score_latency", scores.get("size_latency", 0))
-        ),
+        "size_score_latency": safe_int(scores.get("size_score_latency", scores.get("size_latency", 0))),
         "dataset_and_code_score": safe_float(
             scores.get("dataset_and_code_score", scores.get("availability", 0.0))
         ),
         "dataset_and_code_score_latency": safe_int(
-            scores.get(
-                "dataset_and_code_score_latency", scores.get("availability_latency", 0)
-            )
+            scores.get("dataset_and_code_score_latency", scores.get("availability_latency", 0))
         ),
         "dataset_quality": safe_float(scores.get("dataset_quality")),
         "dataset_quality_latency": safe_int(scores.get("dataset_quality_latency")),
@@ -91,9 +84,7 @@ def models(
 
     if output_format == "ndjson":
         scores = score_repo_from_owner_and_repo(owner, repo)
-        line = build_ndjson_line(
-            raw.get("full_name") or f"{owner}/{repo}", "REPOSITORY", scores
-        )
+        line = build_ndjson_line(raw.get("full_name") or f"{owner}/{repo}", "REPOSITORY", scores)
         typer.echo(json.dumps(line))
         return
 
@@ -118,7 +109,7 @@ def hf_model(
             scores = score_model_from_id(model_id)
             line = build_ndjson_line(model_id, "MODEL", scores)
             typer.echo(json.dumps(line))
-        except (ValueError, KeyError, OSError) as e:
+        except Exception as e:
             typer.echo(f"Error scoring model: {e}", err=True)
         return
 
@@ -167,7 +158,7 @@ def multiple_urls():
     for line in lines:
         # Split by comma and process each URL
         urls = [url.strip() for url in line.split(",") if url.strip()]
-
+        
         # Process the model URL from each line
         if len(urls) >= 3:
             # First line: take the 3rd URL (index 2)
@@ -177,7 +168,7 @@ def multiple_urls():
             url = urls[0]
         else:
             continue
-
+            
         # Handle Hugging Face models
         if "huggingface.co" in url:
             try:
@@ -185,102 +176,55 @@ def multiple_urls():
                 if "/tree/" in url:
                     # Remove /tree/main or similar
                     url = url.split("/tree/")[0]
-
+                
                 # Extract model ID from path
                 path = url.split("huggingface.co/", 1)[1]
                 model_id = path.strip("/")
-
+                
                 scores = score_model_from_id(model_id)
                 # Extract just the model name for display
                 model_name = model_id.split("/")[-1]
                 line = build_ndjson_line(model_name, "MODEL", scores)
-
+                
                 # Format all float values to 2 decimal precision
-                json_str = json.dumps(line, separators=(",", ":"))  # Remove spaces
-
+                json_str = json.dumps(line, separators=(',', ':'))  # Remove spaces
+                
                 # Fix all float values to 2 decimal places
-
+                import re
+                
                 # Fix net_score precision
-                json_str = re.sub(
-                    r'"net_score":(\d+\.?\d*)',
-                    lambda m: f'"net_score":{float(m.group(1)):.2f}',
-                    json_str,
-                )
-
+                json_str = re.sub(r'"net_score":(\d+\.?\d*)', lambda m: f'"net_score":{float(m.group(1)):.2f}', json_str)
+                
                 # Fix ramp_up_time precision
-                json_str = re.sub(
-                    r'"ramp_up_time":(\d+\.?\d*)',
-                    lambda m: f'"ramp_up_time":{float(m.group(1)):.2f}',
-                    json_str,
-                )
-
+                json_str = re.sub(r'"ramp_up_time":(\d+\.?\d*)', lambda m: f'"ramp_up_time":{float(m.group(1)):.2f}', json_str)
+                
                 # Fix bus_factor precision
-                json_str = re.sub(
-                    r'"bus_factor":(\d+\.?\d*)',
-                    lambda m: f'"bus_factor":{float(m.group(1)):.2f}',
-                    json_str,
-                )
-
+                json_str = re.sub(r'"bus_factor":(\d+\.?\d*)', lambda m: f'"bus_factor":{float(m.group(1)):.2f}', json_str)
+                
                 # Fix performance_claims precision
-                json_str = re.sub(
-                    r'"performance_claims":(\d+\.?\d*)',
-                    lambda m: f'"performance_claims":{float(m.group(1)):.2f}',
-                    json_str,
-                )
-
+                json_str = re.sub(r'"performance_claims":(\d+\.?\d*)', lambda m: f'"performance_claims":{float(m.group(1)):.2f}', json_str)
+                
                 # Fix license precision
-                json_str = re.sub(
-                    r'"license":(\d+\.?\d*)',
-                    lambda m: f'"license":{float(m.group(1)):.2f}',
-                    json_str,
-                )
-
+                json_str = re.sub(r'"license":(\d+\.?\d*)', lambda m: f'"license":{float(m.group(1)):.2f}', json_str)
+                
                 # Fix dataset_and_code_score precision
-                json_str = re.sub(
-                    r'"dataset_and_code_score":(\d+\.?\d*)',
-                    lambda m: f'"dataset_and_code_score":{float(m.group(1)):.2f}',
-                    json_str,
-                )
-
+                json_str = re.sub(r'"dataset_and_code_score":(\d+\.?\d*)', lambda m: f'"dataset_and_code_score":{float(m.group(1)):.2f}', json_str)
+                
                 # Fix dataset_quality precision
-                json_str = re.sub(
-                    r'"dataset_quality":(\d+\.?\d*)',
-                    lambda m: f'"dataset_quality":{float(m.group(1)):.2f}',
-                    json_str,
-                )
-
+                json_str = re.sub(r'"dataset_quality":(\d+\.?\d*)', lambda m: f'"dataset_quality":{float(m.group(1)):.2f}', json_str)
+                
                 # Fix code_quality precision
-                json_str = re.sub(
-                    r'"code_quality":(\d+\.?\d*)',
-                    lambda m: f'"code_quality":{float(m.group(1)):.2f}',
-                    json_str,
-                )
-
+                json_str = re.sub(r'"code_quality":(\d+\.?\d*)', lambda m: f'"code_quality":{float(m.group(1)):.2f}', json_str)
+                
                 # Fix size_score object values precision
-                json_str = re.sub(
-                    r'"raspberry_pi":(\d+\.?\d*)',
-                    lambda m: f'"raspberry_pi":{float(m.group(1)):.2f}',
-                    json_str,
-                )
-                json_str = re.sub(
-                    r'"jetson_nano":(\d+\.?\d*)',
-                    lambda m: f'"jetson_nano":{float(m.group(1)):.2f}',
-                    json_str,
-                )
-                json_str = re.sub(
-                    r'"desktop_pc":(\d+\.?\d*)',
-                    lambda m: f'"desktop_pc":{float(m.group(1)):.2f}',
-                    json_str,
-                )
-                json_str = re.sub(
-                    r'"aws_server":(\d+\.?\d*)',
-                    lambda m: f'"aws_server":{float(m.group(1)):.2f}',
-                    json_str,
-                )
-
+                json_str = re.sub(r'"raspberry_pi":(\d+\.?\d*)', lambda m: f'"raspberry_pi":{float(m.group(1)):.2f}', json_str)
+                json_str = re.sub(r'"jetson_nano":(\d+\.?\d*)', lambda m: f'"jetson_nano":{float(m.group(1)):.2f}', json_str)
+                json_str = re.sub(r'"desktop_pc":(\d+\.?\d*)', lambda m: f'"desktop_pc":{float(m.group(1)):.2f}', json_str)
+                json_str = re.sub(r'"aws_server":(\d+\.?\d*)', lambda m: f'"aws_server":{float(m.group(1)):.2f}', json_str)
+                
                 typer.echo(json_str)
-
-            except (ValueError, KeyError, OSError, ConnectionError) as e:
+                
+            except Exception as e:
                 typer.echo(f"Error processing Hugging Face URL {url}: {e}", err=True)
                 continue
 

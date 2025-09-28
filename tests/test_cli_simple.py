@@ -1,7 +1,7 @@
 """Simple CLI tests for the active commands."""
 
 import json
-from unittest.mock import mock_open, patch
+from unittest.mock import MagicMock, mock_open, patch
 
 from typer.testing import CliRunner
 
@@ -24,12 +24,7 @@ def test_multiple_urls_command():
             "performance_claims_latency": 35,
             "license": 1.0,
             "license_latency": 10,
-            "size_score": {
-                "raspberry_pi": 0.2,
-                "jetson_nano": 0.4,
-                "desktop_pc": 0.95,
-                "aws_server": 1.0,
-            },
+            "size_score": {"raspberry_pi": 0.2, "jetson_nano": 0.4, "desktop_pc": 0.95, "aws_server": 1.0},
             "size_score_latency": 50,
             "dataset_and_code_score": 0.9,
             "dataset_and_code_score_latency": 15,
@@ -40,25 +35,14 @@ def test_multiple_urls_command():
         }
 
         # Mock the URL_FILE.txt content
-        with patch(
-            "builtins.open",
-            mock_open(
-                read_data=(
-                    "https://github.com/google-research/bert, "
-                    "https://huggingface.co/datasets/bookcorpus/bookcorpus, "
-                    "https://huggingface.co/google-bert/bert-base-uncased\n"
-                    ",,https://huggingface.co/parvk11/audience_classifier_model\n"
-                    ",,https://huggingface.co/openai/whisper-tiny/tree/main"
-                )
-            ),
-        ):
-            result = runner.invoke(app, ["multiple-urls"])
+        with patch("builtins.open", mock_open(read_data="https://github.com/google-research/bert, https://huggingface.co/datasets/bookcorpus/bookcorpus, https://huggingface.co/google-bert/bert-base-uncased\n,,https://huggingface.co/parvk11/audience_classifier_model\n,,https://huggingface.co/openai/whisper-tiny/tree/main")):
+            result = runner.invoke(app, [])
             assert result.exit_code == 0
 
             # Verify NDJSON output (should have 3 lines)
-            lines = result.output.strip().split("\n")
+            lines = result.output.strip().split('\n')
             assert len(lines) == 3
-
+            
             # Check first line
             output_data = json.loads(lines[0])
             assert "name" in output_data
@@ -71,7 +55,7 @@ def test_multiple_urls_command_error_handling():
     """Test multiple-urls command error handling."""
     # Test with invalid URL_FILE.txt content
     with patch("builtins.open", mock_open(read_data="invalid,url,format")):
-        result = runner.invoke(app, ["multiple-urls"])
+        result = runner.invoke(app, [])
         # Should still exit successfully even with invalid URLs
         assert result.exit_code == 0
 
@@ -79,7 +63,7 @@ def test_multiple_urls_command_error_handling():
 def test_multiple_urls_command_empty_file():
     """Test multiple-urls command with empty file."""
     with patch("builtins.open", mock_open(read_data="")):
-        result = runner.invoke(app, ["multiple-urls"])
+        result = runner.invoke(app, [])
         # Should exit successfully with no output
         assert result.exit_code == 0
         assert result.output.strip() == ""

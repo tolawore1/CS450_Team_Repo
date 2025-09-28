@@ -1,5 +1,4 @@
 """Helper functions for LLM-enhanced scoring."""
-
 from typing import Any, Dict
 
 
@@ -60,81 +59,3 @@ def validate_llm_response(response: Dict[str, Any], expected_keys: list) -> bool
             return False
 
     return True
-
-
-def calculate_maturity_factor(
-    readme: str, author: str, model_size: int, downloads: int
-) -> float:
-    """Calculate maturity factor based on common patterns."""
-    maturity_factor = 1.0
-
-    # Organization reputation boost
-    prestigious_orgs = [
-        "google",
-        "openai",
-        "microsoft",
-        "facebook",
-        "meta",
-        "huggingface",
-        "nvidia",
-        "anthropic",
-    ]
-    if any(org in author for org in prestigious_orgs):
-        maturity_factor *= 1.2
-
-    # Model size indicates complexity
-    if model_size > 1000000000:  # >1GB
-        maturity_factor *= 1.0  # Large models need good docs
-    elif model_size < 10000000:  # <10MB
-        maturity_factor *= 0.9  # Small models can have simpler docs
-
-    # Download-based maturity tiers
-    download_multipliers = [
-        (10000000, 1.0),
-        (1000000, 0.95),
-        (100000, 0.90),
-        (10000, 0.85),
-        (1000, 0.80),
-        (0, 0.75),
-    ]
-    for threshold, multiplier in download_multipliers:
-        if downloads > threshold:
-            maturity_factor *= multiplier
-            break
-
-    # Check for experimental indicators
-    experimental_keywords = [
-        "experimental",
-        "beta",
-        "alpha",
-        "preview",
-        "demo",
-        "toy",
-        "simple",
-        "test",
-    ]
-    if any(keyword in readme for keyword in experimental_keywords):
-        if not any(org in author for org in prestigious_orgs):
-            maturity_factor *= 0.001  # Significantly reduce for experimental models
-
-    # Check for established indicators
-    established_keywords = [
-        "production",
-        "stable",
-        "release",
-        "v1",
-        "v2",
-        "enterprise",
-        "bert",
-        "transformer",
-        "gpt",
-    ]
-    if any(keyword in readme for keyword in established_keywords):
-        maturity_factor *= 1.3  # Boost for established models
-
-    # Check for academic indicators
-    academic_keywords = ["paper", "research", "arxiv", "conference", "journal", "study"]
-    if any(keyword in readme for keyword in academic_keywords):
-        maturity_factor *= 1.1  # Slight boost for research models
-
-    return maturity_factor

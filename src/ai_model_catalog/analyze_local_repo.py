@@ -3,6 +3,7 @@ import shutil
 import logging
 from typing import Dict, Optional
 from git import Repo, GitCommandError
+import requests
 
 log = logging.getLogger(__name__)
 
@@ -17,16 +18,16 @@ def clone_or_get_repo(model_id: str, base_dir: str = "cloned_models") -> Optiona
     hf_repo_url = f"{HF_GIT_BASE}/{model_id}.git"
 
     if os.path.isdir(repo_path):
-        log.info("Using cached repo at %s", repo_path)
+        log.info(f"Using cached repo at {repo_path}")
         return repo_path
 
     os.makedirs(base_dir, exist_ok=True)
     try:
-        log.info("Cloning %s → %s", hf_repo_url, repo_path)
+        log.info(f"Cloning {hf_repo_url} → {repo_path}")
         Repo.clone_from(hf_repo_url, repo_path)
         return repo_path
     except GitCommandError as e:
-        log.error("Failed to clone repo: %s", e)
+        log.error(f"Failed to clone repo: {e}")
         return None
 
 
@@ -62,8 +63,8 @@ def get_git_metadata(repo_path: str) -> Dict[str, Optional[str]]:
             "contributor_count": len(contributors),
             "last_commit_time": last_commit.committed_datetime.isoformat(),
         }
-    except (GitCommandError, OSError, ValueError, Exception) as e:
-        log.error("Error analyzing git repo: %s", e)
+    except Exception as e:
+        log.error(f"Error analyzing git repo: {e}")
         return {
             "contributor_count": None,
             "last_commit_time": None,
@@ -96,4 +97,4 @@ def cleanup_cloned_repo(model_id: str, base_dir: str = "cloned_models") -> None:
     repo_path = os.path.join(base_dir, model_id.replace("/", "_"))
     if os.path.isdir(repo_path):
         shutil.rmtree(repo_path)
-        log.info("Deleted %s", repo_path)
+        log.info(f"Deleted {repo_path}")

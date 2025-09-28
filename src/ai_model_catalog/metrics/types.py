@@ -10,3 +10,4 @@ class MetricResult:
     details: Mapping[str, Any]
     error: Optional[str]
     elapsed_s: float
+    

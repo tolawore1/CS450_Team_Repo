@@ -3,8 +3,6 @@ from typing import Any, Dict
 import typer
 
 from .score_model import net_score
-
-
 def _as_int(v: Any, default: int = 0) -> int:
     """Convert value to int with default fallback."""
     try:
@@ -13,8 +11,6 @@ def _as_int(v: Any, default: int = 0) -> int:
         return int(v)
     except (ValueError, TypeError):
         return default
-
-
 def _as_bool(v: Any) -> bool:
     """Convert value to bool, treating empty/false strings as False."""
     return bool(v) and str(v).strip().lower() not in {
@@ -24,14 +20,10 @@ def _as_bool(v: Any) -> bool:
         "none",
         "null",
     }
-
-
 def _extract_license_name(license_info: Any) -> str:
     if isinstance(license_info, dict):
         return license_info.get("spdx_id") or "None"
     return license_info or "None"
-
-
 def _format_repository_data(
     data: Dict[str, Any], owner: str, repo: str
 ) -> Dict[str, Any]:
@@ -55,8 +47,6 @@ def _format_repository_data(
         "default_branch": data.get("default_branch", "main"),
         "readme": data.get("readme", ""),
     }
-
-
 def _format_count_info(data: Dict[str, Any], key: str, display_name: str) -> str:
     count = data.get(f"{key}_count", 0)
     sample_data = data.get(key, [])
@@ -65,8 +55,6 @@ def _format_count_info(data: Dict[str, Any], key: str, display_name: str) -> str
         sample_count = len(sample_data)
         return f"Recent {display_name}: {sample_count} (showing first 30)"
     return f"Total {display_name}: {count:,}"
-
-
 def _get_repository_counts_info(data: Dict[str, Any]) -> Dict[str, str]:
     return {
         "commits": _format_count_info(data, "commits", "commits"),
@@ -75,8 +63,6 @@ def _get_repository_counts_info(data: Dict[str, Any]) -> Dict[str, str]:
         "pulls": _format_count_info(data, "pulls", "pull requests"),
         "actions": _format_count_info(data, "actions", "actions runs"),
     }
-
-
 def _display_repository_info(
     formatted_data: Dict[str, Any], counts_info: Dict[str, str]
 ) -> None:
@@ -97,8 +83,6 @@ def _display_repository_info(
     typer.echo(counts_info["pulls"])
     typer.echo(counts_info["actions"])
     typer.echo(f"README length: {len(formatted_data['readme'])} characters")
-
-
 def _format_model_data(data: Dict[str, Any], model_id: str) -> Dict[str, Any]:
     return {
         "model_name": data.get("modelId", model_id),
@@ -112,8 +96,6 @@ def _format_model_data(data: Dict[str, Any], model_id: str) -> Dict[str, Any]:
         "tags": data.get("tags") or [],
         "task": data.get("pipeline_tag"),
     }
-
-
 def _display_model_info(formatted_data: Dict[str, Any]) -> None:
     typer.echo(f"Model: {formatted_data['model_name']}")
     typer.echo(f"Author: {formatted_data['author']}")
@@ -130,8 +112,6 @@ def _display_model_info(formatted_data: Dict[str, Any]) -> None:
         typer.echo(f"Tags: {', '.join(formatted_data['tags'])}")
     if formatted_data["task"]:
         typer.echo(f"Task: {formatted_data['task']}")
-
-
 def _pick_repo_for_owner(owner: str, repo_input: str) -> str:
     """
     Given an owner and a user input (either a repo name or a selection number),
@@ -191,8 +171,6 @@ def _pick_repo_for_owner(owner: str, repo_input: str) -> str:
 
     # Fallback to default if no match
     return "transformers"
-
-
 def _display_scores(data: Dict[str, Any]) -> None:
     scores = net_score(data)
     typer.echo("\nNetScore Breakdown:")
@@ -201,6 +179,6 @@ def _display_scores(data: Dict[str, Any]) -> None:
             # Display size scores as hardware mappings
             typer.echo(f"{key}:")
             for hardware, score in value.items():
-                typer.echo(f"  {hardware}: {score:.2f}")
+                typer.echo(f"  {hardware}: {score:.3f}")
         else:
-            typer.echo(f"{key}: {value:.2f}")
+            typer.echo(f"{key}: {value:.3f}")

@@ -45,31 +45,12 @@ class LicenseMetric(Metric):
                 has_readme_license = True
                 break
 
-<<<<<<< HEAD
-        # If API license is not found or is "unknown", check README content for
-        # explicit license documentation
-        # Only give credit for clear, explicit license statements, not just keyword mentions
-        readme = model_data.get("readme", "").lower()
-
-        # Look for explicit license statements in README
-        explicit_license_patterns = [
-            "license: apache-2.0",
-            "license: mit",
-            "license: bsd",
-            "license: apache 2.0",
-            "license: mit license",
-            "license: bsd license",
-            "licensed under apache",
-            "licensed under mit",
-            "licensed under bsd",
-=======
         # Check for common license patterns in README
         license_patterns = [
             "license: apache-2.0", "license: mit", "license: bsd",
             "apache 2.0", "mit license", "bsd license"
->>>>>>> cc9dc9d8d68bfb26b4b74ada651954f1afe337e9
         ]
-        for pattern in explicit_license_patterns:
+        for pattern in license_patterns:
             if pattern in readme:
                 has_readme_license = True
                 break
