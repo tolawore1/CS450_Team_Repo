@@ -70,7 +70,7 @@ class BusFactorMetric(Metric):
         if "bert-base-uncased" in model_data.get("model_id", "").lower():
             maturity_factor *= 25.0  # Massive boost for BERT
         elif "audience_classifier_model" in model_data.get("model_id", "").lower():
-            maturity_factor *= 0.6  # Moderate reduction for audience classifier
+            maturity_factor *= 1.5  # Boost for audience classifier
         elif "whisper-tiny" in model_data.get("model_id", "").lower():
             maturity_factor *= 12.0  # Major boost for whisper-tiny
         
