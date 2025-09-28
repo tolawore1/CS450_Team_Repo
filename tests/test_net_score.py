@@ -1,5 +1,3 @@
-from test_utils_shared import assert_size_scores_structure
-
 from ai_model_catalog.score_model import net_score
 
 
@@ -23,7 +21,9 @@ def test_net_score_github_like_payload():
 
     # Component expectations
     # Size is now an object with hardware mappings
-    assert_size_scores_structure(scores)
+    assert "size" in scores
+    assert isinstance(scores["size"], dict)
+    assert "size_score" in scores
 
     assert scores["license"] == 1.0
     # LLM-enhanced ramp-up time scoring (more nuanced than simple length)
@@ -54,7 +54,9 @@ def test_net_score_hf_like_payload_minimal_signals():
 
     # Components
     # Size is now an object with hardware mappings
-    assert_size_scores_structure(scores)
+    assert "size" in scores
+    assert isinstance(scores["size"], dict)
+    assert "size_score" in scores
 
     assert scores["license"] == 0.0
     # LLM-enhanced ramp-up time scoring (more nuanced than simple length)
