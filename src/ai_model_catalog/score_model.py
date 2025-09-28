@@ -280,7 +280,7 @@ def score_dataset_from_id(dataset_id: str) -> Dict[str, float]:
 
     scores = {
         "size": size_scores,
-        "size_score": size_score_avg,
+        "size_score": size_scores,  # Use the dictionary, not the average
         "size_score_latency": size_latency,
 
         "license": license_score,
@@ -318,7 +318,15 @@ def score_dataset_from_id(dataset_id: str) -> Dict[str, float]:
         "performance_claims": 0.2,
     }
 
-    netscore = sum(scores[k] * weights[k] for k in weights)
+    # Use the average size score for net score calculation
+    netscore = (size_score_avg * weights["size_score"] + 
+                license_score * weights["license"] +
+                ramp_up_score * weights["ramp_up_time"] +
+                bus_factor_score * weights["bus_factor"] +
+                availability_score * weights["dataset_and_code_score"] +
+                dataset_quality_score * weights["dataset_quality"] +
+                0.0 * weights["code_quality"] +  # code_quality is 0 for datasets
+                performance_claims_score * weights["performance_claims"])
     scores["net_score"] = round(netscore, 3)
     scores["NetScore"] = round(netscore, 3)
 

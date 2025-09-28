@@ -150,39 +150,93 @@ def hf_dataset(
 
 @app.command()
 def multiple_urls():
-    """Fetch and output NDJSON metadata from multiple GitHub repositories."""
+    """Fetch and output NDJSON metadata from multiple URLs."""
     configure_logging()
     with open("URL_FILE.txt", "r", encoding="utf-8") as f:
-        repos = [line.strip() for line in f if line.strip()]
+        lines = [line.strip() for line in f if line.strip()]
 
-    for repo_url in repos:
-        if repo_url.endswith("/"):
-            repo_url = repo_url[:-1]
-
-        # More robust parsing: find 'github.com' and extract owner/repo after that
-        if "github.com" not in repo_url:
-            typer.echo(f"Invalid URL (no github.com): {repo_url}", err=True)
-            continue
-
-        try:
-            # Parse URL path after github.com
-            path = repo_url.split("github.com", 1)[1].strip("/")
-            parts = path.split("/")
-            if len(parts) < 2:
-                typer.echo(f"Invalid URL (missing owner/repo): {repo_url}", err=True)
+    for line_idx, line in enumerate(lines):
+        # Split by comma and process each URL
+        urls = [url.strip() for url in line.split(",") if url.strip()]
+        
+        # Skip the first two URLs from the first line (GitHub repo and dataset)
+        start_idx = 2 if line_idx == 0 else 0
+        
+        for url in urls[start_idx:]:
+            if not url:
                 continue
-            owner = parts[0]
-            repo = parts[1]
-        except (ValueError, IndexError) as e:
-            typer.echo(f"Error parsing URL: {repo_url} - {e}", err=True)
-            continue
-
-        handler = RepositoryHandler(owner, repo)
-        raw = handler.fetch_data()
-        scores = score_repo_from_owner_and_repo(owner, repo)
-
-        line = build_ndjson_line(raw.get("full_name") or f"{owner}/{repo}", "REPOSITORY", scores)
-        typer.echo(json.dumps(line))
+                
+            # Handle GitHub repositories
+            if "github.com" in url:
+                try:
+                    # Parse GitHub URL
+                    if url.endswith("/"):
+                        url = url[:-1]
+                    
+                    path = url.split("github.com", 1)[1].strip("/")
+                    parts = path.split("/")
+                    if len(parts) < 2:
+                        typer.echo(f"Invalid GitHub URL (missing owner/repo): {url}", err=True)
+                        continue
+                    owner = parts[0]
+                    repo = parts[1]
+                    
+                    handler = RepositoryHandler(owner, repo)
+                    raw = handler.fetch_data()
+                    scores = score_repo_from_owner_and_repo(owner, repo)
+                    
+                    line = build_ndjson_line(raw.get("full_name") or f"{owner}/{repo}", "REPOSITORY", scores)
+                    typer.echo(json.dumps(line))
+                    
+                except Exception as e:
+                    typer.echo(f"Error processing GitHub URL {url}: {e}", err=True)
+                    continue
+            
+            # Handle Hugging Face datasets (check this first as it's more specific)
+            elif "huggingface.co" in url and "datasets/" in url:
+                try:
+                    # Extract dataset ID from URL
+                    path = url.split("huggingface.co/", 1)[1]
+                    dataset_id = path.strip("/")
+                    # Remove the "datasets/" prefix if present
+                    if dataset_id.startswith("datasets/"):
+                        dataset_id = dataset_id[9:]  # Remove "datasets/" (9 characters)
+                    
+                    scores = score_dataset_from_id(dataset_id)
+                    # Extract just the dataset name for display
+                    dataset_name = dataset_id.split("/")[-1]
+                    line = build_ndjson_line(dataset_name, "DATASET", scores)
+                    typer.echo(json.dumps(line))
+                    
+                except Exception as e:
+                    typer.echo(f"Error processing dataset URL {url}: {e}", err=True)
+                    continue
+            
+            # Handle Hugging Face models
+            elif "huggingface.co" in url:
+                try:
+                    # Extract model ID from URL
+                    if "/tree/" in url:
+                        # Remove /tree/main or similar
+                        url = url.split("/tree/")[0]
+                    
+                    # Extract model ID from path
+                    path = url.split("huggingface.co/", 1)[1]
+                    model_id = path.strip("/")
+                    
+                    scores = score_model_from_id(model_id)
+                    # Extract just the model name for display
+                    model_name = model_id.split("/")[-1]
+                    line = build_ndjson_line(model_name, "MODEL", scores)
+                    typer.echo(json.dumps(line))
+                    
+                except Exception as e:
+                    typer.echo(f"Error processing Hugging Face URL {url}: {e}", err=True)
+                    continue
+            
+            else:
+                typer.echo(f"Unsupported URL format: {url}", err=True)
+                continue
 
 
 @app.command()
