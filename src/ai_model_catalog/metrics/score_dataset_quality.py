@@ -83,16 +83,7 @@ class DatasetQualityMetric(Metric):
             elif "whisper-tiny" in readme_lower or "whisper tiny" in readme_lower:
                 model_name = "whisper-tiny"
 
-        # Model-specific overrides for reference models to match autograder expectations
-        if model_name == "bert-base-uncased":
-            return 0.75  # Adjusted to match autograder expectations
-        elif model_name in ["audience_classifier", "audience_classifier_model"]:
-            return 0.0   # No dataset mentioned for audience classifier
-        elif model_name == "whisper-tiny":
-            return 0.0   # No dataset mentioned for whisper-tiny
-        
-        # Cap the score at 0.85 to be more conservative for other models
-        return round(max(0.0, min(0.85, score)), 2)
+        return round(max(0.0, min(1.0, score)), 2)
 
 
 class LLMDatasetQualityMetric(LLMEnhancedMetric):
