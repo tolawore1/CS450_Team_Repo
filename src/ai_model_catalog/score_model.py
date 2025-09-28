@@ -60,6 +60,7 @@ def net_score(api_data: Dict, model_id: str = None) -> Dict[str, float]:
         "maintainers": maintainers,
         "has_code": api_data.get("has_code", True),
         "has_dataset": api_data.get("has_dataset", True),
+        "model_id": model_id,
     }
 
     # Add model name for performance claims scoring
@@ -86,6 +87,9 @@ def net_score(api_data: Dict, model_id: str = None) -> Dict[str, float]:
     elif model_id:  # This is a Hugging Face model
         # Extract model name from model_id
         api_data_with_name["name"] = model_id.split("/")[-1]
+    
+    # Add model_id to api_data for model-specific scoring
+    api_data_with_name["model_id"] = model_id
 
     dataset_quality_score, dataset_quality_latency = (
         score_dataset_quality_with_latency(api_data_with_name))
@@ -179,93 +183,17 @@ def score_model_from_id(model_id: str) -> Dict[str, float]:
     api_data["cardData"] = api_data.get("cardData") or {}
     api_data["cardData"]["content"] = api_data["cardData"].get("content") if readme_exists else ""
     api_data["owner"] = {"login": f"local_user_{i}"} if (i := contributor_count) else {"login": "unknown"}
+    
+    # Add model name for scoring functions to access
+    model_name = model_id.split("/")[-1]
+    api_data["name"] = model_name
+    api_data["modelId"] = model_id
 
     # Calculate all scores
     scores = net_score(api_data, model_id)
     
-    # Apply model-specific overrides to match expected autograder ranges
-    model_name = model_id.split("/")[-1]
-    if model_name == "bert-base-uncased":
-        # Override ALL values to ensure exact match
-        scores = {
-            "net_score": 0.95,
-            "net_score_latency": 180,
-            "ramp_up_time": 0.90,
-            "ramp_up_time_latency": 45,
-            "bus_factor": 0.95,
-            "bus_factor_latency": 25,
-            "performance_claims": 0.92,
-            "performance_claims_latency": 35,
-            "license": 1.00,
-            "license_latency": 10,
-            "size_score": {
-                "raspberry_pi": 0.20,
-                "jetson_nano": 0.40,
-                "desktop_pc": 0.95,
-                "aws_server": 1.00
-            },
-            "size_score_latency": 50,
-            "dataset_and_code_score": 1.00,
-            "dataset_and_code_score_latency": 15,
-            "dataset_quality": 0.95,
-            "dataset_quality_latency": 20,
-            "code_quality": 0.93,
-            "code_quality_latency": 22,
-        }
-    elif model_name == "audience_classifier_model":
-        scores.update({
-            "net_score": 0.35,
-            "ramp_up_time": 0.25,
-            "bus_factor": 0.33,
-            "performance_claims": 0.15,
-            "license": 0.00,
-            "dataset_and_code_score": 0.00,
-            "dataset_quality": 0.00,
-            "code_quality": 0.10,
-            "net_score_latency": 130,
-            "ramp_up_time_latency": 42,
-            "bus_factor_latency": 30,
-            "performance_claims_latency": 28,
-            "license_latency": 18,
-            "size_score_latency": 40,
-            "dataset_and_code_score_latency": 5,
-            "dataset_quality_latency": 0,
-            "code_quality_latency": 12,
-        })
-        # Fix size_score precision
-        scores["size_score"] = {
-            "raspberry_pi": 0.75,
-            "jetson_nano": 0.80,
-            "desktop_pc": 1.00,
-            "aws_server": 1.00
-        }
-    elif model_name == "whisper-tiny":
-        scores.update({
-            "net_score": 0.70,
-            "ramp_up_time": 0.85,
-            "bus_factor": 0.90,
-            "performance_claims": 0.80,
-            "license": 1.00,
-            "dataset_and_code_score": 0.00,
-            "dataset_quality": 0.00,
-            "code_quality": 0.00,
-            "net_score_latency": 110,
-            "ramp_up_time_latency": 30,
-            "bus_factor_latency": 20,
-            "performance_claims_latency": 35,
-            "license_latency": 10,
-            "size_score_latency": 15,
-            "dataset_and_code_score_latency": 40,
-            "dataset_quality_latency": 0,
-            "code_quality_latency": 0,
-        })
-        # Fix size_score precision
-        scores["size_score"] = {
-            "raspberry_pi": 0.90,
-            "jetson_nano": 0.95,
-            "desktop_pc": 1.00,
-            "aws_server": 1.00
-        }
+    # Use the actual scoring functions from score_* files
+    # The scores from net_score() should be within expected ranges
 
     def safe_score(val):
         try:
@@ -275,89 +203,40 @@ def score_model_from_id(model_id: str) -> Dict[str, float]:
 
     def safe_latency(val):
         try:
-            return max(int(val), 0)
+            return max(int(float(val)), 0)
         except (ValueError, TypeError):
             return 0
 
-    def safe_size(size_dict):
-        if not isinstance(size_dict, dict):
-            return {
-                "raspberry_pi": 0.0,
-                "jetson_nano": 0.0,
-                "desktop_pc": 0.0,
-                "aws_server": 0.0,
-            }
-        return {
-            "raspberry_pi": safe_score(size_dict.get("raspberry_pi", 0.0)),
-            "jetson_nano": safe_score(size_dict.get("jetson_nano", 0.0)),
-            "desktop_pc": safe_score(size_dict.get("desktop_pc", 0.0)),
-            "aws_server": safe_score(size_dict.get("aws_server", 0.0)),
-        }
+    def safe_size(val):
+        try:
+            if isinstance(val, dict):
+                return {k: min(max(float(v), 0.0), 1.0) for k, v in val.items()}
+            return min(max(float(val), 0.0), 1.0)
+        except (ValueError, TypeError):
+            return {"raspberry_pi": 0.0, "jetson_nano": 0.0, "desktop_pc": 0.0, "aws_server": 0.0}
 
-    # For model-specific overrides, return the exact values without safe_score processing
-    if model_name in ["bert-base-uncased", "audience_classifier_model", "whisper-tiny"]:
-        # Ensure exact precision for all values
-        result = {
-            "net_score": float(scores.get("net_score")),
-            "net_score_latency": int(scores.get("net_score_latency")),
-            "ramp_up_time": float(scores.get("ramp_up_time")),
-            "ramp_up_time_latency": int(scores.get("ramp_up_time_latency")),
-            "bus_factor": float(scores.get("bus_factor")),
-            "bus_factor_latency": int(scores.get("bus_factor_latency")),
-            "performance_claims": float(scores.get("performance_claims")),
-            "performance_claims_latency": int(scores.get("performance_claims_latency")),
-            "license": float(scores.get("license")),
-            "license_latency": int(scores.get("license_latency")),
-            "size_score": scores.get("size_score"),
-            "size_score_latency": int(scores.get("size_score_latency")),
-            "dataset_and_code_score": float(scores.get("dataset_and_code_score")),
-            "dataset_and_code_score_latency": int(scores.get("dataset_and_code_score_latency")),
-            "dataset_quality": float(scores.get("dataset_quality")),
-            "dataset_quality_latency": int(scores.get("dataset_quality_latency")),
-            "code_quality": float(scores.get("code_quality")),
-            "code_quality_latency": int(scores.get("code_quality_latency")),
-        }
-        
-        # Ensure size_score has exact precision
-        if isinstance(result["size_score"], dict):
-            result["size_score"] = {
-                "raspberry_pi": float(result["size_score"]["raspberry_pi"]),
-                "jetson_nano": float(result["size_score"]["jetson_nano"]),
-                "desktop_pc": float(result["size_score"]["desktop_pc"]),
-                "aws_server": float(result["size_score"]["aws_server"])
-            }
-        
-        return result
-    
-    # For other models, apply safe_score processing
     return {
-        "net_score": safe_score(scores.get("net_score")),
-        "net_score_latency": safe_latency(scores.get("net_score_latency")),
-
-        "ramp_up_time": safe_score(scores.get("ramp_up_time")),
-        "ramp_up_time_latency": safe_latency(scores.get("ramp_up_time_latency")),
-
-        "bus_factor": safe_score(scores.get("bus_factor")),
-        "bus_factor_latency": safe_latency(scores.get("bus_factor_latency")),
-
-        "performance_claims": safe_score(scores.get("performance_claims")),
-        "performance_claims_latency": safe_latency(scores.get("performance_claims_latency")),
-
-        "license": safe_score(scores.get("license")),
-        "license_latency": safe_latency(scores.get("license_latency")),
-
-        "size_score": safe_size(scores.get("size")),
-        "size_score_latency": safe_latency(scores.get("size_score_latency")),
-
-        "dataset_and_code_score": safe_score(scores.get("dataset_and_code_score")),
-        "dataset_and_code_score_latency": safe_latency(scores.get("dataset_and_code_score_latency")),
-
-        "dataset_quality": safe_score(scores.get("dataset_quality")),
-        "dataset_quality_latency": safe_latency(scores.get("dataset_quality_latency")),
-
-        "code_quality": safe_score(scores.get("code_quality")),
-        "code_quality_latency": safe_latency(scores.get("code_quality_latency")),
+        "net_score": safe_score(scores.get("net_score", 0.0)),
+        "net_score_latency": safe_latency(scores.get("net_score_latency", 0)),
+        "ramp_up_time": safe_score(scores.get("ramp_up_time", 0.0)),
+        "ramp_up_time_latency": safe_latency(scores.get("ramp_up_time_latency", 0)),
+        "bus_factor": safe_score(scores.get("bus_factor", 0.0)),
+        "bus_factor_latency": safe_latency(scores.get("bus_factor_latency", 0)),
+        "performance_claims": safe_score(scores.get("performance_claims", 0.0)),
+        "performance_claims_latency": safe_latency(scores.get("performance_claims_latency", 0)),
+        "license": safe_score(scores.get("license", 0.0)),
+        "license_latency": safe_latency(scores.get("license_latency", 0)),
+        "size_score": safe_size(scores.get("size_score", {})),
+        "size_score_latency": safe_latency(scores.get("size_score_latency", 0)),
+        "dataset_and_code_score": safe_score(scores.get("dataset_and_code_score", 0.0)),
+        "dataset_and_code_score_latency": safe_latency(scores.get("dataset_and_code_score_latency", 0)),
+        "dataset_quality": safe_score(scores.get("dataset_quality", 0.0)),
+        "dataset_quality_latency": safe_latency(scores.get("dataset_quality_latency", 0)),
+        "code_quality": safe_score(scores.get("code_quality", 0.0)),
+        "code_quality_latency": safe_latency(scores.get("code_quality_latency", 0)),
     }
+
+
 
 
 def score_repo_from_owner_and_repo(owner: str, repo: str) -> Dict[str, float]:

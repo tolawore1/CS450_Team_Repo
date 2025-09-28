@@ -1,7 +1,7 @@
-"""Simple CLI tests to boost coverage."""
+"""Simple CLI tests for the active commands."""
 
 import json
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, mock_open, patch
 
 from typer.testing import CliRunner
 
@@ -10,150 +10,68 @@ from ai_model_catalog.cli import app
 runner = CliRunner()
 
 
-def test_models_command_ndjson_format():
-    """Test models command with NDJSON format."""
-    with patch("ai_model_catalog.cli.score_repo_from_owner_and_repo") as mock_score:
-        mock_score.return_value = {
-            "NetScore": 0.85,
-            "ramp_up_time": 1.0,
-            "bus_factor": 0.5,
-            "performance_claims": 0.8,
-            "license": 1.0,
-            "size": {"raspberry_pi": 0.2},
-            "availability": 0.9,
-            "dataset_quality": 0.7,
-            "code_quality": 0.6,
-        }
-
-        with patch("ai_model_catalog.cli.RepositoryHandler") as mock_handler_class:
-            mock_handler = MagicMock()
-            mock_handler_class.return_value = mock_handler
-            mock_handler.fetch_data.return_value = {
-                "full_name": "test/repo",
-                "stars": 100,
-            }
-
-            result = runner.invoke(app, ["models", "--format", "ndjson"])
-            assert result.exit_code == 0
-
-            # Verify NDJSON output
-            output_data = json.loads(result.output)
-            assert "name" in output_data
-            assert "category" in output_data
-            assert "net_score" in output_data
-            assert "net_score_latency" in output_data
-
-
-def test_hf_model_command_ndjson_format():
-    """Test hf-model command with NDJSON format."""
+def test_multiple_urls_command():
+    """Test multiple-urls command with NDJSON format."""
     with patch("ai_model_catalog.cli.score_model_from_id") as mock_score:
         mock_score.return_value = {
-            "NetScore": 0.75,
-            "ramp_up_time": 0.8,
-            "bus_factor": 0.6,
-            "performance_claims": 0.7,
-            "license": 1.0,
-            "size": {"raspberry_pi": 0.3},
-            "availability": 0.8,
-            "dataset_quality": 0.6,
-            "code_quality": 0.7,
-        }
-
-        with patch("ai_model_catalog.cli.ModelHandler") as mock_handler_class:
-            mock_handler = MagicMock()
-            mock_handler_class.return_value = mock_handler
-            mock_handler.fetch_data.return_value = {
-                "modelSize": 123,
-                "license": "mit",
-            }
-
-            result = runner.invoke(app, ["hf-model", "--format", "ndjson"])
-            assert result.exit_code == 0
-
-            # Verify NDJSON output
-            output_data = json.loads(result.output)
-            assert "name" in output_data
-            assert "category" in output_data
-            assert "net_score" in output_data
-            assert "net_score_latency" in output_data
-
-
-def test_hf_dataset_command_ndjson_format():
-    """Test hf-dataset command with NDJSON format."""
-    with patch("ai_model_catalog.cli.score_dataset_from_id") as mock_score:
-        mock_score.return_value = {
-            "NetScore": 0.7,
-            "ramp_up_time": 0.6,
+            "net_score": 0.85,
+            "net_score_latency": 180,
+            "ramp_up_time": 1.0,
+            "ramp_up_time_latency": 45,
             "bus_factor": 0.5,
-            "performance_claims": 0.6,
+            "bus_factor_latency": 25,
+            "performance_claims": 0.8,
+            "performance_claims_latency": 35,
             "license": 1.0,
-            "size": {"raspberry_pi": 0.4},
-            "availability": 0.7,
-            "dataset_quality": 0.8,
-            "code_quality": 0.0,
+            "license_latency": 10,
+            "size_score": {"raspberry_pi": 0.2, "jetson_nano": 0.4, "desktop_pc": 0.95, "aws_server": 1.0},
+            "size_score_latency": 50,
+            "dataset_and_code_score": 0.9,
+            "dataset_and_code_score_latency": 15,
+            "dataset_quality": 0.7,
+            "dataset_quality_latency": 20,
+            "code_quality": 0.6,
+            "code_quality_latency": 22,
         }
 
-        with patch("ai_model_catalog.cli.fetch_dataset_data") as mock_fetch:
-            mock_fetch.return_value = {
-                "author": "test",
-                "license": "mit",
-                "downloads": 1000,
-            }
-
-            result = runner.invoke(app, ["hf-dataset", "--format", "ndjson"])
+        # Mock the URL_FILE.txt content
+        with patch("builtins.open", mock_open(read_data="https://github.com/google-research/bert, https://huggingface.co/datasets/bookcorpus/bookcorpus, https://huggingface.co/google-bert/bert-base-uncased\n,,https://huggingface.co/parvk11/audience_classifier_model\n,,https://huggingface.co/openai/whisper-tiny/tree/main")):
+            result = runner.invoke(app, [])
             assert result.exit_code == 0
 
-            # Verify NDJSON output
-            output_data = json.loads(result.output)
+            # Verify NDJSON output (should have 3 lines)
+            lines = result.output.strip().split('\n')
+            assert len(lines) == 3
+            
+            # Check first line
+            output_data = json.loads(lines[0])
             assert "name" in output_data
             assert "category" in output_data
             assert "net_score" in output_data
             assert "net_score_latency" in output_data
 
 
-def test_hf_dataset_command_with_tags():
-    """Test hf-dataset command with tags and task categories."""
-    with patch("ai_model_catalog.cli.fetch_dataset_data") as mock_fetch:
-        mock_fetch.return_value = {
-            "author": "test",
-            "license": "mit",
-            "downloads": 1000,
-            "lastModified": "2024-01-01",
-            "tags": ["nlp", "text", "classification"],
-            "taskCategories": ["text-classification", "sentiment-analysis"],
-        }
-
-        result = runner.invoke(app, ["hf-dataset", "--dataset-id", "test-dataset"])
+def test_multiple_urls_command_error_handling():
+    """Test multiple-urls command error handling."""
+    # Test with invalid URL_FILE.txt content
+    with patch("builtins.open", mock_open(read_data="invalid,url,format")):
+        result = runner.invoke(app, [])
+        # Should still exit successfully even with invalid URLs
         assert result.exit_code == 0
-        assert "Tags: nlp, text, classification" in result.output
-        assert (
-            "Task Categories: text-classification, sentiment-analysis" in result.output
-        )
 
 
-def test_hf_dataset_command_no_tags():
-    """Test hf-dataset command without tags."""
-    with patch("ai_model_catalog.cli.fetch_dataset_data") as mock_fetch:
-        mock_fetch.return_value = {
-            "author": "test",
-            "license": "mit",
-            "downloads": 1000,
-            "lastModified": "2024-01-01",
-            "tags": [],
-            "taskCategories": [],
-        }
-
-        result = runner.invoke(app, ["hf-dataset", "--dataset-id", "test-dataset"])
+def test_multiple_urls_command_empty_file():
+    """Test multiple-urls command with empty file."""
+    with patch("builtins.open", mock_open(read_data="")):
+        result = runner.invoke(app, [])
+        # Should exit successfully with no output
         assert result.exit_code == 0
-        assert "Tags:" not in result.output
-        assert "Task Categories:" not in result.output
+        assert result.output.strip() == ""
 
 
-def test_interactive_command():
-    """Test interactive command."""
-    with patch("ai_model_catalog.cli.interactive_main") as mock_interactive:
-        mock_interactive.return_value = None
-
-        result = runner.invoke(app, ["interactive"])
-        assert result.exit_code == 0
-        mock_interactive.assert_called_once()
+def test_multiple_urls_command_file_not_found():
+    """Test multiple-urls command when URL_FILE.txt doesn't exist."""
+    with patch("builtins.open", side_effect=FileNotFoundError):
+        result = runner.invoke(app, [])
+        # Should exit with error code
+        assert result.exit_code != 0
