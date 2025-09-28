@@ -121,3 +121,4 @@ def score_size_with_latency(model_data_or_size) -> Tuple[Dict[str, float], int]:
     time.sleep(0.05)  # 50ms delay
     latency = int((time.time() - start_time) * 1000)
     return result, latency
+    
