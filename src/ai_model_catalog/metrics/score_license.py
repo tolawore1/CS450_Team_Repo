@@ -72,10 +72,10 @@ class LicenseMetric(Metric):
         # Sophisticated maturity analysis
         maturity_factor = 1.0
         
-        # Organization reputation boost - extremely aggressive for prestigious orgs
+        # Organization reputation boost - reasonable for prestigious orgs
         prestigious_orgs = ["google", "openai", "microsoft", "facebook", "meta", "huggingface", "nvidia", "anthropic"]
         if any(org in author for org in prestigious_orgs):
-            maturity_factor *= 100.0  # Massive boost for prestigious organizations
+            maturity_factor *= 1.1  # Reasonable boost for prestigious organizations
         
         # Model size indicates licensing complexity needs
         if model_size > 1000000000:  # >1GB
@@ -85,17 +85,17 @@ class LicenseMetric(Metric):
         elif model_size < 10000000:  # <10MB
             maturity_factor *= 0.9  # Small models may have simpler licensing
         
-        # Download-based maturity tiers - more aggressive boost for popular models
+        # Download-based maturity tiers - reasonable boost for popular models
         if downloads > 10000000:  # 10M+ downloads
-            maturity_factor *= 3.0  # Major boost for very popular models
+            maturity_factor *= 1.2  # Reasonable boost for very popular models
         elif downloads > 1000000:  # 1M+ downloads
-            maturity_factor *= 2.5  # Large boost for popular models
+            maturity_factor *= 1.15  # Reasonable boost for popular models
         elif downloads > 100000:  # 100K+ downloads
-            maturity_factor *= 2.0  # Boost for moderately popular models
+            maturity_factor *= 1.1  # Reasonable boost for moderately popular models
         elif downloads > 10000:   # 10K+ downloads
-            maturity_factor *= 1.5  # Moderate boost
+            maturity_factor *= 1.05  # Moderate boost
         elif downloads > 1000:    # 1K+ downloads
-            maturity_factor *= 1.2  # Small boost
+            maturity_factor *= 1.02  # Small boost
         else:                     # <1K downloads
             maturity_factor *= 1.0  # No boost
         
