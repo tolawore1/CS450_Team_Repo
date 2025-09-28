@@ -3,7 +3,6 @@ from __future__ import annotations
 import time
 import os
 from typing import Any, Dict, Iterable, List, Union
-from .scoring_helpers import calculate_maturity_factor
 
 from .base import Metric
 from .constants import DATASET_KEYWORDS, KNOWN_DATASETS
@@ -21,110 +20,21 @@ class DatasetQualityMetric(Metric):
     """Very simple heuristic for dataset quality presence in README/tags."""
 
     def score(self, model_data: dict) -> float:
-        """
-        Returns a dataset_quality score.
-        Strict: 0.00 unless open, documented, verifiable datasets exist.
-        """
         readme = (model_data.get("readme") or "").strip()
         tags: List[str] = list(model_data.get("tags") or [])
 
-        # Check if training dataset is unknown or proprietary
-        # Look for explicit indicators of open, documented datasets
-        indicators = {
-            "dataset_word": _contains_any(readme, DATASET_KEYWORDS),
-            "known_name": _contains_any(readme, KNOWN_DATASETS),
-            "data_link": ("](" in readme or "http" in readme)
-            and _contains_any(readme, DATASET_KEYWORDS),
-            "dataset_tag": any(
-                w in " ".join(tags).lower() for w in ["dataset", "corpus", "benchmark"]
-            )
-            or any(k in " ".join(tags).lower() for k in KNOWN_DATASETS),
-        }
+        ds_words = DATASET_KEYWORDS
+        known = KNOWN_DATASETS
 
-        # Require explicit evidence that the model was TRAINED on open, verifiable datasets
-        # The training statement must specifically mention known, open datasets
+        has_dataset_word = _contains_any(readme, ds_words)
+        has_known_name = _contains_any(readme, known)
+        has_data_link = ("](" in readme or "http" in readme) and has_dataset_word
 
-        # Look for training statements that specifically mention known datasets
-        training_indicators = [
-            "trained on",
-            "training data",
-            "training dataset",
-            "trained using",
-        ]
+        tag_str = " ".join(tags).lower()
+        has_dataset_tag = any(
+            w in tag_str for w in ["dataset", "corpus", "benchmark"]
+        ) or any(k in tag_str for k in known)
 
-<<<<<<< HEAD
-        # Check if any training line specifically mentions known datasets
-        lines = readme.split("\n")
-        training_lines = [
-            line
-            for line in lines
-            if any(indicator in line.lower() for indicator in training_indicators)
-        ]
-
-        # Only give credit if a training line specifically mentions known datasets
-        has_open_training_data = any(
-            any(dataset.lower() in line.lower() for dataset in KNOWN_DATASETS)
-            for line in training_lines
-        )
-
-        if not has_open_training_data:
-            return 0.00
-
-        # Calculate weighted score for documented datasets
-        score = 0.0
-
-        # Dataset keywords (30%) - but only if we also have other evidence
-        if indicators["dataset_word"] and (
-            indicators["known_name"]
-            or indicators["data_link"]
-            or indicators["dataset_tag"]
-        ):
-            score += 0.3
-
-        # Known dataset names (35%)
-        if indicators["known_name"]:
-            score += 0.35
-
-        # Data links (20%)
-        if indicators["data_link"]:
-            score += 0.2
-
-        # Dataset tags (15%)
-        if indicators["dataset_tag"]:
-            score += 0.15
-
-        # Enhanced scoring based on dataset documentation + sophisticated model analysis
-        model_info = {
-            "downloads": model_data.get("downloads", 0),
-            "author": (model_data.get("author", "") or "").lower(),
-            "model_size": model_data.get("modelSize", 0),
-        }
-
-        # Calculate base score from dataset documentation
-        score_thresholds = [
-            (0.8, 0.95),
-            (0.6, 0.80),
-            (0.4, 0.50),
-            (0.2, 0.20),
-            (0.0, 0.00),
-        ]
-        base_score = next(
-            (base for threshold, base in score_thresholds if score >= threshold), 0.00
-        )
-
-        # Use shared maturity factor calculation
-        maturity_factor = calculate_maturity_factor(
-            readme,
-            model_info["author"],
-            model_info["model_size"],
-            model_info["downloads"],
-        )
-
-        # If base score is 0, there's no content to evaluate, so final score should be 0
-        if base_score == 0.0:
-            return 0.0
-
-=======
         # Calculate weighted score instead of simple hit count - more strict
         score = 0.0
 
@@ -223,13 +133,7 @@ class DatasetQualityMetric(Metric):
         if any(keyword in readme for keyword in academic_keywords):
             maturity_factor *= 1.1  # Slight boost for research models
         
->>>>>>> cc9dc9d8d68bfb26b4b74ada651954f1afe337e9
         final_score = base_score * maturity_factor
-
-        # Cap excellent but not ideal datasets at 0.95
-        if base_score >= 0.95:
-            final_score = min(final_score, 0.95)
-
         return round(max(0.0, min(1.0, final_score)), 2)
 
 
@@ -291,7 +195,7 @@ class LLMDatasetQualityMetric(LLMEnhancedMetric):
 def score_dataset_quality(arg: Union[dict, float]) -> float:
     # Add latency simulation for run file compatibility
     time.sleep(0.02)  # 20ms delay
-
+    
     if isinstance(arg, dict):
         if os.getenv("GEN_AI_STUDIO_API_KEY"):
             return LLMDatasetQualityMetric().score(arg)
