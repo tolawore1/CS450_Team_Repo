@@ -2,6 +2,7 @@ import json
 
 import pytest
 from typer.testing import CliRunner
+from unittest.mock import mock_open
 
 from ai_model_catalog.cli import app
 
@@ -47,24 +48,38 @@ def test_models_command_smoke(monkeypatch):
     assert "Repo:" in result.output
 
 
-def test_hf_model_command_smoke(monkeypatch):
-    # What ModelHandler ultimately calls:
+def test_multiple_urls_command_smoke(monkeypatch):
+    # Mock the score_model_from_id function
     monkeypatch.setattr(
-        "ai_model_catalog.fetch_repo.fetch_model_data",
+        "ai_model_catalog.cli.score_model_from_id",
         lambda model_id: {
-            "modelSize": 123,
-            "license": "mit",
-            "author": "tester",
-            "readme": "# readme",
-            "cardData": {},
-            "downloads": 42,
-            "lastModified": "2024-01-01",
+            "net_score": 0.85,
+            "net_score_latency": 180,
+            "ramp_up_time": 1.0,
+            "ramp_up_time_latency": 45,
+            "bus_factor": 0.5,
+            "bus_factor_latency": 25,
+            "performance_claims": 0.8,
+            "performance_claims_latency": 35,
+            "license": 1.0,
+            "license_latency": 10,
+            "size_score": {"raspberry_pi": 0.2, "jetson_nano": 0.4, "desktop_pc": 0.95, "aws_server": 1.0},
+            "size_score_latency": 50,
+            "dataset_and_code_score": 0.9,
+            "dataset_and_code_score_latency": 15,
+            "dataset_quality": 0.7,
+            "dataset_quality_latency": 20,
+            "code_quality": 0.6,
+            "code_quality_latency": 22,
         },
         raising=True,
     )
 
-    # Use defaults (no option spelling needed)
-    result = runner.invoke(app, ["hf-model"])
+    # Mock the URL_FILE.txt content
+    monkeypatch.setattr("builtins.open", mock_open(read_data="https://github.com/google-research/bert, https://huggingface.co/datasets/bookcorpus/bookcorpus, https://huggingface.co/google-bert/bert-base-uncased\n,,https://huggingface.co/parvk11/audience_classifier_model\n,,https://huggingface.co/openai/whisper-tiny/tree/main"))
+
+    # Test the multiple-urls command
+    result = runner.invoke(app, [])
     assert result.exit_code == 0
     assert "bert-base-uncased" in result.output
 

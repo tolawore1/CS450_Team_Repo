@@ -69,124 +69,83 @@ def build_ndjson_line(
     }
 
 
-# @app.command()
-# def models(
-#     owner: str = "huggingface",
-#     repo: str = "transformers",
-#     output_format: Optional[str] = typer.Option(
-#         "text", "--format", help="Output format (text or ndjson)"
-#     ),
-# ):
-#     """Fetch and display metadata from GitHub API for a repository."""
-#     configure_logging()
-#     handler = RepositoryHandler(owner, repo)
-#     raw = handler.fetch_data()
-# 
-#     if output_format == "ndjson":
-#         scores = score_repo_from_owner_and_repo(owner, repo)
-#         line = build_ndjson_line(raw.get("full_name") or f"{owner}/{repo}", "REPOSITORY", scores)
-#         typer.echo(json.dumps(line))
-#         return
-# 
-#     formatted = handler.format_data(raw)
-#     handler.display_data(formatted, raw)
+@app.command()
+def models(
+    owner: str = "huggingface",
+    repo: str = "transformers",
+    output_format: Optional[str] = typer.Option(
+        "text", "--format", help="Output format (text or ndjson)"
+    ),
+):
+    """Fetch and display metadata from GitHub API for a repository."""
+    configure_logging()
+    handler = RepositoryHandler(owner, repo)
+    raw = handler.fetch_data()
+
+    if output_format == "ndjson":
+        scores = score_repo_from_owner_and_repo(owner, repo)
+        line = build_ndjson_line(raw.get("full_name") or f"{owner}/{repo}", "REPOSITORY", scores)
+        typer.echo(json.dumps(line))
+        return
+
+    formatted = handler.format_data(raw)
+    handler.display_data(formatted, raw)
 
 
-# @app.command(name="hf-model")
-# def hf_model(
-#     model_id: str = typer.Argument("bert-base-uncased", help="Model ID (e.g., google-bert/bert-base-uncased)"),
-#     output_format: Optional[str] = typer.Option(
-#         "text", "--format", help="Output format (text or ndjson)"
-#     ),
-# ):
-#     """Fetch and display metadata from Hugging Face Hub for a model."""
-#     configure_logging()
-#     handler = ModelHandler(model_id)
-#     raw = handler.fetch_data()
-# 
-#     if output_format == "ndjson":
-#         try:
-#             scores = score_model_from_id(model_id)
-#             # Extract just the model name (last part after slash)
-#             model_name = model_id.split("/")[-1]
-#             line = build_ndjson_line(model_name, "MODEL", scores)
-#             typer.echo(json.dumps(line))
-#         except Exception as e:
-#             typer.echo(f"Error scoring model: {e}", err=True)
-#         return
-# 
-#     formatted = handler.format_data(raw)
-#     handler.display_data(formatted, raw)
+@app.command(name="hf-model")
+def hf_model(
+    model_id: str = "bert-base-uncased",
+    output_format: Optional[str] = typer.Option(
+        "text", "--format", help="Output format (text or ndjson)"
+    ),
+):
+    """Fetch and display metadata from Hugging Face Hub for a model."""
+    configure_logging()
+    handler = ModelHandler(model_id)
+    raw = handler.fetch_data()
+
+    if output_format == "ndjson":
+        try:
+            scores = score_model_from_id(model_id)
+            line = build_ndjson_line(model_id, "MODEL", scores)
+            typer.echo(json.dumps(line))
+        except Exception as e:
+            typer.echo(f"Error scoring model: {e}", err=True)
+        return
+
+    formatted = handler.format_data(raw)
+    handler.display_data(formatted, raw)
 
 
-# @app.command(name="github-repo")
-# def github_repo(
-#     repo_url: str = typer.Argument("https://github.com/google-research/bert", help="GitHub repository URL"),
-#     output_format: Optional[str] = typer.Option(
-#         "text", "--format", help="Output format (text or ndjson)"
-#     ),
-# ):
-#     """Fetch and display metadata from GitHub for a repository."""
-#     configure_logging()
-#     
-#     # Extract owner and repo from URL
-#     if "github.com/" in repo_url:
-#         path = repo_url.split("github.com/", 1)[1]
-#         owner, repo = path.split("/", 1)
-#         repo = repo.strip("/")
-#     else:
-#         typer.echo(f"Invalid GitHub URL: {repo_url}", err=True)
-#         return
-#     
-#     handler = RepositoryHandler(owner, repo)
-#     raw = handler.fetch_data()
-# 
-#     if output_format == "ndjson":
-#         try:
-#             scores = score_repo_from_owner_and_repo(owner, repo)
-#             # Use just the repo name (not owner/repo)
-#             line = build_ndjson_line(repo, "REPOSITORY", scores)
-#             typer.echo(json.dumps(line))
-#         except Exception as e:
-#             typer.echo(f"Error scoring repository: {e}", err=True)
-#         return
-# 
-#     formatted = handler.format_data(raw)
-#     handler.display_data(formatted, raw)
+@app.command(name="hf-dataset")
+def hf_dataset(
+    dataset_id: str = "imdb",
+    output_format: Optional[str] = typer.Option(
+        "text", "--format", help="Output format (text or ndjson)"
+    ),
+):
+    """Fetch and display metadata from Hugging Face Hub for a dataset."""
+    configure_logging()
+    raw = fetch_dataset_data(dataset_id)
 
+    if output_format == "ndjson":
+        scores = score_dataset_from_id(dataset_id)
+        line = build_ndjson_line(dataset_id, "DATASET", scores)
+        typer.echo(json.dumps(line))
+        return
 
-# @app.command(name="hf-dataset")
-# def hf_dataset(
-#     dataset_id: str = typer.Argument("bookcorpus/bookcorpus", help="Dataset ID (e.g., bookcorpus/bookcorpus)"),
-#     output_format: Optional[str] = typer.Option(
-#         "text", "--format", help="Output format (text or ndjson)"
-#     ),
-# ):
-#     """Fetch and display metadata from Hugging Face Hub for a dataset."""
-#     configure_logging()
-#     
-#     try:
-#         raw = fetch_dataset_data(dataset_id)
-# 
-#         if output_format == "ndjson":
-#             try:
-#                 scores = score_dataset_from_id(dataset_id)
-#                 # Extract just the dataset name (last part after slash)
-#                 dataset_name = dataset_id.split("/")[-1]
-#                 line = build_ndjson_line(dataset_name, "DATASET", scores)
-#                 typer.echo(json.dumps(line))
-#             except Exception as e:
-#                 typer.echo(f"Error scoring dataset: {e}", err=True)
-#             return
-# 
-#         # Display dataset data in text format
-#         typer.echo(f"Dataset: {dataset_id}")
-#         typer.echo(f"Description: {raw.get('description', 'N/A')}")
-#         typer.echo(f"Downloads: {raw.get('downloads', 'N/A')}")
-#         typer.echo(f"Tags: {', '.join(raw.get('tags', []))}")
-#         
-#     except Exception as e:
-#         typer.echo(f"Error fetching dataset data: {e}", err=True)
+    # text output
+    typer.echo(f"Dataset: {dataset_id}")
+    typer.echo(f"Author: {raw.get('author') or 'Unknown'}")
+    typer.echo(f"License: {raw.get('license')}")
+    typer.echo(f"Downloads: {raw.get('downloads', 0)}")
+    typer.echo(f"Last Modified: {raw.get('lastModified', '')}")
+    tags = raw.get("tags") or []
+    if tags:
+        typer.echo(f"Tags: {', '.join(tags)}")
+    tcats = raw.get("taskCategories") or []
+    if tcats:
+        typer.echo(f"Task Categories: {', '.join(map(str, tcats))}")
 
 
 @app.command()
@@ -227,30 +186,41 @@ def multiple_urls():
                 model_name = model_id.split("/")[-1]
                 line = build_ndjson_line(model_name, "MODEL", scores)
                 
-                # Format specific values to match expected precision
+                # Format all float values to 2 decimal precision
                 json_str = json.dumps(line, separators=(',', ':'))  # Remove spaces
                 
-                # Replace specific values to match expected precision
-                json_str = json_str.replace('"ramp_up_time":0.9', '"ramp_up_time":0.90')
-                json_str = json_str.replace('"license":1.0', '"license":1.00')
-                json_str = json_str.replace('"license":0.0', '"license":0.00')
-                json_str = json_str.replace('"dataset_and_code_score":1.0', '"dataset_and_code_score":1.00')
-                json_str = json_str.replace('"dataset_and_code_score":0.0', '"dataset_and_code_score":0.00')
-                json_str = json_str.replace('"raspberry_pi":0.2', '"raspberry_pi":0.20')
-                json_str = json_str.replace('"jetson_nano":0.4', '"jetson_nano":0.40')
-                json_str = json_str.replace('"raspberry_pi":0.75', '"raspberry_pi":0.75')
-                json_str = json_str.replace('"jetson_nano":0.8', '"jetson_nano":0.80')
-                json_str = json_str.replace('"raspberry_pi":0.9', '"raspberry_pi":0.90')
-                json_str = json_str.replace('"jetson_nano":0.95', '"jetson_nano":0.95')
-                json_str = json_str.replace('"desktop_pc":1.0', '"desktop_pc":1.00')
-                json_str = json_str.replace('"aws_server":1.0', '"aws_server":1.00')
-                json_str = json_str.replace('"net_score":0.7', '"net_score":0.70')
-                json_str = json_str.replace('"bus_factor":0.9', '"bus_factor":0.90')
-                json_str = json_str.replace('"performance_claims":0.8', '"performance_claims":0.80')
-                json_str = json_str.replace('"dataset_quality":0.0', '"dataset_quality":0.00')
-                json_str = json_str.replace('"code_quality":0.0', '"code_quality":0.00')
-                json_str = json_str.replace('"code_quality":0.1', '"code_quality":0.10')
-                json_str = json_str.replace('"bus_factor":0.905', '"bus_factor":0.95')
+                # Fix all float values to 2 decimal places
+                import re
+                
+                # Fix net_score precision
+                json_str = re.sub(r'"net_score":(\d+\.?\d*)', lambda m: f'"net_score":{float(m.group(1)):.2f}', json_str)
+                
+                # Fix ramp_up_time precision
+                json_str = re.sub(r'"ramp_up_time":(\d+\.?\d*)', lambda m: f'"ramp_up_time":{float(m.group(1)):.2f}', json_str)
+                
+                # Fix bus_factor precision
+                json_str = re.sub(r'"bus_factor":(\d+\.?\d*)', lambda m: f'"bus_factor":{float(m.group(1)):.2f}', json_str)
+                
+                # Fix performance_claims precision
+                json_str = re.sub(r'"performance_claims":(\d+\.?\d*)', lambda m: f'"performance_claims":{float(m.group(1)):.2f}', json_str)
+                
+                # Fix license precision
+                json_str = re.sub(r'"license":(\d+\.?\d*)', lambda m: f'"license":{float(m.group(1)):.2f}', json_str)
+                
+                # Fix dataset_and_code_score precision
+                json_str = re.sub(r'"dataset_and_code_score":(\d+\.?\d*)', lambda m: f'"dataset_and_code_score":{float(m.group(1)):.2f}', json_str)
+                
+                # Fix dataset_quality precision
+                json_str = re.sub(r'"dataset_quality":(\d+\.?\d*)', lambda m: f'"dataset_quality":{float(m.group(1)):.2f}', json_str)
+                
+                # Fix code_quality precision
+                json_str = re.sub(r'"code_quality":(\d+\.?\d*)', lambda m: f'"code_quality":{float(m.group(1)):.2f}', json_str)
+                
+                # Fix size_score object values precision
+                json_str = re.sub(r'"raspberry_pi":(\d+\.?\d*)', lambda m: f'"raspberry_pi":{float(m.group(1)):.2f}', json_str)
+                json_str = re.sub(r'"jetson_nano":(\d+\.?\d*)', lambda m: f'"jetson_nano":{float(m.group(1)):.2f}', json_str)
+                json_str = re.sub(r'"desktop_pc":(\d+\.?\d*)', lambda m: f'"desktop_pc":{float(m.group(1)):.2f}', json_str)
+                json_str = re.sub(r'"aws_server":(\d+\.?\d*)', lambda m: f'"aws_server":{float(m.group(1)):.2f}', json_str)
                 
                 typer.echo(json_str)
                 
@@ -259,9 +229,9 @@ def multiple_urls():
                 continue
 
 
-# @app.command()
-# def interactive():
-#     interactive_main()
+@app.command()
+def interactive():
+    interactive_main()
 
 
 if __name__ == "__main__":
