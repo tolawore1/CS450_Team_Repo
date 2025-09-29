@@ -11,6 +11,22 @@ import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
+# Rate limiting variables
+_last_request_time = 0
+_min_request_interval = 0.1  # 100ms between requests (less aggressive)
+
+def _rate_limit():
+    """Ensure minimum time between API requests to avoid rate limiting."""
+    global _last_request_time
+    current_time = time.time()
+    time_since_last = current_time - _last_request_time
+    
+    if time_since_last < _min_request_interval:
+        sleep_time = _min_request_interval - time_since_last
+        time.sleep(sleep_time)
+    
+    _last_request_time = time.time()
+
 GITHUB_API = "https://api.github.com"
 HF_API = "https://huggingface.co/api"
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
@@ -80,12 +96,13 @@ class RepositoryDataError(Exception):
 
 
 def _make_github_request(url: str, params: Optional[Dict] = None) -> requests.Response:
-    """Make a GitHub API request with proper error handling"""
+    """Make a GitHub API request with proper error handling and rate limiting"""
+    _rate_limit()  # Add rate limiting before each request
     session = create_session()
     try:
         log.info("GET %s", url)
         log.debug("GET %s params=%s", url, params)
-        response = session.get(url, headers=HEADERS, params=params, timeout=5)
+        response = session.get(url, headers=HEADERS, params=params, timeout=10)
 
         if response.status_code == 403:
             log.warning("GitHub API 403 (rate limit?) for %s", url)
@@ -374,7 +391,8 @@ def fetch_model_data(model_id: str) -> Dict[str, Any]:
 
     session = create_session()
     try:
-        response = session.get(model_url, headers=headers, timeout=5)
+        _rate_limit()  # Add rate limiting before HF API request
+        response = session.get(model_url, headers=headers, timeout=10)
         response.raise_for_status()
         model_data = response.json()
     except requests.ConnectionError as e:
@@ -439,7 +457,8 @@ def fetch_hf_model(model_id: str) -> Dict[str, Any]:
 
     session = create_session()
     try:
-        response = session.get(model_url, headers=HF_HEADERS, timeout=5)
+        _rate_limit()  # Add rate limiting before HF API request
+        response = session.get(model_url, headers=HF_HEADERS, timeout=10)
         response.raise_for_status()
         model_data = response.json()
     except requests.ConnectionError as e:
@@ -492,6 +511,7 @@ def fetch_dataset_data(dataset_id: str) -> Dict[str, Any]:
         headers["Authorization"] = f"Bearer {hf_token}"
 
     try:
+        _rate_limit()  # Add rate limiting before HF API request
         response = requests.get(dataset_url, headers=headers, timeout=15)
         response.raise_for_status()
         ds_data = response.json()
