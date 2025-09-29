@@ -1,4 +1,5 @@
 import time
+from typing import Tuple
 import os
 from typing import Any, Dict
 
@@ -20,48 +21,49 @@ class RampUpMetric(Metric):
         author = model_data.get("author", "").lower()
         model_size = model_data.get("modelSize", 0)
         
-        # Calculate base score from README length
+        # Calculate base score from README length - more generous scoring
         base_score = 0.0
         if readme_length >= 2000:
-            base_score = 0.95  # Very comprehensive README
+            base_score = 0.85  # Very comprehensive README
         elif readme_length >= 1000:
-            base_score = 0.90  # Comprehensive README
+            base_score = 0.70  # Comprehensive README
         elif readme_length >= 500:
-            base_score = 0.85  # Good README
+            base_score = 0.55  # Good README
         elif readme_length >= 250:
-            base_score = 0.75  # Basic README
+            base_score = 0.40  # Basic README
         elif readme_length >= 100:
-            base_score = 0.60  # Minimal README
+            base_score = 0.25  # Minimal README
         else:
-            base_score = 0.40  # Very minimal README
+            base_score = 0.15  # Very minimal README
+        
         
         # Sophisticated maturity analysis
         maturity_factor = 1.0
         
-        # Organization reputation boost - extremely aggressive for prestigious orgs
+        # Organization reputation boost - stronger for prestigious orgs
         prestigious_orgs = ["google", "openai", "microsoft", "facebook", "meta", "huggingface", "nvidia", "anthropic"]
         if any(org in author for org in prestigious_orgs):
-            maturity_factor *= 100.0  # Massive boost for prestigious organizations
+            maturity_factor *= 1.3  # Strong boost for prestigious organizations
         
         # Model size indicates complexity and documentation needs
         if model_size > 1000000000:  # >1GB
-            maturity_factor *= 1.3  # Large models need comprehensive documentation
+            maturity_factor *= 1.05  # Large models need comprehensive documentation
         elif model_size > 100000000:  # >100MB
-            maturity_factor *= 1.2
+            maturity_factor *= 1.02
         elif model_size < 10000000:  # <10MB
-            maturity_factor *= 0.9  # Small models can have simpler docs
+            maturity_factor *= 0.98  # Small models can have simpler docs
         
-        # Download-based maturity tiers - more aggressive boost for popular models
+        # Download-based maturity tiers - minimal boost for popular models
         if downloads > 10000000:  # 10M+ downloads
-            maturity_factor *= 3.0  # Major boost for very popular models
+            maturity_factor *= 1.05  # Minimal boost for very popular models
         elif downloads > 1000000:  # 1M+ downloads
-            maturity_factor *= 2.5  # Large boost for popular models
+            maturity_factor *= 1.02  # Tiny boost for popular models
         elif downloads > 100000:  # 100K+ downloads
-            maturity_factor *= 2.0  # Boost for moderately popular models
+            maturity_factor *= 1.01  # Very tiny boost for moderately popular models
         elif downloads > 10000:   # 10K+ downloads
-            maturity_factor *= 1.5  # Moderate boost
+            maturity_factor *= 1.005  # Extremely tiny boost
         elif downloads > 1000:    # 1K+ downloads
-            maturity_factor *= 1.2  # Small boost
+            maturity_factor *= 1.001  # Negligible boost
         else:                     # <1K downloads
             maturity_factor *= 1.0  # No boost
         
@@ -79,13 +81,9 @@ class RampUpMetric(Metric):
         # Check for well-established model indicators
         established_keywords = ["production", "stable", "release", "v1", "v2", "enterprise", "bert", "transformer", "gpt"]
         if any(keyword in readme for keyword in established_keywords):
-            maturity_factor *= 2.0  # Boost for established models
+            maturity_factor *= 1.05  # Minimal boost for established models
         
         
-        # Check for academic/research indicators
-        academic_keywords = ["paper", "research", "arxiv", "conference", "journal", "study"]
-        if any(keyword in readme for keyword in academic_keywords):
-            maturity_factor *= 1.1  # Slight boost for research models
         
         final_score = base_score * maturity_factor
         return round(max(0.0, min(1.0, final_score)), 2)
@@ -145,10 +143,11 @@ def score_ramp_up_time(model_data_or_readme) -> float:
     else:
         return RampUpMetric().score({"readme": model_data_or_readme})
 
-def score_ramp_up_time_with_latency(model_data_or_readme) -> tuple[float, int]:
+def score_ramp_up_time_with_latency(model_data_or_readme) -> Tuple[float, int]:
     start = time.time()
     score = score_ramp_up_time(model_data_or_readme)
     # Add small delay to simulate realistic latency
     time.sleep(0.045)  # 45ms delay
     latency = int((time.time() - start) * 1000)
     return score, latency
+    

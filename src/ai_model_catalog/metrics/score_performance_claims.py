@@ -1,4 +1,5 @@
 import time
+from typing import Tuple
 from .base import Metric
 
 class PerformanceClaimsMetric(Metric):
@@ -83,9 +84,10 @@ def score_performance_claims(model_data) -> float:
     return PerformanceClaimsMetric().score(model_data)
 
 
-def score_performance_claims_with_latency(model_data) -> tuple[float, int]:
+def score_performance_claims_with_latency(model_data) -> Tuple[float, int]:
     start = time.time()
     score = score_performance_claims(model_data)
     # Base function already has the delay, just measure timing
     latency = int((time.time() - start) * 1000)
     return score, latency
+    
