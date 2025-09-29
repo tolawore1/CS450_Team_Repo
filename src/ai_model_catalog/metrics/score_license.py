@@ -60,42 +60,43 @@ class LicenseMetric(Metric):
         author = model_data.get("author", "").lower()
         model_size = model_data.get("modelSize", 0)
         
-        # Calculate base score from license clarity
+        # Calculate base score from license clarity - realistic scoring
         base_score = 0.0
         if has_explicit_license and has_readme_license:
-            base_score = 1.0  # Clear compatible license
+            base_score = 0.70  # Clear compatible license
         elif has_explicit_license or has_readme_license:
-            base_score = 0.9  # Some license information
+            base_score = 0.60  # Some license information
         else:
-            base_score = 0.7  # No clear license but still some base score
+            base_score = 0.20  # No clear license information
+        
         
         # Sophisticated maturity analysis
         maturity_factor = 1.0
         
-        # Organization reputation boost - extremely aggressive for prestigious orgs
+        # Organization reputation boost - minimal for prestigious orgs
         prestigious_orgs = ["google", "openai", "microsoft", "facebook", "meta", "huggingface", "nvidia", "anthropic"]
         if any(org in author for org in prestigious_orgs):
-            maturity_factor *= 100.0  # Massive boost for prestigious organizations
+            maturity_factor *= 1.05  # Minimal boost for prestigious organizations
         
         # Model size indicates licensing complexity needs
         if model_size > 1000000000:  # >1GB
-            maturity_factor *= 1.3  # Large models need clear licensing
+            maturity_factor *= 1.1  # Large models need clear licensing
         elif model_size > 100000000:  # >100MB
-            maturity_factor *= 1.2
+            maturity_factor *= 1.05
         elif model_size < 10000000:  # <10MB
-            maturity_factor *= 0.9  # Small models may have simpler licensing
+            maturity_factor *= 0.95  # Small models may have simpler licensing
         
-        # Download-based maturity tiers - more aggressive boost for popular models
+        # Download-based maturity tiers - conservative boost for popular models
         if downloads > 10000000:  # 10M+ downloads
-            maturity_factor *= 3.0  # Major boost for very popular models
+            maturity_factor *= 1.2  # Moderate boost for very popular models
         elif downloads > 1000000:  # 1M+ downloads
-            maturity_factor *= 2.5  # Large boost for popular models
+            maturity_factor *= 1.1  # Small boost for popular models
         elif downloads > 100000:  # 100K+ downloads
-            maturity_factor *= 2.0  # Boost for moderately popular models
+            maturity_factor *= 1.05  # Minimal boost for moderately popular models
         elif downloads > 10000:   # 10K+ downloads
-            maturity_factor *= 1.5  # Moderate boost
+            maturity_factor *= 1.02  # Very small boost
         elif downloads > 1000:    # 1K+ downloads
-            maturity_factor *= 1.2  # Small boost
+            maturity_factor *= 1.01  # Tiny boost
         else:                     # <1K downloads
             maturity_factor *= 1.0  # No boost
         
@@ -109,7 +110,7 @@ class LicenseMetric(Metric):
         # Check for well-established model indicators
         established_keywords = ["production", "stable", "release", "v1", "v2", "enterprise", "bert", "transformer", "gpt"]
         if any(keyword in readme for keyword in established_keywords):
-            maturity_factor *= 2.0  # Boost for established models
+            maturity_factor *= 1.05  # Minimal boost for established models
         
         # Check for academic/research indicators
         academic_keywords = ["paper", "research", "arxiv", "conference", "journal", "study"]
@@ -138,3 +139,4 @@ def score_license_with_latency(model_data) -> Tuple[float, int]:
     time.sleep(0.01)  # 10ms delay
     latency = int((time.time() - start_time) * 1000)
     return result, latency
+    
