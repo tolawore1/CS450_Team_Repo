@@ -28,6 +28,8 @@ This project follows the [Contributor Covenant Code of Conduct](CODE_OF_CONDUCT.
 - GitPython (for local repository analysis)
 - Basic understanding of AI/ML model evaluation
 - Familiarity with command-line tools
+- Purdue GenAI Studio API key (for LLM features)
+- GitHub API token (recommended for higher rate limits)
 
 ### Development Setup
 
@@ -49,6 +51,11 @@ This project follows the [Contributor Covenant Code of Conduct](CODE_OF_CONDUCT.
    
    # Install pre-commit hooks
    pre-commit install
+   
+   # Set up environment variables
+   export GITHUB_TOKEN="your_github_token_here"
+   export PURDUE_GENAI_API_KEY="your_purdue_genai_token_here"
+   export LOG_LEVEL="1"
    ```
 
 3. **Verify setup**
@@ -61,6 +68,12 @@ This project follows the [Contributor Covenant Code of Conduct](CODE_OF_CONDUCT.
    
    # Test CLI
    python -m src.ai_model_catalog --help
+   
+   # Test LLM integration
+   python test_llm_interactive.py
+   
+   # Test auto-grader interface
+   ./run test
    ```
 
 ## Contributing Process
@@ -201,15 +214,68 @@ def process_model_data(
 ```
 src/ai_model_catalog/
 ├── __init__.py
-├── cli.py                    # CLI interface (includes local repo analysis)
+├── __main__.py               # Entry point
+├── cli.py                    # CLI interface
 ├── fetch_repo.py             # API integration
 ├── score_model.py            # NetScore calculation
+├── llm_service.py            # LLM integration service
+├── interactive.py            # Interactive mode
+├── logging_config.py         # Logging configuration
+├── utils.py                  # Utility functions
+├── model_sources/            # Model source handlers
+│   ├── __init__.py
+│   ├── base.py
+│   ├── github_model.py
+│   └── hf_model.py
 └── metrics/                  # Individual metrics
     ├── __init__.py
     ├── base.py               # Base metric class
+    ├── llm_base.py           # LLM-enhanced metric base
     ├── runner.py             # Parallel execution
     ├── types.py              # Data types
+    ├── scoring_helpers.py    # Helper functions
+    ├── constants.py          # Metric constants
     └── score_*.py            # Individual metrics
+```
+
+## LLM Integration
+
+### Contributing to LLM Features
+
+The AI Model Catalog CLI includes LLM-enhanced analysis capabilities using Purdue GenAI Studio API. Key areas for contribution:
+
+#### Core LLM Service (`llm_service.py`)
+- `LLMService`: Main service class for API interactions
+- `analyze_readme_quality()`: README content analysis
+- `analyze_dataset_quality()`: Dataset metadata analysis
+- `analyze_code_quality()`: Code quality assessment
+- `analyze_performance_claims()`: Performance claims evaluation
+
+#### LLM-Enhanced Metrics
+- `LLMEnhancedMetric`: Base class for LLM-enhanced metrics
+- `score_with_llm()`: LLM-powered scoring method
+- `score_without_llm()`: Traditional fallback method
+- Graceful fallback when LLM service is unavailable
+
+#### Features to Enhance
+- **Prompt Engineering**: Improve analysis prompts for better results
+- **Caching**: Optimize response caching mechanisms
+- **Rate Limiting**: Enhance rate limiting strategies
+- **Error Handling**: Improve error recovery and fallback logic
+
+#### Testing LLM Integration
+```python
+# Test LLM service functionality
+def test_llm_service_analysis():
+    llm_service = get_llm_service()
+    result = llm_service.analyze_readme_quality(sample_readme)
+    assert "documentation_quality" in result
+
+# Test enhanced metrics
+def test_enhanced_ramp_up_score():
+    metric = RampUpMetric()
+    score = metric.score({"readme": "Comprehensive documentation..."})
+    assert 0.0 <= score <= 1.0
 ```
 
 ## Local Repository Analysis

@@ -28,10 +28,9 @@ catalog models [OPTIONS] --owner TEXT --repo TEXT
 ```
 
 **Options:**
-- `--owner TEXT`: GitHub repository owner (required)
-- `--repo TEXT`: GitHub repository name (required)
-- `--format [human|json|ndjson]`: Output format (default: human)
-- `--verbose`: Enable verbose output
+- `--owner TEXT`: GitHub repository owner (default: huggingface)
+- `--repo TEXT`: GitHub repository name (default: transformers)
+- `--format [text|ndjson]`: Output format (default: text)
 - `--help`: Show help message
 
 **Examples:**
@@ -39,11 +38,11 @@ catalog models [OPTIONS] --owner TEXT --repo TEXT
 # Analyze Hugging Face transformers repository
 catalog models --owner huggingface --repo transformers
 
-# Output as JSON
-catalog models --owner microsoft --repo DeepSpeed --format json
+# Output as NDJSON for auto-grader
+catalog models --owner microsoft --repo DeepSpeed --format ndjson
 
-# Verbose output
-catalog models --owner facebookresearch --repo fairseq --verbose
+# Analyze with default parameters
+catalog models
 ```
 
 #### `catalog hf-model`
@@ -54,9 +53,8 @@ catalog hf-model [OPTIONS] --model-id TEXT
 ```
 
 **Options:**
-- `--model-id TEXT`: Hugging Face model ID (required)
-- `--format [human|json|ndjson]`: Output format (default: human)
-- `--verbose`: Enable verbose output
+- `--model-id TEXT`: Hugging Face model ID (default: bert-base-uncased)
+- `--format [text|ndjson]`: Output format (default: text)
 - `--help`: Show help message
 
 **Examples:**
@@ -66,17 +64,41 @@ catalog hf-model --model-id bert-base-uncased
 
 # Output as NDJSON for auto-grader
 catalog hf-model --model-id microsoft/DialoGPT-medium --format ndjson
+
+# Analyze with default parameters
+catalog hf-model
+```
+
+#### `catalog hf-dataset`
+Analyze a Hugging Face Hub dataset.
+
+```bash
+catalog hf-dataset [OPTIONS] --dataset-id TEXT
+```
+
+**Options:**
+- `--dataset-id TEXT`: Hugging Face dataset ID (default: imdb)
+- `--format [text|ndjson]`: Output format (default: text)
+- `--help`: Show help message
+
+**Examples:**
+```bash
+# Analyze IMDB dataset
+catalog hf-dataset --dataset-id imdb
+
+# Output as NDJSON for auto-grader
+catalog hf-dataset --dataset-id squad --format ndjson
+
+# Analyze with default parameters
+catalog hf-dataset
 ```
 
 #### `catalog interactive`
 Launch interactive mode for model exploration.
 
 ```bash
-catalog interactive [OPTIONS]
+catalog interactive
 ```
-
-**Options:**
-- `--help`: Show help message
 
 **Features:**
 - Browse popular AI/ML repositories
@@ -84,49 +106,19 @@ catalog interactive [OPTIONS]
 - Interactive model selection
 - Real-time scoring display
 
-#### `catalog analyze`
-Analyze a repository from GitHub URL or local directory with comprehensive scoring.
+#### `catalog multiple-urls`
+Process multiple URLs from URL_FILE.txt for auto-grader compatibility.
 
 ```bash
-catalog analyze [OPTIONS] SOURCE
+catalog multiple-urls
 ```
-
-**Arguments:**
-- `SOURCE`: GitHub URL (e.g., `https://github.com/owner/repo`) or local path (e.g., `.`)
-
-**Options:**
-- `--output, -o PATH`: Write output to file instead of stdout
-- `--format, -f [json|ndjson]`: Output format (default: json)
-- `--help`: Show help message
 
 **Features:**
-- GitHub repository analysis via API
-- Local repository analysis with Git integration
-- Comprehensive NetScore calculation
-- Filesystem scanning and Git metadata extraction
-- Support for both JSON and NDJSON output formats
-
-**Examples:**
-```bash
-# Analyze GitHub repository
-catalog analyze https://github.com/huggingface/transformers
-
-# Analyze local directory
-catalog analyze . --format ndjson
-
-# Save output to file
-catalog analyze /path/to/repo --output results.json
-
-# Local repository with Git metadata
-catalog analyze . --format json
-```
-
-**Local Repository Analysis Features:**
-- Git branch and commit information
-- Contributor analysis (top 10 by commits)
-- File system scanning (size, count, Python files, tests)
-- README and license file detection
-- Smart directory skipping (`.git`, `__pycache__`, etc.)
+- Reads URLs from URL_FILE.txt
+- Processes Hugging Face models and datasets
+- Outputs NDJSON format for each URL
+- Handles URL parsing and model ID extraction
+- Auto-grader compatible output format
 
 ### Auto-Grader Interface
 
@@ -182,6 +174,50 @@ https://huggingface.co/microsoft/DialoGPT-medium
 
 # Hugging Face datasets
 https://huggingface.co/datasets/squad
+```
+
+## LLM Integration
+
+The AI Model Catalog CLI includes LLM-enhanced analysis capabilities using Purdue GenAI Studio API (Claude-3-Sonnet) for intelligent README and metadata analysis.
+
+### LLM Service Configuration
+
+```python
+from ai_model_catalog.llm_service import get_llm_service
+
+# Get LLM service instance
+llm_service = get_llm_service()
+
+# Analyze README quality
+analysis = llm_service.analyze_readme_quality(readme_content)
+```
+
+### Enhanced Metrics with LLM
+
+The following metrics are enhanced with LLM analysis:
+
+#### Ramp-up Time Score
+- **Traditional**: README length measurement
+- **LLM-Enhanced**: Context-aware analysis of installation instructions, examples, and documentation structure
+
+#### Code Quality Score
+- **Traditional**: Keyword matching for testing tools
+- **LLM-Enhanced**: Understanding of actual tool usage and CI/CD pipeline quality
+
+#### Dataset Quality Score
+- **Traditional**: Pattern matching for dataset keywords
+- **LLM-Enhanced**: Comprehensive analysis of dataset documentation and metadata
+
+### Environment Variables
+
+```bash
+# Required for LLM features
+export PURDUE_GENAI_API_KEY="your_purdue_genai_token_here"
+
+# Optional configuration
+export LLM_ENABLED="true"
+export LLM_MODEL="claude-3-sonnet"
+export LLM_TIMEOUT="30"
 ```
 
 ## Python API
@@ -285,6 +321,13 @@ from ai_model_catalog.metrics.score_size import SizeMetric
 
 metric = SizeMetric()
 score = metric.score({"repo_size_bytes": 1000000})
+# Returns hardware compatibility object:
+# {
+#     "raspberry_pi": 0.20,
+#     "jetson_nano": 0.40, 
+#     "desktop_pc": 0.95,
+#     "aws_server": 1.00
+# }
 ```
 
 **LicenseMetric**
