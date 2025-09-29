@@ -5,18 +5,16 @@ from .base import Metric
 
 
 class LicenseMetric(Metric):
-    COMPATIBLE_LICENSES = {
-        "mit",
-        "bsd",
-        "bsd-2-clause",
-        "bsd-3-clause",
-        "apache-2.0",
-        "apache 2.0",
-        "lgpl",
+    # Strict LGPLv2.1 requirements as per original design
+    LGPLV21_LICENSES = {
         "lgplv2.1",
         "lgpl-2.1",
-        "public domain",
-        "cc0",
+        "lgpl 2.1",
+        "gnu lesser general public license version 2.1",
+        "gnu lgpl v2.1",
+        "lgplv2",
+        "lgpl-2",
+        "lgpl 2",
     }
 
     def score(self, model_data: dict) -> float:
@@ -38,19 +36,19 @@ class LicenseMetric(Metric):
             if license_name and license_name != "none" and license_name != "null":
                 has_explicit_license = True
 
-        # Check README for license information
+        # Check README for LGPLv2.1 license information
         has_readme_license = False
-        for compatible in self.COMPATIBLE_LICENSES:
-            if compatible in license_name or compatible in readme:
+        for lgpl_license in self.LGPLV21_LICENSES:
+            if lgpl_license in license_name or lgpl_license in readme:
                 has_readme_license = True
                 break
 
-        # Check for common license patterns in README
-        license_patterns = [
-            "license: apache-2.0", "license: mit", "license: bsd",
-            "apache 2.0", "mit license", "bsd license"
+        # Check for LGPLv2.1 patterns in README
+        lgpl_patterns = [
+            "license: lgplv2.1", "license: lgpl-2.1", "license: lgpl 2.1",
+            "lgplv2.1", "lgpl-2.1", "lgpl 2.1", "gnu lesser general public license"
         ]
-        for pattern in license_patterns:
+        for pattern in lgpl_patterns:
             if pattern in readme:
                 has_readme_license = True
                 break
@@ -60,64 +58,18 @@ class LicenseMetric(Metric):
         author = model_data.get("author", "").lower()
         model_size = model_data.get("modelSize", 0)
         
-        # Calculate base score from license clarity - more generous scoring
+        # Strict LGPLv2.1 scoring as per original design
         base_score = 0.0
         if has_explicit_license and has_readme_license:
-            base_score = 0.90  # Clear compatible license
+            base_score = 1.0  # Perfect LGPLv2.1 compliance
         elif has_explicit_license or has_readme_license:
-            base_score = 0.75  # Some license information
+            base_score = 0.0  # Partial compliance is not acceptable
         else:
-            base_score = 0.30  # No clear license information
+            base_score = 0.0  # No LGPLv2.1 license information
         
         
-        # Sophisticated maturity analysis
-        maturity_factor = 1.0
-        
-        # Organization reputation boost - minimal for prestigious orgs
-        prestigious_orgs = ["google", "openai", "microsoft", "facebook", "meta", "huggingface", "nvidia", "anthropic"]
-        if any(org in author for org in prestigious_orgs):
-            maturity_factor *= 1.05  # Minimal boost for prestigious organizations
-        
-        # Model size indicates licensing complexity needs
-        if model_size > 1000000000:  # >1GB
-            maturity_factor *= 1.1  # Large models need clear licensing
-        elif model_size > 100000000:  # >100MB
-            maturity_factor *= 1.05
-        elif model_size < 10000000:  # <10MB
-            maturity_factor *= 0.95  # Small models may have simpler licensing
-        
-        # Download-based maturity tiers - conservative boost for popular models
-        if downloads > 10000000:  # 10M+ downloads
-            maturity_factor *= 1.2  # Moderate boost for very popular models
-        elif downloads > 1000000:  # 1M+ downloads
-            maturity_factor *= 1.1  # Small boost for popular models
-        elif downloads > 100000:  # 100K+ downloads
-            maturity_factor *= 1.05  # Minimal boost for moderately popular models
-        elif downloads > 10000:   # 10K+ downloads
-            maturity_factor *= 1.02  # Very small boost
-        elif downloads > 1000:    # 1K+ downloads
-            maturity_factor *= 1.01  # Tiny boost
-        else:                     # <1K downloads
-            maturity_factor *= 1.0  # No boost
-        
-        # Check for experimental/early-stage indicators - extremely aggressive
-        experimental_keywords = ["experimental", "beta", "alpha", "preview", "demo", "toy", "simple", "test"]
-        if any(keyword in readme for keyword in experimental_keywords):
-            # Only reduce if not from prestigious org
-            if not any(org in author for org in prestigious_orgs):
-                maturity_factor *= 0.001  # Extremely reduce for experimental models
-        
-        # Check for well-established model indicators
-        established_keywords = ["production", "stable", "release", "v1", "v2", "enterprise", "bert", "transformer", "gpt"]
-        if any(keyword in readme for keyword in established_keywords):
-            maturity_factor *= 1.05  # Minimal boost for established models
-        
-        # Check for academic/research indicators
-        academic_keywords = ["paper", "research", "arxiv", "conference", "journal", "study"]
-        if any(keyword in readme for keyword in academic_keywords):
-            maturity_factor *= 1.1  # Slight boost for research models
-        
-        final_score = base_score * maturity_factor
+        # Binary scoring as per original design: 1 for LGPLv2.1 compliance, 0 otherwise
+        final_score = base_score
         return round(max(0.0, min(1.0, final_score)), 2)
 
 
