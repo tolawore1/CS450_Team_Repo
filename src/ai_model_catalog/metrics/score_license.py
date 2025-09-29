@@ -60,14 +60,14 @@ class LicenseMetric(Metric):
         author = model_data.get("author", "").lower()
         model_size = model_data.get("modelSize", 0)
         
-        # Calculate base score from license clarity - realistic scoring
+        # Calculate base score from license clarity - more generous scoring
         base_score = 0.0
         if has_explicit_license and has_readme_license:
-            base_score = 0.70  # Clear compatible license
+            base_score = 0.90  # Clear compatible license
         elif has_explicit_license or has_readme_license:
-            base_score = 0.60  # Some license information
+            base_score = 0.75  # Some license information
         else:
-            base_score = 0.20  # No clear license information
+            base_score = 0.30  # No clear license information
         
         
         # Sophisticated maturity analysis

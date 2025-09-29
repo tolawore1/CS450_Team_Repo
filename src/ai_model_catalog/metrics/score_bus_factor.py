@@ -15,13 +15,13 @@ class BusFactorMetric(Metric):
         # Calculate base score from maintainers - more generous scoring
         base_score = 0.0
         if len(maintainers) >= 5:
-            base_score = 0.85  # Good number of maintainers
+            base_score = 0.95  # Excellent number of maintainers
         elif len(maintainers) >= 3:
-            base_score = 0.70  # Decent number of maintainers
+            base_score = 0.85  # Good number of maintainers
         elif len(maintainers) >= 2:
-            base_score = 0.55  # Some maintainers
+            base_score = 0.70  # Decent number of maintainers
         elif len(maintainers) >= 1:
-            base_score = 0.40  # At least one maintainer
+            base_score = 0.50  # At least one maintainer
         else:
             base_score = 0.20  # No maintainers
         
@@ -31,7 +31,7 @@ class BusFactorMetric(Metric):
         # Organization reputation boost - stronger for prestigious orgs
         prestigious_orgs = ["google", "openai", "microsoft", "facebook", "meta", "huggingface", "nvidia", "anthropic"]
         if any(org in author for org in prestigious_orgs):
-            maturity_factor *= 1.3  # Strong boost for prestigious organizations
+            maturity_factor *= 1.4  # Very strong boost for prestigious organizations
         
         # Model size indicates complexity and maintenance needs
         if model_size > 1000000000:  # >1GB
